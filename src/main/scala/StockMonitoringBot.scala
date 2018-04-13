@@ -22,7 +22,7 @@ object StockMonitoringBot extends App {
         system.terminate().onComplete(_ => sys.exit())
       case stockName => //for example "MSFT", "BAC", "NFLX"
         println(s"started retrieving info about $stockName")
-        stockCostService.getCost(stockName).onComplete({
+        stockCostService.getStockPriceInfo(stockName).onComplete({
           case Success(info) =>
             println(info)
           case Failure(exception) =>

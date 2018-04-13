@@ -13,7 +13,7 @@ import scala.util.{Failure, Success, Try}
 /**
   * Created by amir.
   */
-class AlphavantageStockPriceService(apiKey: String)(implicit actorSystem: ActorSystem) extends StockCostService {
+class AlphavantageStockPriceService(apiKey: String)(implicit actorSystem: ActorSystem) extends StockPriceService {
 
   implicit val materializer: ActorMaterializer = ActorMaterializer()
 
@@ -68,7 +68,7 @@ class AlphavantageStockPriceService(apiKey: String)(implicit actorSystem: ActorS
     }.getOrElse(throw new Exception(s"Can't parse json: $json"))
   }
 
-  override def getCost(stockName: String): Future[StockInfo] = {
+  override def getStockPriceInfo(stockName: String): Future[StockInfo] = {
     import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport.sprayJsValueUnmarshaller
     queueRequest(stockPriceRequest(stockName)).flatMap({
       case HttpResponse(StatusCodes.OK, _, entity, _) =>
