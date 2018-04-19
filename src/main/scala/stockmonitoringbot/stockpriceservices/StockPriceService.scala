@@ -1,3 +1,5 @@
+package stockmonitoringbot.stockpriceservices
+
 import scala.concurrent.Future
 
 /**
