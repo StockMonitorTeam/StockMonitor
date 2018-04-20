@@ -1,9 +1,10 @@
 package stockmonitoringbot.datastorage
 
 import org.scalatest.{FlatSpec, Matchers}
+import stockmonitoringbot.ExecutionContextComponent
 
 import scala.concurrent.duration.Duration
-import scala.concurrent.{Await, ExecutionContext}
+import scala.concurrent.{Await, ExecutionContextExecutor}
 
 
 /**
@@ -13,10 +14,18 @@ class InMemoryDataStorageTest extends FlatSpec with Matchers {
 
   val stock = "MSFT"
 
-  implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.global
+  implicit val executionContextGlobal: ExecutionContextExecutor = scala.concurrent.ExecutionContext.global
+
+  trait ExecutionContextGlobal extends ExecutionContextComponent {
+    override implicit val executionContext: ExecutionContextExecutor = scala.concurrent.ExecutionContext.global
+  }
+
+  def inMemoryStorage: DataStorage = {
+    new {} with InMemoryDataStorage with ExecutionContextGlobal
+  }
 
   "InMemoryDataStorage" should "return stock price" in {
-    val notificationService = new InMemoryDataStorage()
+    val notificationService = inMemoryStorage
     val test = for {_ <- notificationService.addStock(stock, 23)
                     firstPrice <- notificationService.getPrice(stock)
                     _ <- notificationService.updateStockPrice(stock, 25)
@@ -30,7 +39,7 @@ class InMemoryDataStorageTest extends FlatSpec with Matchers {
   }
 
   "InMemoryDataStorage" should "return triggered notifications when price raise" in {
-    val notificationService = new InMemoryDataStorage()
+    val notificationService = inMemoryStorage
     val test = for {_ <- notificationService.addStock(stock, 23)
                     _ <- notificationService.addNotification(Notification(stock, 24, RaiseNotification, 0))
                     _ <- notificationService.addNotification(Notification(stock, 24, RaiseNotification, 1))
@@ -45,7 +54,7 @@ class InMemoryDataStorageTest extends FlatSpec with Matchers {
   }
 
   "InMemoryDataStorage" should "return triggered notifications when price fall" in {
-    val notificationService = new InMemoryDataStorage()
+    val notificationService = inMemoryStorage
     val test = for {_ <- notificationService.addStock(stock, 23)
                     _ <- notificationService.addNotification(Notification(stock, 22, RaiseNotification, 0))
                     _ <- notificationService.addNotification(Notification(stock, 22, RaiseNotification, 1))
@@ -60,7 +69,7 @@ class InMemoryDataStorageTest extends FlatSpec with Matchers {
   }
 
   "InMemoryDataStorage" should "store user's notifications" in {
-    val notificationService = new InMemoryDataStorage()
+    val notificationService = inMemoryStorage
     val test = for {_ <- notificationService.addStock(stock, 23)
                     _ <- notificationService.addNotification(Notification(stock, 22, RaiseNotification, 0))
                     _ <- notificationService.addNotification(Notification(stock, 23, RaiseNotification, 0))

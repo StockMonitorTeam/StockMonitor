@@ -13,6 +13,12 @@ case class Notification(stock: String,
   }
 }
 
+object Notification {
+  def apply(price: Double): Notification = {
+    Notification("", price, RaiseNotification, 0)
+  }
+}
+
 sealed trait NotificationType
 
 case object RaiseNotification extends NotificationType

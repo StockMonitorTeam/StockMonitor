@@ -1,17 +1,17 @@
 package stockmonitoringbot.stockpriceservices
 
-import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.Uri.Query
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.stream.scaladsl.{Keep, Sink, Source}
-import akka.stream.{ActorMaterializer, OverflowStrategy, QueueOfferResult, ThrottleMode}
+import akka.stream.{OverflowStrategy, QueueOfferResult, ThrottleMode}
 import com.typesafe.config.ConfigFactory
 import spray.json.JsValue
+import stockmonitoringbot.{ActorSystemComponent, ExecutionContextComponent}
 
 import scala.concurrent.duration._
-import scala.concurrent.{ExecutionContext, Future, Promise}
+import scala.concurrent.{Future, Promise}
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
@@ -19,10 +19,7 @@ import scala.util.{Failure, Success, Try}
   * Created by amir.
   */
 trait AlphavantageStockPriceService extends StockPriceService {
-
-  implicit val system: ActorSystem
-  implicit val materializer: ActorMaterializer
-  implicit val executionContext: ExecutionContext
+  self: ActorSystemComponent with ExecutionContextComponent =>
 
   private val apiKey: String = ConfigFactory.load().getString("StockMonitor.Alphavantage.apikey")
 

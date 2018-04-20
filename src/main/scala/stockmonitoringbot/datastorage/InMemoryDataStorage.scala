@@ -1,14 +1,15 @@
 package stockmonitoringbot.datastorage
 
-import stockmonitoringbot.datastorage.InMemoryDataStorage.DoubleToNotification
+import stockmonitoringbot.ExecutionContextComponent
 
 import scala.collection.mutable
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.Future
 
 /**
   * Created by amir.
   */
-class InMemoryDataStorage(implicit executionContext: ExecutionContext) extends DataStorage {
+trait InMemoryDataStorage extends DataStorage {
+  self: ExecutionContextComponent =>
   private val stockCurrentPrice: mutable.Map[String, Double] = mutable.HashMap.empty
   private val stockNotifications: mutable.Map[String, mutable.TreeSet[Notification]] = mutable.Map.empty
   private val userNotifications: mutable.Map[Long, mutable.HashSet[Notification]] = mutable.Map.empty
@@ -25,8 +26,8 @@ class InMemoryDataStorage(implicit executionContext: ExecutionContext) extends D
     val oldPrice = stockCurrentPrice(stock)
     stockCurrentPrice(stock) = newPrice
     val triggered = stockNotifications(stock).rangeImpl(
-      Some(DoubleToNotification(Math.min(oldPrice, newPrice))),
-      Some(DoubleToNotification(Math.max(oldPrice, newPrice)))).toSeq
+      Some(Notification(Math.min(oldPrice, newPrice))),
+      Some(Notification(Math.max(oldPrice, newPrice)))).toSeq
     triggered.foreach { notification =>
       stockNotifications(stock) -= notification
       userNotifications(notification.userId) -= notification
@@ -62,15 +63,15 @@ class InMemoryDataStorage(implicit executionContext: ExecutionContext) extends D
     ()
   })
 
-  override def getNotifications(userId: Long): Future[Seq[Notification]] = Future(synchronized {userNotifications.getOrElse(userId, Seq()).toSeq})
+  override def getNotifications(userId: Long): Future[Seq[Notification]] = Future(synchronized {
+    userNotifications.getOrElse(userId, Seq()).toSeq
+  })
 
-  override def getStocks: Future[Set[String]] = Future(synchronized {stockCurrentPrice.keySet.toSet})
+  override def getStocks: Future[Set[String]] = Future(synchronized {
+    stockCurrentPrice.keySet.toSet
+  })
 
-  def containsStock(stock: String): Future[Boolean] = Future(synchronized {stockCurrentPrice.contains(stock)})
-}
-
-object InMemoryDataStorage {
-
-  def DoubleToNotification(double: Double): Notification = Notification("", double, RaiseNotification, -1)
-
+  def containsStock(stock: String): Future[Boolean] = Future(synchronized {
+    stockCurrentPrice.contains(stock)
+  })
 }
