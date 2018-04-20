@@ -1,12 +1,10 @@
 package stockmonitoringbot
 
-import akka.actor.ActorSystem
 import info.mukel.telegrambot4s.methods.SendMessage
 import stockmonitoringbot.datastorage.DataStorage
 import stockmonitoringbot.messengerservices.TelegramService
 import stockmonitoringbot.stockpriceservices.StockPriceService
 
-import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 import scala.language.postfixOps
 
@@ -14,10 +12,11 @@ import scala.language.postfixOps
   * Created by amir.
   */
 trait StockMonitoringBot {
-  self: StockPriceService with DataStorage with TelegramService =>
-
-  implicit val system: ActorSystem
-  implicit val executionContext: ExecutionContext
+  self: StockPriceService
+    with DataStorage
+    with TelegramService
+    with ExecutionContextComponent
+    with ActorSystemComponent =>
 
   def updatePrices(): Unit =
     for {stocks <- getStocks
