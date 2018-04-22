@@ -1,0 +1,8 @@
+StockMonitor {
+  Alphavantage {
+    apikey = ""
+  }
+  Telegram {
+    apitoken = ""
+  }
+}
