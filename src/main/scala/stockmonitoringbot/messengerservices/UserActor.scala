@@ -1,6 +1,6 @@
 package stockmonitoringbot.messengerservices
 
-import akka.actor.{Actor, ActorLogging, Props}
+import akka.actor.{Actor, Props}
 import info.mukel.telegrambot4s.methods.SendMessage
 import info.mukel.telegrambot4s.models.{KeyboardButton, ReplyKeyboardMarkup}
 import stockmonitoringbot.datastorage.{DataStorage, FallNotification, Notification, RaiseNotification}
@@ -12,13 +12,12 @@ import scala.util.{Failure, Success}
 /**
   * Created by amir.
   */
-class UserActor(userId: Long, telegramService: TelegramService, notificationService: DataStorage) extends Actor with ActorLogging {
+class UserActor(userId: Long, telegramService: MessageSender, notificationService: DataStorage) extends Actor {
 
   import context.dispatcher
 
-  private def sendMessageToUser(message: String, markup: Option[ReplyKeyboardMarkup] = None): Unit = {
+  private def sendMessageToUser(message: String, markup: Option[ReplyKeyboardMarkup] = None): Unit =
     telegramService.send(SendMessage(userId, message, replyMarkup = markup))
-  }
 
   override def preStart(): Unit = {
     sendMessageToUser("Hello, choose action:", startMenuMarkup)
@@ -125,7 +124,7 @@ class UserActor(userId: Long, telegramService: TelegramService, notificationServ
 }
 
 object UserActor {
-  def props(id: Long, telegramService: TelegramService, notificationService: DataStorage): Props =
+  def props(id: Long, telegramService: MessageSender, notificationService: DataStorage): Props =
     Props(new UserActor(id, telegramService, notificationService))
 
   case class IncomingMessage(message: String)

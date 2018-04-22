@@ -1,8 +1,9 @@
 package stockmonitoringbot
 
+import com.typesafe.scalalogging.Logger
 import info.mukel.telegrambot4s.methods.SendMessage
 import stockmonitoringbot.datastorage.DataStorage
-import stockmonitoringbot.messengerservices.TelegramService
+import stockmonitoringbot.messengerservices.MessageSender
 import stockmonitoringbot.stockpriceservices.StockPriceService
 
 import scala.concurrent.duration._
@@ -14,9 +15,11 @@ import scala.language.postfixOps
 trait StockMonitoringBot {
   self: StockPriceService
     with DataStorage
-    with TelegramService
+    with MessageSender
     with ExecutionContextComponent
     with ActorSystemComponent =>
+
+  private val logger = Logger(getClass)
 
   def updatePrices(): Unit =
     for {stocks <- getStocks

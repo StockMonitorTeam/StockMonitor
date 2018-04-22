@@ -1,51 +1,27 @@
 package stockmonitoringbot.stockpriceservices
 
-import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.Uri.Query
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.unmarshalling.Unmarshal
-import akka.stream.scaladsl.{Keep, Sink, Source}
-import akka.stream.{OverflowStrategy, QueueOfferResult, ThrottleMode}
-import com.typesafe.config.ConfigFactory
 import spray.json.JsValue
-import stockmonitoringbot.{ActorSystemComponent, ExecutionContextComponent}
+import stockmonitoringbot.{ActorSystemComponent, ApiKeys, ExecutionContextComponent}
 
-import scala.concurrent.duration._
-import scala.concurrent.{Future, Promise}
-import scala.language.postfixOps
-import scala.util.{Failure, Success, Try}
+import scala.concurrent.Future
+import scala.util.{Failure, Try}
 
 /**
   * Created by amir.
   */
 trait AlphavantageStockPriceService extends StockPriceService {
-  self: ActorSystemComponent with ExecutionContextComponent =>
+  self: ActorSystemComponent
+    with ExecutionContextComponent
+    with HttpRequestExecutor
+    with ApiKeys =>
 
-  private val apiKey: String = ConfigFactory.load().getString("StockMonitor.Alphavantage.apikey")
+  private val apiKey: String = getKey("StockMonitor.Alphavantage.apikey")
 
   //https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol=MSFT&interval=1min&apikey=demo
-  private val ApiURL = "www.alphavantage.co"
   private val stockPriceEndPoint = "/query"
-
-  private val pool = Http().cachedHostConnectionPoolHttps[Promise[HttpResponse]](host = ApiURL)
-  private val queue = Source.queue[(HttpRequest, Promise[HttpResponse])](1000, OverflowStrategy.dropHead)
-    .throttle(1, 1 second, 1, ThrottleMode.Shaping)
-    .via(pool)
-    .toMat(Sink.foreach {
-      case ((Success(resp), p)) => p.success(resp)
-      case ((Failure(e), p)) => p.failure(e)
-    })(Keep.left)
-    .run
-
-  private def queueRequest(request: HttpRequest): Future[HttpResponse] = {
-    val responsePromise = Promise[HttpResponse]()
-    queue.offer(request -> responsePromise).flatMap {
-      case QueueOfferResult.Enqueued => responsePromise.future
-      case QueueOfferResult.Dropped => Future.failed(new RuntimeException("Queue overflowed. Try again later."))
-      case QueueOfferResult.Failure(ex) => Future.failed(ex)
-      case QueueOfferResult.QueueClosed => Future.failed(new RuntimeException("Queue was closed (pool shut down) while running the request. Try again later."))
-    }
-  }
 
   private def stockPriceRequest(stockName: String): HttpRequest = {
     val params = Map("function" -> "TIME_SERIES_INTRADAY",
@@ -77,7 +53,7 @@ trait AlphavantageStockPriceService extends StockPriceService {
 
   override def getStockPriceInfo(stockName: String): Future[StockInfo] = {
     import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport.sprayJsValueUnmarshaller
-    queueRequest(stockPriceRequest(stockName)).flatMap({
+    executeRequest(stockPriceRequest(stockName)).flatMap({
       case HttpResponse(StatusCodes.OK, _, entity, _) =>
         Unmarshal(entity).to[JsValue].flatMap(result => Future.fromTry(parseResult(result)))
       case HttpResponse(code, _, entity, _) =>

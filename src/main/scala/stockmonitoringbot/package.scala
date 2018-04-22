@@ -1,5 +1,6 @@
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
+import com.typesafe.config.ConfigFactory
 
 import scala.concurrent.ExecutionContext
 
@@ -25,6 +26,16 @@ package object stockmonitoringbot {
   trait ExecutionContextImpl extends ExecutionContextComponent {
     self: ActorSystemComponent =>
     override implicit lazy val executionContext: ExecutionContext = system.dispatcher
+  }
+
+  trait ApiKeys {
+    def getKey(keyPath: String): String
+  }
+
+  trait ApiKeysImpl extends ApiKeys {
+    private lazy val config = ConfigFactory.load()
+
+    def getKey(keyPath: String): String = config.getString(keyPath)
   }
 
 }

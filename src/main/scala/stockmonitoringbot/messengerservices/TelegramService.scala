@@ -1,13 +1,12 @@
 package stockmonitoringbot.messengerservices
 
 import akka.actor.{ActorRef, PoisonPill}
-import com.typesafe.config.ConfigFactory
 import info.mukel.telegrambot4s.api._
 import info.mukel.telegrambot4s.api.declarative.Commands
-import info.mukel.telegrambot4s.methods._
+import info.mukel.telegrambot4s.methods.SendMessage
 import stockmonitoringbot.datastorage.DataStorage
 import stockmonitoringbot.messengerservices.UserActor.IncomingMessage
-import stockmonitoringbot.{ActorSystemComponent, ExecutionContextComponent}
+import stockmonitoringbot.{ActorSystemComponent, ApiKeys, ExecutionContextComponent}
 
 import scala.collection.mutable
 import scala.util.{Failure, Success}
@@ -17,10 +16,14 @@ import scala.util.{Failure, Success}
   */
 trait TelegramService extends TelegramBot
   with Polling
-  with Commands {
-  self: ExecutionContextComponent with ActorSystemComponent with DataStorage =>
+  with Commands
+  with MessageSender {
+  self: ExecutionContextComponent
+    with ActorSystemComponent
+    with DataStorage
+    with ApiKeys =>
 
-  override val token: String = ConfigFactory.load().getString("StockMonitor.Telegram.apitoken")
+  override val token: String = getKey("StockMonitor.Telegram.apitoken")
 
   logger.info("starting telegram bot")
 
@@ -49,11 +52,10 @@ trait TelegramService extends TelegramBot
       } user ! IncomingMessage(messageText)
   }
 
-  def send(msg: SendMessage): Unit = {
-    request(msg).onComplete {
-      case Success(_) =>
-      case Failure(exception) =>
-        logger.error(s"Can't deliver message: $exception")
-    }
+  override def send(message: SendMessage): Unit = request(message).onComplete {
+    case Success(_) =>
+    case Failure(exception) =>
+      logger.error(s"Can't deliver message: $exception")
   }
+
 }
