@@ -1,13 +1,18 @@
 package stockmonitoringbot.stockpriceservices
 
+import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.Uri.Query
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.unmarshalling.Unmarshal
+import akka.stream.scaladsl.{Flow, Keep, Sink, Source}
+import akka.stream.{OverflowStrategy, QueueOfferResult, ThrottleMode}
 import spray.json.JsValue
 import stockmonitoringbot.{ActorSystemComponent, ApiKeys, ExecutionContextComponent}
 
-import scala.concurrent.Future
-import scala.util.{Failure, Try}
+import scala.concurrent.duration._
+import scala.concurrent.{Future, Promise}
+import scala.language.postfixOps
+import scala.util.{Failure, Success, Try}
 
 /**
   * Created by amir.
@@ -15,12 +20,35 @@ import scala.util.{Failure, Try}
 trait AlphavantageStockPriceService extends StockPriceService {
   self: ActorSystemComponent
     with ExecutionContextComponent
-    with HttpRequestExecutor
     with ApiKeys =>
 
+  private val ApiURL = "www.alphavantage.co"
+  private val endPoint = "/query"
   private val apiKey: String = getKey("StockMonitor.Alphavantage.apikey")
 
-  private val endPoint = "/query"
+  lazy val queriesPerSecond = 1
+
+  lazy val pool: Flow[(HttpRequest, Promise[HttpResponse]), (Try[HttpResponse], Promise[HttpResponse]), Any] =
+    Http().cachedHostConnectionPoolHttps[Promise[HttpResponse]](ApiURL)
+
+  private val queue = Source.queue[(HttpRequest, Promise[HttpResponse])](1000, OverflowStrategy.dropHead)
+    .throttle(queriesPerSecond, 1 second, 1, ThrottleMode.Shaping)
+    .via(pool)
+    .toMat(Sink.foreach {
+      case ((Success(resp), p)) => p.success(resp)
+      case ((Failure(e), p)) => p.failure(e)
+    })(Keep.left)
+    .run
+
+  private def executeRequest(request: HttpRequest): Future[HttpResponse] = {
+    val responsePromise = Promise[HttpResponse]()
+    queue.offer(request -> responsePromise).flatMap {
+      case QueueOfferResult.Enqueued => responsePromise.future
+      case QueueOfferResult.Dropped => Future.failed(new RuntimeException("Queue overflowed. Try again later."))
+      case QueueOfferResult.Failure(ex) => Future.failed(ex)
+      case QueueOfferResult.QueueClosed => Future.failed(new RuntimeException("Queue was closed (pool shut down) while running the request. Try again later."))
+    }
+  }
 
   import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport.sprayJsValueUnmarshaller
   import spray.json.DefaultJsonProtocol._

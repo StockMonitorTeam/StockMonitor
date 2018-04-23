@@ -2,7 +2,7 @@ package stockmonitoringbot
 
 import stockmonitoringbot.datastorage.DataStorageWithStockInfoLoad
 import stockmonitoringbot.messengerservices.TelegramService
-import stockmonitoringbot.stockpriceservices.{AlphavantageHttpRequestExecutor, AlphavantageStockPriceService}
+import stockmonitoringbot.stockpriceservices.AlphavantageStockPriceService
 
 /**
   * Created by amir.
@@ -13,7 +13,6 @@ object Main extends App {
     with StockMonitoringBot
     with DataStorageWithStockInfoLoad
     with AlphavantageStockPriceService
-    with AlphavantageHttpRequestExecutor
     with TelegramService
     with ExecutionContextImpl
     with ActorSystemComponentImpl

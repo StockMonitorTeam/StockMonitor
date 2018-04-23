@@ -1,41 +1,42 @@
 package stockmonitoringbot.stockpriceservices
 
 import akka.http.scaladsl.model._
+import akka.stream.scaladsl.Flow
 import org.scalatest.{FlatSpec, Matchers}
 import stockmonitoringbot.{ActorSystemComponentImpl, ApiKeys, ExecutionContextImpl}
 
-import scala.concurrent.duration.Duration
+import scala.collection.concurrent.{Map, TrieMap}
+import scala.concurrent.duration._
 import scala.concurrent.{Await, Future, Promise}
-import scala.util.Success
+import scala.language.postfixOps
+import scala.util.{Success, Try}
 
 /**
   * Created by amir.
   */
 
 class AlphavantageStockPriceServiceTest extends FlatSpec with Matchers {
-  var currentRequest: HttpRequest = _
-  var currentPromise: Promise[HttpResponse] = _
+  var currentRequests: Map[HttpRequest, Promise[HttpResponse]] = TrieMap.empty
 
   val apiKey = "123"
-
-  trait HttpRequestExecutorMock extends HttpRequestExecutor {
-    override def executeRequest(request: HttpRequest): Future[HttpResponse] = {
-      currentRequest = request
-      currentPromise = Promise()
-      currentPromise.future
-    }
-  }
 
   trait ApiKeysMock extends ApiKeys {
     override def getKey(keyPath: String): String = apiKey
   }
 
-  val stockPriceService = new {}
+  private val stockPriceService = new {}
     with AlphavantageStockPriceService
     with ActorSystemComponentImpl
     with ExecutionContextImpl
-    with HttpRequestExecutorMock
-    with ApiKeysMock
+    with ApiKeysMock {
+    override lazy val queriesPerSecond = 100
+    override lazy val pool: Flow[(HttpRequest, Promise[HttpResponse]), (Try[HttpResponse], Promise[HttpResponse]), Any] =
+      Flow.apply[(HttpRequest, Promise[HttpResponse])].mapAsyncUnordered(4) { in =>
+        val currentPromise = Promise[HttpResponse]()
+        currentRequests.put(in._1, currentPromise)
+        currentPromise.future.map(response => (Try(response), in._2))
+      }
+  }
 
   //////////////SINGLE REQUEST TESTS
 
@@ -76,32 +77,24 @@ class AlphavantageStockPriceServiceTest extends FlatSpec with Matchers {
       |     }
       |  }""".stripMargin
 
-  "AlphavantageStockPriceService" should "create correct single stock info HttpRequest" in {
-    stockPriceService.getStockPriceInfo(stock)
-    currentRequest shouldBe
-      HttpRequest(uri = s"/query?function=TIME_SERIES_INTRADAY&symbol=$stock&interval=1min&apikey=$apiKey")
-  }
 
-  "AlphavantageStockPriceService" should "parse correctly single stock info json" in {
+  "AlphavantageStockPriceService" should "make correct request and correctly parse response in \"getStockPriceInfo\"" in {
     val result: Future[StockInfo] = stockPriceService.getStockPriceInfo(stock)
-    currentPromise.complete(Success(HttpResponse(
+    val expectedRequest = HttpRequest(uri = s"/query?function=TIME_SERIES_INTRADAY&symbol=$stock&interval=1min&apikey=$apiKey")
+    Thread.sleep(100)
+    currentRequests.get(expectedRequest) should not be None
+    currentRequests(expectedRequest).complete(Success(HttpResponse(
       entity = HttpEntity.apply(responseEntity).withContentType(ContentTypes.`application/json`))))
-    Await.result(result, Duration.Inf) shouldBe
+    Await.result(result, 1 second) shouldBe
       DetailedStockInfo(stock, 94.9200, 94.9300, 94.8350, 94.8500, 29033,
         parseZonedDateTime("2018-04-20 15:05:00", "US/Eastern"))
-  }
-
-  "AlphavantageStockPriceService" should "fail if service is unavailable" in {
-    val result = stockPriceService.getStockPriceInfo(stock)
-    currentPromise.complete(Success(HttpResponse(status = StatusCodes.BadRequest)))
-    an[Exception] should be thrownBy Await.result(result, Duration.Inf)
   }
 
   //////////////BATCH REQUEST TESTS
 
   val batch = Seq("MSFT", "YNDX", "BAC")
 
-  val batchResponse =
+  val batchResponse: String =
     """{
       |    "Meta Data": {
       |        "1. Information": "Batch Stock Market Quotes",
@@ -130,17 +123,14 @@ class AlphavantageStockPriceServiceTest extends FlatSpec with Matchers {
       |    ]
       |}""".stripMargin
 
-  "AlphavantageStockPriceService" should "create correct batch info HttpRequest" in {
-    stockPriceService.getBatchPrices(batch)
-    currentRequest shouldBe
-      HttpRequest(uri = s"/query?function=BATCH_STOCK_QUOTES&symbols=MSFT,YNDX,BAC&apikey=$apiKey")
-  }
-
-  "AlphavantageStockPriceService" should "parse correctly batch info json" in {
+  "AlphavantageStockPriceService" should "make correct request and correctly parse response in \"getBatchPrices\"" in {
     val result = stockPriceService.getBatchPrices(batch)
-    currentPromise.complete(Success(HttpResponse(
+    val expectedRequest = HttpRequest(uri = s"/query?function=BATCH_STOCK_QUOTES&symbols=MSFT,YNDX,BAC&apikey=$apiKey")
+    Thread.sleep(100)
+    currentRequests.get(expectedRequest) should not be None
+    currentRequests(expectedRequest).complete(Success(HttpResponse(
       entity = HttpEntity.apply(batchResponse).withContentType(ContentTypes.`application/json`))))
-    Await.result(result, Duration.Inf) should contain theSameElementsAs
+    Await.result(result, 1 second) should contain theSameElementsAs
       Seq(BaseStockInfo("MSFT", 95.8200, 8412698, parseZonedDateTime("2018-04-23 12:16:03", "US/Eastern")),
         BaseStockInfo("YNDX", 34.2900, 3540531, parseZonedDateTime("2018-04-23 12:15:46", "US/Eastern")),
         BaseStockInfo("BAC", 30.3700, 21796573, parseZonedDateTime("2018-04-23 12:16:03", "US/Eastern"))
@@ -151,12 +141,6 @@ class AlphavantageStockPriceServiceTest extends FlatSpec with Matchers {
 
   val from = "USD"
   val to = "RUB"
-
-  "AlphavantageStockPriceService" should "create correct exchange info HttpRequest" in {
-    stockPriceService.getCurrencyExchangeRate(from, to)
-    currentRequest shouldBe HttpRequest(
-      uri = s"/query?function=CURRENCY_EXCHANGE_RATE&from_currency=$from&to_currency=$to&apikey=$apiKey")
-  }
 
   val currencyExchangeResponseEntity: String =
     """{
@@ -171,18 +155,17 @@ class AlphavantageStockPriceServiceTest extends FlatSpec with Matchers {
       |    }
       |}""".stripMargin
 
-  "AlphavantageStockPriceService" should "parse correctly exchange info json" in {
+  "AlphavantageStockPriceService" should "make correct request and correctly parse response in \"getCurrencyExchangeRate\"" in {
     val result = stockPriceService.getCurrencyExchangeRate(from, to)
-    currentPromise.complete(Success(HttpResponse(
+    val expectedRequest = HttpRequest(uri = s"/query?function=CURRENCY_EXCHANGE_RATE&from_currency=$from&to_currency=$to&apikey=$apiKey")
+    Thread.sleep(100)
+    currentRequests.get(expectedRequest) should not be None
+    currentRequests(expectedRequest).complete(Success(HttpResponse(
       entity = HttpEntity.apply(currencyExchangeResponseEntity).
         withContentType(ContentTypes.`application/json`))))
-    Await.result(result, Duration.Inf) shouldBe
+    Await.result(result, 1 second) shouldBe
       CurrencyExchangeRateInfo("USD", "United States Dollar",
         "RUB", "Russian Ruble",
         61.81350000, parseZonedDateTime("2018-04-23 15:41:12", "UTC"))
   }
-
-
 }
-
-
