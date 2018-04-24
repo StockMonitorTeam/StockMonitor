@@ -23,5 +23,5 @@ case class DetailedStockInfo(name: String,
 
 case class BaseStockInfo(name: String,
                          price: Double,
-                         valume: Int,
+                         volume: Int,
                          lastRefreshed: ZonedDateTime) extends StockInfo

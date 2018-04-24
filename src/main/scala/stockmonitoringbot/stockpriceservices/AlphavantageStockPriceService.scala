@@ -26,8 +26,9 @@ trait AlphavantageStockPriceService extends StockPriceService {
   private val endPoint = "/query"
   private val apiKey: String = getKey("StockMonitor.Alphavantage.apikey")
 
-  lazy val queriesPerSecond = 1
+  val batchMaxSize = 100
 
+  lazy val queriesPerSecond = 1
   lazy val pool: Flow[(HttpRequest, Promise[HttpResponse]), (Try[HttpResponse], Promise[HttpResponse]), Any] =
     Http().cachedHostConnectionPoolHttps[Promise[HttpResponse]](ApiURL)
 
@@ -126,11 +127,14 @@ trait AlphavantageStockPriceService extends StockPriceService {
   }
 
   override def getBatchPrices(stocks: Seq[String]): Future[Seq[BaseStockInfo]] = {
-    val params = Map("function" -> "BATCH_STOCK_QUOTES",
-      "symbols" -> stocks.mkString(","),
-      "apikey" -> apiKey)
-    val request = HttpRequest(uri = Uri(endPoint).withQuery(Query(params)))
-    execAndParse(request, batchParseResult)
+    //group stocks in chunks by 100, do request for each chunk, then concat them and return
+    Future.traverse[Seq[String], Seq[BaseStockInfo], Iterator](stocks.grouped(batchMaxSize))({ stocksGroup =>
+      val params = Map("function" -> "BATCH_STOCK_QUOTES",
+        "symbols" -> stocksGroup.mkString(","),
+        "apikey" -> apiKey)
+      val request = HttpRequest(uri = Uri(endPoint).withQuery(Query(params)))
+      execAndParse(request, batchParseResult)
+    }).map(_.flatten.toSeq)
   }
 
   override def getCurrencyExchangeRate(from: String, to: String): Future[CurrencyExchangeRateInfo] = {
