@@ -5,7 +5,6 @@ import akka.stream.scaladsl.Flow
 import org.scalatest.{FlatSpec, Matchers}
 import stockmonitoringbot.{ActorSystemComponentImpl, ApiKeys, ExecutionContextImpl}
 
-import scala.collection.concurrent.{Map, TrieMap}
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future, Promise}
 import scala.language.postfixOps
@@ -16,7 +15,8 @@ import scala.util.{Success, Try}
   */
 
 class AlphavantageStockPriceServiceTest extends FlatSpec with Matchers {
-  var currentRequests: Map[HttpRequest, Promise[HttpResponse]] = TrieMap.empty
+  var currentRequest: HttpRequest = _
+  var currentPromise: Promise[HttpResponse] = _
 
   val apiKey = "123"
 
@@ -32,8 +32,8 @@ class AlphavantageStockPriceServiceTest extends FlatSpec with Matchers {
     override lazy val queriesPerSecond = 100
     override lazy val pool: Flow[(HttpRequest, Promise[HttpResponse]), (Try[HttpResponse], Promise[HttpResponse]), Any] =
       Flow.apply[(HttpRequest, Promise[HttpResponse])].mapAsyncUnordered(4) { in =>
-        val currentPromise = Promise[HttpResponse]()
-        currentRequests.put(in._1, currentPromise)
+        currentPromise = Promise[HttpResponse]()
+        currentRequest = in._1
         currentPromise.future.map(response => (Try(response), in._2))
       }
   }
@@ -77,13 +77,12 @@ class AlphavantageStockPriceServiceTest extends FlatSpec with Matchers {
       |     }
       |  }""".stripMargin
 
-
   "AlphavantageStockPriceService" should "make correct request and correctly parse response in \"getStockPriceInfo\"" in {
     val result: Future[StockInfo] = stockPriceService.getStockPriceInfo(stock)
     val expectedRequest = HttpRequest(uri = s"/query?function=TIME_SERIES_INTRADAY&symbol=$stock&interval=1min&apikey=$apiKey")
-    Thread.sleep(100)
-    currentRequests.get(expectedRequest) should not be None
-    currentRequests(expectedRequest).complete(Success(HttpResponse(
+    Thread.sleep(50)
+    currentRequest shouldBe expectedRequest
+    currentPromise.complete(Success(HttpResponse(
       entity = HttpEntity.apply(responseEntity).withContentType(ContentTypes.`application/json`))))
     Await.result(result, 1 second) shouldBe
       DetailedStockInfo(stock, 94.9200, 94.9300, 94.8350, 94.8500, 29033,
@@ -126,15 +125,22 @@ class AlphavantageStockPriceServiceTest extends FlatSpec with Matchers {
   "AlphavantageStockPriceService" should "make correct request and correctly parse response in \"getBatchPrices\"" in {
     val result = stockPriceService.getBatchPrices(batch)
     val expectedRequest = HttpRequest(uri = s"/query?function=BATCH_STOCK_QUOTES&symbols=MSFT,YNDX,BAC&apikey=$apiKey")
-    Thread.sleep(100)
-    currentRequests.get(expectedRequest) should not be None
-    currentRequests(expectedRequest).complete(Success(HttpResponse(
+    Thread.sleep(50)
+    currentRequest shouldBe expectedRequest
+    currentPromise.complete(Success(HttpResponse(
       entity = HttpEntity.apply(batchResponse).withContentType(ContentTypes.`application/json`))))
     Await.result(result, 1 second) should contain theSameElementsAs
       Seq(BaseStockInfo("MSFT", 95.8200, 8412698, parseZonedDateTime("2018-04-23 12:16:03", "US/Eastern")),
         BaseStockInfo("YNDX", 34.2900, 3540531, parseZonedDateTime("2018-04-23 12:15:46", "US/Eastern")),
         BaseStockInfo("BAC", 30.3700, 21796573, parseZonedDateTime("2018-04-23 12:16:03", "US/Eastern"))
       )
+  }
+
+  "AlphavantageStockPriceService" should "shouldn't make any requests if batch is empty in \"getBatchPrices\"" in {
+    currentRequest = null
+    stockPriceService.getBatchPrices(Seq.empty)
+    Thread.sleep(50)
+    currentRequest shouldBe null
   }
 
   //////////////CURRENCY EXCHANGE TESTS
@@ -158,9 +164,9 @@ class AlphavantageStockPriceServiceTest extends FlatSpec with Matchers {
   "AlphavantageStockPriceService" should "make correct request and correctly parse response in \"getCurrencyExchangeRate\"" in {
     val result = stockPriceService.getCurrencyExchangeRate(from, to)
     val expectedRequest = HttpRequest(uri = s"/query?function=CURRENCY_EXCHANGE_RATE&from_currency=$from&to_currency=$to&apikey=$apiKey")
-    Thread.sleep(100)
-    currentRequests.get(expectedRequest) should not be None
-    currentRequests(expectedRequest).complete(Success(HttpResponse(
+    Thread.sleep(50)
+    currentRequest shouldBe expectedRequest
+    currentPromise.complete(Success(HttpResponse(
       entity = HttpEntity.apply(currencyExchangeResponseEntity).
         withContentType(ContentTypes.`application/json`))))
     Await.result(result, 1 second) shouldBe

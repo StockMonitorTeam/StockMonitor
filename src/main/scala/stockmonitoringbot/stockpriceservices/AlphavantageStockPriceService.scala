@@ -127,14 +127,17 @@ trait AlphavantageStockPriceService extends StockPriceService {
   }
 
   override def getBatchPrices(stocks: Seq[String]): Future[Seq[BaseStockInfo]] = {
+    if (stocks.isEmpty)
+      Future.successful(Seq.empty)
+    else
     //group stocks in chunks by 100, do request for each chunk, then concat them and return
-    Future.traverse[Seq[String], Seq[BaseStockInfo], Iterator](stocks.grouped(batchMaxSize))({ stocksGroup =>
-      val params = Map("function" -> "BATCH_STOCK_QUOTES",
-        "symbols" -> stocksGroup.mkString(","),
-        "apikey" -> apiKey)
-      val request = HttpRequest(uri = Uri(endPoint).withQuery(Query(params)))
-      execAndParse(request, batchParseResult)
-    }).map(_.flatten.toSeq)
+      Future.traverse[Seq[String], Seq[BaseStockInfo], Iterator](stocks.grouped(batchMaxSize))({ stocksGroup =>
+        val params = Map("function" -> "BATCH_STOCK_QUOTES",
+          "symbols" -> stocksGroup.mkString(","),
+          "apikey" -> apiKey)
+        val request = HttpRequest(uri = Uri(endPoint).withQuery(Query(params)))
+        execAndParse(request, batchParseResult)
+      }).map(_.flatten.toSeq)
   }
 
   override def getCurrencyExchangeRate(from: String, to: String): Future[CurrencyExchangeRateInfo] = {
