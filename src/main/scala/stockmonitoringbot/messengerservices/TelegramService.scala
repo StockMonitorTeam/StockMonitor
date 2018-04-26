@@ -15,7 +15,7 @@ import scala.util.{Failure, Success}
   * Created by amir.
   */
 trait TelegramService extends TelegramBot
-  with Polling
+  with Webhook
   with Commands
   with MessageSender {
   self: ExecutionContextComponent
@@ -24,6 +24,8 @@ trait TelegramService extends TelegramBot
     with ApiKeys =>
 
   override val token: String = getKey("StockMonitor.Telegram.apitoken")
+  override val port: Int = getKey("StockMonitor.Telegram.port").toInt
+  override val webhookUrl: String = getKey("StockMonitor.Telegram.url")
 
   logger.info("starting telegram bot")
 

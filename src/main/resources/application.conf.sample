@@ -4,5 +4,7 @@ StockMonitor {
   }
   Telegram {
     apitoken = ""
+    port = "1337"
+    url = ""
   }
 }
