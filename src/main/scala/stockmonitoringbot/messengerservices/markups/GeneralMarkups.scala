@@ -43,7 +43,8 @@ object GeneralMarkups {
   val notificationsMenuMarkup = customKeyboard(Seq(
     Seq(KeyboardButton(Buttons.notificationGet)),
     Seq(KeyboardButton(Buttons.notificationAdd)),
-    Seq(KeyboardButton(Buttons.notificationDel))
+    Seq(KeyboardButton(Buttons.notificationDel)),
+    Seq(KeyboardButton(Buttons.backToMain))
   ))
 
   def notificationToString(notification: Notification): String = {

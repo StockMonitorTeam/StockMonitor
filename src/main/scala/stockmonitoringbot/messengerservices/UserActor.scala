@@ -28,6 +28,11 @@ class UserActor(userId: Long, telegramService: MessageSender, notificationServic
     sendMessageToUser(GeneralTexts.INTRO_MESSAGE, GeneralMarkups.startMenuMarkup)
   }
 
+  def common : Receive = {
+    case IncomingMessage(Buttons.backToMain) =>
+      returnToStartMenu()
+  }
+
   override def receive: Receive = startMenu
 
   def returnToStartMenu(): Unit = {
@@ -35,7 +40,7 @@ class UserActor(userId: Long, telegramService: MessageSender, notificationServic
     context become startMenu
   }
 
-  def startMenu: Receive = {
+  def startMenu: Receive = common orElse {
     case IncomingMessage(Buttons.stock) =>
       sendMessageToUser(GeneralTexts.STOCK_INTRO_MESSAGE, GeneralMarkups.stockMarkup)
       context become waitForStock
@@ -49,9 +54,7 @@ class UserActor(userId: Long, telegramService: MessageSender, notificationServic
       context become notificationsMenu
   }
 
-  def waitForStock: Receive = {
-    case IncomingMessage(Buttons.backToMain) =>
-      returnToStartMenu()
+  def waitForStock: Receive = common orElse {
 
     case IncomingMessage(stockName(name)) => {
       logger.info(s"Got message : $name")
@@ -111,7 +114,9 @@ class UserActor(userId: Long, telegramService: MessageSender, notificationServic
       context become Actor.emptyBehavior
   }
 
-  def notificationsMenu: Receive = {
+  def notificationsMenu: Receive = common orElse {
+//    case IncomingMessage(Buttons.backToMain) =>
+//      returnToStartMenu()
     case IncomingMessage(Buttons.notificationGet) =>
       notificationService.getNotifications(userId).onComplete {
         case Success(result) =>
