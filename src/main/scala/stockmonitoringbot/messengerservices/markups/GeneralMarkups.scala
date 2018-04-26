@@ -7,7 +7,7 @@ object Buttons {
 
   val stock = "📈 Акции"
   val currency = "💰 Валюта"
-  val collection = "💼 Мои портфели"
+  val portfolio = "💼 Мои портфели"
   val notifications = "⏱ Регулярные отчёты"
   val triggers = "🚨 События триггеры"
   val info = "❓ Информация"
@@ -16,6 +16,9 @@ object Buttons {
   val notificationGet = "⏱ Список оповещений"
   val notificationAdd = "➕ Новое оповещение"
   val notificationDel = "❌ Удалить оповещения"
+
+  val portfolioCreate = "➕ Создать новый портфель"
+  val portfolioDelete = "❌ Удалить портфель"
 
 }
 
@@ -30,13 +33,20 @@ object GeneralMarkups {
 
   val startMenuMarkup = customKeyboard(Seq(
       Seq(KeyboardButton(Buttons.stock), KeyboardButton(Buttons.currency)),
-      Seq(KeyboardButton(Buttons.collection)),
+      Seq(KeyboardButton(Buttons.portfolio)),
       Seq(KeyboardButton(Buttons.notifications), KeyboardButton(Buttons.triggers)),
       Seq(KeyboardButton(Buttons.info))
     ))
 
   val stockMarkup = customKeyboard(Seq(
-    Seq(KeyboardButton(Buttons.collection), KeyboardButton(Buttons.currency)),
+    Seq(KeyboardButton(Buttons.portfolio), KeyboardButton(Buttons.currency)),
+    Seq(KeyboardButton(Buttons.backToMain))
+  ))
+
+  val portfolioMarkup = customKeyboard(Seq(
+    Seq(KeyboardButton(Buttons.portfolioCreate)),
+    Seq(KeyboardButton(Buttons.stock), KeyboardButton(Buttons.currency)),
+    Seq(KeyboardButton(Buttons.notifications), KeyboardButton(Buttons.triggers)),
     Seq(KeyboardButton(Buttons.backToMain))
   ))
 

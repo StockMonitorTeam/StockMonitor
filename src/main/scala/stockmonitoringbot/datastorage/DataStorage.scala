@@ -27,4 +27,8 @@ trait DataStorage {
 
   def getNotifications(userId: Long): Future[Seq[Notification]]
 
+  def getPortfolios(userId: Long): Future[Seq[Portfolio]]
+
+  def isPortfoliosExist(userId: Long): Future[Boolean]
+
 }

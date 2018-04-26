@@ -1,16 +1,15 @@
 package stockmonitoringbot.messengerservices
 
 import akka.actor.{Actor, Props}
+import akka.event.Logging
 import info.mukel.telegrambot4s.methods.SendMessage
-import info.mukel.telegrambot4s.models.{KeyboardButton, ReplyKeyboardMarkup}
+import info.mukel.telegrambot4s.models.ReplyKeyboardMarkup
 import stockmonitoringbot.datastorage.{DataStorage, FallNotification, Notification, RaiseNotification}
 import stockmonitoringbot.messengerservices.UserActor._
+import stockmonitoringbot.messengerservices.markups.{Buttons, GeneralMarkups, GeneralTexts}
 
 import scala.util.matching.Regex
 import scala.util.{Failure, Success}
-import stockmonitoringbot.messengerservices.markups.{Buttons, GeneralMarkups, GeneralTexts}
-
-import akka.event.Logging
 
 /**
   * Created by amir.
@@ -28,30 +27,50 @@ class UserActor(userId: Long, telegramService: MessageSender, notificationServic
     sendMessageToUser(GeneralTexts.INTRO_MESSAGE, GeneralMarkups.startMenuMarkup)
   }
 
-  def common : Receive = {
-    case IncomingMessage(Buttons.backToMain) =>
-      returnToStartMenu()
-  }
-
-  override def receive: Receive = startMenu
-
   def returnToStartMenu(): Unit = {
     sendMessageToUser(GeneralTexts.MAIN_MENU_GREETING, GeneralMarkups.startMenuMarkup)
     context become startMenu
   }
 
-  def startMenu: Receive = common orElse {
+  // General menu items
+  def common: Receive = {
+
+    case IncomingMessage(Buttons.backToMain) =>
+      returnToStartMenu()
+
     case IncomingMessage(Buttons.stock) =>
       sendMessageToUser(GeneralTexts.STOCK_INTRO_MESSAGE, GeneralMarkups.stockMarkup)
       context become waitForStock
 
-    case IncomingMessage(Buttons.currency) | IncomingMessage(Buttons.collection)
-    | IncomingMessage(Buttons.triggers) | IncomingMessage(Buttons.info) =>
+    case IncomingMessage(Buttons.portfolio) =>
+      notificationService.isPortfoliosExist(userId).onComplete {
+        case Success(true) =>
+          sendMessageToUser(GeneralTexts.PORTFOLIO_GREETING, GeneralMarkups.portfolioMarkup)
+          context become waitForPortfolio
+        case Success(false) =>
+          sendMessageToUser(GeneralTexts.NO_PORTFOLIO_GREETING, GeneralMarkups.portfolioMarkup)
+          context become waitForPortfolio
+        case _ =>
+          returnToStartMenu()
+      }
+
+    case IncomingMessage(Buttons.currency) | IncomingMessage(Buttons.triggers) | IncomingMessage(Buttons.info) =>
       sendMessageToUser(GeneralTexts.UNIMPLEMENTED)
 
+  }
+
+  override def receive: Receive = startMenu
+
+  def startMenu: Receive = common orElse {
     case IncomingMessage(Buttons.notifications) =>
       sendMessageToUser("Notification menu", GeneralMarkups.notificationsMenuMarkup)
       context become notificationsMenu
+  }
+
+  def waitForPortfolio: Receive = common orElse {
+    case IncomingMessage(Buttons.currency) => {
+
+    }
   }
 
   def waitForStock: Receive = common orElse {
@@ -115,8 +134,8 @@ class UserActor(userId: Long, telegramService: MessageSender, notificationServic
   }
 
   def notificationsMenu: Receive = common orElse {
-//    case IncomingMessage(Buttons.backToMain) =>
-//      returnToStartMenu()
+    //    case IncomingMessage(Buttons.backToMain) =>
+    //      returnToStartMenu()
     case IncomingMessage(Buttons.notificationGet) =>
       notificationService.getNotifications(userId).onComplete {
         case Success(result) =>

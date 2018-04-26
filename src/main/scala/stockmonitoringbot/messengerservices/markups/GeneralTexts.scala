@@ -1,9 +1,5 @@
 package stockmonitoringbot.messengerservices.markups
 
-import info.mukel.telegrambot4s.models.{KeyboardButton, ReplyKeyboardMarkup}
-import stockmonitoringbot.datastorage.{FallNotification, Notification, RaiseNotification}
-
-
 object GeneralTexts {
 
   val INTRO_MESSAGE =
@@ -27,13 +23,27 @@ object GeneralTexts {
 
   val printStockPrice = (name: String, price: Double) =>
     s"""
-      |Акции $name
-      |Стоимость: $price
+       |Акции $name
+       |Стоимость: $price
     """.stripMargin
 
   val printStockException = (name: String) =>
     s"Ошибка получения информации об акции: $name"
 
   val UNIMPLEMENTED = "В стадии разработки. Приносим извинения за неудобства. 😌"
+
+  val PORTFOLIO_GREETING =
+    """
+      |Портфель – это список ваших акций. Вы сможете следить за суммарной стоимостью акций в портфеле и настраивать оповещения.
+      |
+      |Для добавления выберите соответствующий пункт в меню бота или нажмите /createWatchlist
+    """.stripMargin
+
+  val NO_PORTFOLIO_GREETING =
+    s"""
+       |У вас не создано ни одного портфеля.
+       |
+       |$PORTFOLIO_GREETING
+    """.stripMargin
 
 }

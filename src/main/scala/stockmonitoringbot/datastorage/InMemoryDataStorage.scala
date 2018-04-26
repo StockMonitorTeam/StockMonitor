@@ -13,6 +13,7 @@ trait InMemoryDataStorage extends DataStorage {
   private val stockCurrentPrice: mutable.Map[String, Double] = mutable.HashMap.empty
   private val stockNotifications: mutable.Map[String, mutable.TreeSet[Notification]] = mutable.Map.empty
   private val userNotifications: mutable.Map[Long, mutable.HashSet[Notification]] = mutable.Map.empty
+  private val userPortfolio: mutable.Map[Long, mutable.HashSet[Portfolio]] = mutable.Map.empty
 
   override def addStock(stock: String, price: Double): Future[Unit] = Future(synchronized {
     stockCurrentPrice += stock -> price
@@ -70,6 +71,12 @@ trait InMemoryDataStorage extends DataStorage {
   override def getStocks: Future[Set[String]] = Future(synchronized {
     stockCurrentPrice.keySet.toSet
   })
+
+  override def getPortfolios(userId: Long): Future[Seq[Portfolio]] = Future(synchronized {
+    userPortfolio.getOrElse(userId, Seq()).toSeq
+  })
+
+  override def isPortfoliosExist(userId: Long): Future[Boolean] = getPortfolios(userId) map (x => x.nonEmpty)
 
   def containsStock(stock: String): Future[Boolean] = Future(synchronized {
     stockCurrentPrice.contains(stock)
