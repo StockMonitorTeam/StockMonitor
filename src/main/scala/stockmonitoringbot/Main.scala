@@ -17,7 +17,6 @@ object Main extends App {
     with ExecutionContextImpl
     with ActorSystemComponentImpl
     with ApiKeysImpl
-
   bot.run()
 
 }

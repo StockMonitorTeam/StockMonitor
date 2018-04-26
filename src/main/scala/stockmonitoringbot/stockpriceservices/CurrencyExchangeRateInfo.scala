@@ -9,5 +9,5 @@ case class CurrencyExchangeRateInfo(from: String,
                                     descriptionFrom: String,
                                     to: String,
                                     descriptionTo: String,
-                                    rate: Double,
+                                    rate: BigDecimal,
                                     lastRefreshed: ZonedDateTime)

@@ -2,6 +2,8 @@ package stockmonitoringbot.stockpriceservices
 
 import akka.http.scaladsl.model._
 import akka.stream.scaladsl.Flow
+import org.scalamock.scalatest.MockFactory
+import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{FlatSpec, Matchers}
 import stockmonitoringbot.{ActorSystemComponentImpl, ApiKeys, ExecutionContextImpl}
 
@@ -14,7 +16,7 @@ import scala.util.{Success, Try}
   * Created by amir.
   */
 
-class AlphavantageStockPriceServiceTest extends FlatSpec with Matchers {
+class AlphavantageStockPriceServiceTest extends FlatSpec with Matchers with ScalaFutures with MockFactory {
   var currentRequest: HttpRequest = _
   var currentPromise: Promise[HttpResponse] = _
 
@@ -24,8 +26,7 @@ class AlphavantageStockPriceServiceTest extends FlatSpec with Matchers {
     override def getKey(keyPath: String): String = apiKey
   }
 
-  private val stockPriceService = new {}
-    with AlphavantageStockPriceService
+  private val stockPriceService = new AlphavantageStockPriceService
     with ActorSystemComponentImpl
     with ExecutionContextImpl
     with ApiKeysMock {
@@ -85,8 +86,8 @@ class AlphavantageStockPriceServiceTest extends FlatSpec with Matchers {
     currentPromise.complete(Success(HttpResponse(
       entity = HttpEntity.apply(responseEntity).withContentType(ContentTypes.`application/json`))))
     Await.result(result, 1 second) shouldBe
-      DetailedStockInfo(stock, 94.9200, 94.9300, 94.8350, 94.8500, 29033,
-        parseZonedDateTime("2018-04-20 15:05:00", "US/Eastern"))
+      DetailedStockInfo(stock, BigDecimal("94.9200"), BigDecimal("94.9300"), BigDecimal("94.8350"),
+        BigDecimal("94.8500"), 29033, parseZonedDateTime("2018-04-20 15:05:00", "US/Eastern"))
   }
 
   //////////////BATCH REQUEST TESTS
@@ -130,9 +131,9 @@ class AlphavantageStockPriceServiceTest extends FlatSpec with Matchers {
     currentPromise.complete(Success(HttpResponse(
       entity = HttpEntity.apply(batchResponse).withContentType(ContentTypes.`application/json`))))
     Await.result(result, 1 second) should contain theSameElementsAs
-      Seq(BaseStockInfo("MSFT", 95.8200, 8412698, parseZonedDateTime("2018-04-23 12:16:03", "US/Eastern")),
-        BaseStockInfo("YNDX", 34.2900, 3540531, parseZonedDateTime("2018-04-23 12:15:46", "US/Eastern")),
-        BaseStockInfo("BAC", 30.3700, 21796573, parseZonedDateTime("2018-04-23 12:16:03", "US/Eastern"))
+      Seq(BaseStockInfo("MSFT", BigDecimal("95.8200"), 8412698, parseZonedDateTime("2018-04-23 12:16:03", "US/Eastern")),
+        BaseStockInfo("YNDX", BigDecimal("34.2900"), 3540531, parseZonedDateTime("2018-04-23 12:15:46", "US/Eastern")),
+        BaseStockInfo("BAC", BigDecimal("30.3700"), 21796573, parseZonedDateTime("2018-04-23 12:16:03", "US/Eastern"))
       )
   }
 
@@ -172,6 +173,6 @@ class AlphavantageStockPriceServiceTest extends FlatSpec with Matchers {
     Await.result(result, 1 second) shouldBe
       CurrencyExchangeRateInfo("USD", "United States Dollar",
         "RUB", "Russian Ruble",
-        61.81350000, parseZonedDateTime("2018-04-23 15:41:12", "UTC"))
+        BigDecimal("61.81350000"), parseZonedDateTime("2018-04-23 15:41:12", "UTC"))
   }
 }

@@ -7,6 +7,7 @@ import akka.http.scaladsl.unmarshalling.Unmarshal
 import akka.stream.scaladsl.{Flow, Keep, Sink, Source}
 import akka.stream.{OverflowStrategy, QueueOfferResult, ThrottleMode}
 import spray.json.JsValue
+import stockmonitoringbot.stockpriceservices.exceptions.{JsonParseException, ServerResponseException}
 import stockmonitoringbot.{ActorSystemComponent, ApiKeys, ExecutionContextComponent}
 
 import scala.concurrent.duration._
@@ -32,7 +33,7 @@ trait AlphavantageStockPriceService extends StockPriceService {
   lazy val pool: Flow[(HttpRequest, Promise[HttpResponse]), (Try[HttpResponse], Promise[HttpResponse]), Any] =
     Http().cachedHostConnectionPoolHttps[Promise[HttpResponse]](ApiURL)
 
-  private val queue = Source.queue[(HttpRequest, Promise[HttpResponse])](1000, OverflowStrategy.dropHead)
+  private val queue = Source.queue[(HttpRequest, Promise[HttpResponse])](1000, OverflowStrategy.dropNew)
     .throttle(queriesPerSecond, 1 second, 1, ThrottleMode.Shaping)
     .via(pool)
     .toMat(Sink.foreach {
@@ -62,14 +63,14 @@ trait AlphavantageStockPriceService extends StockPriceService {
       val latestTime = prices.keys.max
       val latestPrice = prices(latestTime).asJsObject.fields
       DetailedStockInfo(stockName,
-        latestPrice("1. open").convertTo[String].toDouble,
-        latestPrice("2. high").convertTo[String].toDouble,
-        latestPrice("3. low").convertTo[String].toDouble,
-        latestPrice("4. close").convertTo[String].toDouble,
+        latestPrice("1. open").convertTo[BigDecimal],
+        latestPrice("2. high").convertTo[BigDecimal],
+        latestPrice("3. low").convertTo[BigDecimal],
+        latestPrice("4. close").convertTo[BigDecimal],
         latestPrice("5. volume").convertTo[String].toInt,
         parseZonedDateTime(latestTime, zone))
     }.recoverWith {
-      case _ => Failure(new Exception(s"Can't parse $json"))
+      case exception => Failure(new JsonParseException(json, exception))
     }
   }
 
@@ -80,12 +81,12 @@ trait AlphavantageStockPriceService extends StockPriceService {
       stocks.map(_.asJsObject.fields).map(json =>
         BaseStockInfo(
           json("1. symbol").convertTo[String],
-          json("2. price").convertTo[String].toDouble,
+          json("2. price").convertTo[BigDecimal],
           json("3. volume").convertTo[String].toInt,
           parseZonedDateTime(json("4. timestamp").convertTo[String], zone))
       )
     }.recoverWith {
-      case _ => Failure(new Exception(s"Can't parse $json"))
+      case exception => Failure(new JsonParseException(json, exception))
     }
   }
 
@@ -98,11 +99,11 @@ trait AlphavantageStockPriceService extends StockPriceService {
         info("2. From_Currency Name").convertTo[String],
         info("3. To_Currency Code").convertTo[String],
         info("4. To_Currency Name").convertTo[String],
-        info("5. Exchange Rate").convertTo[String].toDouble,
+        info("5. Exchange Rate").convertTo[BigDecimal],
         parseZonedDateTime(info("6. Last Refreshed").convertTo[String],
           info("7. Time Zone").convertTo[String]))
     }.recoverWith {
-      case _ => Failure(new Exception(s"Can't parse $json"))
+      case exception => Failure(new JsonParseException(json, exception))
     }
   }
 
@@ -110,10 +111,8 @@ trait AlphavantageStockPriceService extends StockPriceService {
     executeRequest(httpRequest).flatMap({
       case HttpResponse(StatusCodes.OK, _, entity, _) =>
         Unmarshal(entity).to[JsValue].flatMap(result => Future.fromTry(jsonParser(result)))
-      case HttpResponse(code, _, entity, _) =>
-        Unmarshal(entity).to[String].flatMap(message =>
-          Future.failed(new Exception(s"bad request: $code, message: $message"))
-        )
+      case HttpResponse(code, _, _, _) =>
+        Future.failed(new ServerResponseException(code))
     })
   }
 

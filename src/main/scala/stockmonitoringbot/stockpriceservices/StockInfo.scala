@@ -7,21 +7,21 @@ import java.time.ZonedDateTime
   */
 sealed trait StockInfo {
   val name: String
-  val price: Double
+  val price: BigDecimal
   val lastRefreshed: ZonedDateTime
 }
 
 case class DetailedStockInfo(name: String,
-                             open: Double,
-                             high: Double,
-                             low: Double,
-                             close: Double,
+                             open: BigDecimal,
+                             high: BigDecimal,
+                             low: BigDecimal,
+                             close: BigDecimal,
                              volume: Int,
                              lastRefreshed: ZonedDateTime) extends StockInfo {
-  val price: Double = (high + low) / 2 //todo correct formula for stock price
+  val price: BigDecimal = (high + low) / 2 //todo correct formula for stock price
 }
 
 case class BaseStockInfo(name: String,
-                         price: Double,
+                         price: BigDecimal,
                          volume: Int,
                          lastRefreshed: ZonedDateTime) extends StockInfo
