@@ -5,6 +5,8 @@ import stockmonitoringbot.stockpriceservices.StockPriceService
 
 import scala.concurrent.Future
 
+case class PriceInfo(ticker: String, org: String, price: Double)
+
 /**
   * Created by amir.
   */

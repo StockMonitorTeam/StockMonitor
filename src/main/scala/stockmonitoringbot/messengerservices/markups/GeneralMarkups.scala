@@ -11,6 +11,7 @@ object Buttons {
   val notifications = "⏱ Регулярные отчёты"
   val triggers = "🚨 События триггеры"
   val info = "❓ Информация"
+  val backToMain = "⏮ Главное меню"
 
   val notificationGet = "⏱ Список оповещений"
   val notificationAdd = "➕ Новое оповещение"
@@ -20,6 +21,31 @@ object Buttons {
 
 object GeneralMarkups {
 
+  def customKeyboard(keyboard : Seq[Seq[KeyboardButton]],
+             resizeKeyboard : Option[Boolean] = Some(true),
+             oneTimeKeyboard : Option[Boolean] = None,
+             selective : Option[Boolean] = Some(true)): Option[ReplyKeyboardMarkup] = {
+    Some(ReplyKeyboardMarkup(keyboard, resizeKeyboard, oneTimeKeyboard, selective))
+  }
+
+  val startMenuMarkup = customKeyboard(Seq(
+      Seq(KeyboardButton(Buttons.stock), KeyboardButton(Buttons.currency)),
+      Seq(KeyboardButton(Buttons.collection)),
+      Seq(KeyboardButton(Buttons.notifications), KeyboardButton(Buttons.triggers)),
+      Seq(KeyboardButton(Buttons.info))
+    ))
+
+  val stockMarkup = customKeyboard(Seq(
+    Seq(KeyboardButton(Buttons.collection), KeyboardButton(Buttons.currency)),
+    Seq(KeyboardButton(Buttons.backToMain))
+  ))
+
+  val notificationsMenuMarkup = customKeyboard(Seq(
+    Seq(KeyboardButton(Buttons.notificationGet)),
+    Seq(KeyboardButton(Buttons.notificationAdd)),
+    Seq(KeyboardButton(Buttons.notificationDel))
+  ))
+
   def notificationToString(notification: Notification): String = {
     val notificationType = notification.notificationType match {
       case RaiseNotification => ">"
@@ -27,26 +53,6 @@ object GeneralMarkups {
     }
     s"${notification.stock} $notificationType ${notification.price}"
   }
-
-  def markup(keyboard : Seq[Seq[KeyboardButton]],
-             resizeKeyboard : Option[Boolean] = Some(true),
-             oneTimeKeyboard : Option[Boolean] = None,
-             selective : Option[Boolean] = Some(true)): Option[ReplyKeyboardMarkup] = {
-    Some(ReplyKeyboardMarkup(keyboard, resizeKeyboard, oneTimeKeyboard, selective))
-  }
-
-  val startMenuMarkup = markup(Seq(
-      Seq(KeyboardButton(Buttons.stock), KeyboardButton(Buttons.currency)),
-      Seq(KeyboardButton(Buttons.collection)),
-      Seq(KeyboardButton(Buttons.notifications), KeyboardButton(Buttons.triggers)),
-      Seq(KeyboardButton(Buttons.info))
-    ))
-
-  val notificationsMenuMarkup = markup(Seq(
-    Seq(KeyboardButton(Buttons.notificationGet)),
-    Seq(KeyboardButton(Buttons.notificationAdd)),
-    Seq(KeyboardButton(Buttons.notificationDel))
-  ))
 
   def notificationsMarkup(notifications: Seq[Notification]): Option[ReplyKeyboardMarkup] = Some(ReplyKeyboardMarkup.singleColumn(
     notifications.map(notification => KeyboardButton(notificationToString(notification))),

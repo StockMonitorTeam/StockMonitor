@@ -10,12 +10,16 @@ import scala.util.matching.Regex
 import scala.util.{Failure, Success}
 import stockmonitoringbot.messengerservices.markups.{Buttons, GeneralMarkups, GeneralTexts}
 
+import akka.event.Logging
+
 /**
   * Created by amir.
   */
 class UserActor(userId: Long, telegramService: MessageSender, notificationService: DataStorage) extends Actor {
 
   import context.dispatcher
+
+  val logger = Logging(context.system, this)
 
   private def sendMessageToUser(message: String, markup: Option[ReplyKeyboardMarkup] = None): Unit =
     telegramService.send(SendMessage(userId, message, replyMarkup = markup))
@@ -27,30 +31,42 @@ class UserActor(userId: Long, telegramService: MessageSender, notificationServic
   override def receive: Receive = startMenu
 
   def returnToStartMenu(): Unit = {
-    sendMessageToUser("Choose Action: ", GeneralMarkups.startMenuMarkup)
+    sendMessageToUser(GeneralTexts.MAIN_MENU_GREETING, GeneralMarkups.startMenuMarkup)
     context become startMenu
   }
 
   def startMenu: Receive = {
     case IncomingMessage(Buttons.stock) =>
-      sendMessageToUser(GeneralTexts.STOCK_INTRO_MESSAGE)
+      sendMessageToUser(GeneralTexts.STOCK_INTRO_MESSAGE, GeneralMarkups.stockMarkup)
       context become waitForStock
+
+    case IncomingMessage(Buttons.currency) | IncomingMessage(Buttons.collection)
+    | IncomingMessage(Buttons.triggers) | IncomingMessage(Buttons.info) =>
+      sendMessageToUser(GeneralTexts.UNIMPLEMENTED)
+
     case IncomingMessage(Buttons.notifications) =>
       sendMessageToUser("Notification menu", GeneralMarkups.notificationsMenuMarkup)
       context become notificationsMenu
   }
 
   def waitForStock: Receive = {
-    case IncomingMessage(stockName(name)) =>
+    case IncomingMessage(Buttons.backToMain) =>
+      returnToStartMenu()
+
+    case IncomingMessage(stockName(name)) => {
+      logger.info(s"Got message : $name")
       notificationService.getPrice(name).onComplete {
         case Success(price) =>
-          sendMessageToUser(s"$name current price is $price")
-          returnToStartMenu()
+          sendMessageToUser(GeneralTexts.printStockPrice(name, price))
+          context become waitForStock
         case Failure(exception) =>
-          sendMessageToUser(s"$name is not valid stock name $exception")
-          returnToStartMenu()
+          sendMessageToUser(GeneralTexts.printStockException(name))
+          logger.warning(s"$exception")
+          context become waitForStock
       }
       context become Actor.emptyBehavior
+    }
+
   }
 
   def waitForNewNotification: Receive = {
@@ -130,7 +146,7 @@ object UserActor {
 
   case class IncomingMessage(message: String)
 
-  val stockName: Regex = "([A-Z]+)".r
+  val stockName: Regex = "/?([A-Z]+)".r
   val notificationRegex: Regex = "([A-Z]+) ([<>]) ([^ ]+)".r
 
 }

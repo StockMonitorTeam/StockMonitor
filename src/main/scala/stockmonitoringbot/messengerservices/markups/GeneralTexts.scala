@@ -6,18 +6,14 @@ import stockmonitoringbot.datastorage.{FallNotification, Notification, RaiseNoti
 
 object GeneralTexts {
 
-  val getStockPrice = "Get stock price"
-  val notifications = "Notifications"
-  val getActiveNotifications = "Get active notifications"
-  val addNotification = "Add notification"
-  val delNotification = "Delete notification"
-
   val INTRO_MESSAGE =
     """
       |StockMon бот умеет показывать информацию о стоимости акций, позволяет создавать вам свои портфели и контролировать их стоимость при помощи регулярных отчётов и установки оповещений при росте и падении выше порога.
       |
       |Для использования выберите команду в панели меню бота или введите /help.
     """.stripMargin
+
+  val MAIN_MENU_GREETING = "Для продолжения работы выберите команду в панели меню бота или введите /help."
 
   val STOCK_INTRO_MESSAGE =
     """
@@ -28,5 +24,16 @@ object GeneralTexts {
       |/GAZP – Gazprom PAO
       |/YNDX – Yandex N.V
     """.stripMargin
+
+  val printStockPrice = (name: String, price: Double) =>
+    s"""
+      |Акции $name
+      |Стоимость: $price
+    """.stripMargin
+
+  val printStockException = (name: String) =>
+    s"Ошибка получения информации об акции: $name"
+
+  val UNIMPLEMENTED = "В стадии разработки. Приносим извинения за неудобства. 😌"
 
 }
