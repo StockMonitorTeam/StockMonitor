@@ -94,4 +94,11 @@ class AlphavantageStockPriceServiceTest extends FlatSpec with Matchers {
     an[Exception] should be thrownBy Await.result(result, Duration.Inf)
   }
 
+  "AlphavantageStockPriceService" should "return close price for the last segment" in {
+    val result: Future[StockInfo] = stockPriceService.getStockPriceInfo(stock)
+    currentPromise.complete(Success(HttpResponse(
+      entity = HttpEntity.apply(responseEntity).withContentType(ContentTypes.`application/json`))))
+    Await.result(result, Duration.Inf).price shouldBe 94.85
+  }
+
 }
