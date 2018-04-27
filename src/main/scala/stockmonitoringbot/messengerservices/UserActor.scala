@@ -43,11 +43,11 @@ class UserActor(userId: Long,
   def printPortfolios(): Unit = {
     userDataStorage.getUsersPortfolios(userId).onComplete {
       case Success(results) => results match {
-        case portfolios: Seq[Portfolio] if portfolios.nonEmpty =>
-          sendMessageToUser(GeneralTexts.PORTFOLIO_GREETING(portfolios.map(x => x.name).mkString("\n")), GeneralMarkups.portfolioMarkup)
-          context become waitForPortfolio
-        case Nil =>
+        case Seq() =>
           sendMessageToUser(GeneralTexts.NO_PORTFOLIO_GREETING, GeneralMarkups.portfolioMarkup)
+          context become waitForPortfolio
+        case portfolios =>
+          sendMessageToUser(GeneralTexts.PORTFOLIO_GREETING(portfolios.map(x => x.name).mkString("\n")), GeneralMarkups.portfolioMarkup)
           context become waitForPortfolio
       }
       case _ =>
