@@ -86,6 +86,15 @@ class AlphavantageStockPriceServiceTest extends FlatSpec with Matchers with Scal
         BigDecimal("94.8500"), 29033, parseZonedDateTime("2018-04-20 15:05:00", "US/Eastern"))
   }
 
+  "AlphavantageStockPriceService" should "return close price for the last segment" in new TestWiring {
+    stockPriceServiceMock.executeRequest
+      .expects(*)
+      .returning(Future.successful(HttpResponse(
+        entity = HttpEntity.apply(responseEntity).withContentType(ContentTypes.`application/json`))))
+    val result: Future[StockInfo] = stockPriceServiceMock.getStockPriceInfo(stock)
+    result.futureValue.price shouldBe BigDecimal("94.85")
+  }
+
   //////////////BATCH REQUEST TESTS
 
   val batch = Seq("MSFT", "YNDX", "BAC")
@@ -152,15 +161,6 @@ class AlphavantageStockPriceServiceTest extends FlatSpec with Matchers with Scal
     }
     stockPriceServiceMock.getBatchPrices(batch101).failed.futureValue shouldBe a[ServerResponseException]
   }
-
-  "AlphavantageStockPriceService" should "return close price for the last segment" in {
-    val result: Future[StockInfo] = stockPriceService.getStockPriceInfo(stock)
-    currentPromise.complete(Success(HttpResponse(
-      entity = HttpEntity.apply(responseEntity).withContentType(ContentTypes.`application/json`))))
-    Await.result(result, Duration.Inf).price shouldBe 94.85
-  }
-
-}
 
   //////////////CURRENCY EXCHANGE TESTS
 
