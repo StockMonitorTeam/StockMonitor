@@ -3,8 +3,8 @@ package stockmonitoringbot.messengerservices
 import akka.actor.{Actor, Props}
 import akka.event.Logging
 import info.mukel.telegrambot4s.methods.SendMessage
-import info.mukel.telegrambot4s.models.ReplyKeyboardMarkup
-import stockmonitoringbot.datastorage.{DataStorage, FallNotification, Notification, RaiseNotification}
+import info.mukel.telegrambot4s.models.{InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup}
+import stockmonitoringbot.datastorage._
 import stockmonitoringbot.messengerservices.UserActor._
 import stockmonitoringbot.messengerservices.markups.{Buttons, GeneralMarkups, GeneralTexts}
 
@@ -23,6 +23,9 @@ class UserActor(userId: Long, telegramService: MessageSender, notificationServic
   private def sendMessageToUser(message: String, markup: Option[ReplyKeyboardMarkup] = None): Unit =
     telegramService.send(SendMessage(userId, message, replyMarkup = markup))
 
+  private def sendInlineMessageToUser(message: String, markup: Option[InlineKeyboardMarkup]): Unit =
+    telegramService.send(SendMessage(userId, message, replyMarkup = markup))
+
   override def preStart(): Unit = {
     sendMessageToUser(GeneralTexts.INTRO_MESSAGE, GeneralMarkups.startMenuMarkup)
   }
@@ -30,6 +33,21 @@ class UserActor(userId: Long, telegramService: MessageSender, notificationServic
   def returnToStartMenu(): Unit = {
     sendMessageToUser(GeneralTexts.MAIN_MENU_GREETING, GeneralMarkups.startMenuMarkup)
     context become startMenu
+  }
+
+  def printPortfolios(): Unit = {
+    notificationService.getPortfolios(userId).onComplete {
+      case Success(results) => results match {
+        case portfolios: Seq[Portfolio] if portfolios.nonEmpty =>
+          sendMessageToUser(GeneralTexts.PORTFOLIO_GREETING(portfolios.map(x=>x.name).mkString("\n")), GeneralMarkups.portfolioMarkup)
+          context become waitForPortfolio
+        case Nil =>
+          sendMessageToUser(GeneralTexts.NO_PORTFOLIO_GREETING, GeneralMarkups.portfolioMarkup)
+          context become waitForPortfolio
+      }
+      case _ =>
+        returnToStartMenu()
+    }
   }
 
   // General menu items
@@ -43,16 +61,7 @@ class UserActor(userId: Long, telegramService: MessageSender, notificationServic
       context become waitForStock
 
     case IncomingMessage(Buttons.portfolio) =>
-      notificationService.isPortfoliosExist(userId).onComplete {
-        case Success(true) =>
-          sendMessageToUser(GeneralTexts.PORTFOLIO_GREETING, GeneralMarkups.portfolioMarkup)
-          context become waitForPortfolio
-        case Success(false) =>
-          sendMessageToUser(GeneralTexts.NO_PORTFOLIO_GREETING, GeneralMarkups.portfolioMarkup)
-          context become waitForPortfolio
-        case _ =>
-          returnToStartMenu()
-      }
+      printPortfolios()
 
     case IncomingMessage(Buttons.currency) | IncomingMessage(Buttons.triggers) | IncomingMessage(Buttons.info) =>
       sendMessageToUser(GeneralTexts.UNIMPLEMENTED)
@@ -68,9 +77,32 @@ class UserActor(userId: Long, telegramService: MessageSender, notificationServic
   }
 
   def waitForPortfolio: Receive = common orElse {
-    case IncomingMessage(Buttons.currency) => {
-
+    case IncomingMessage(Buttons.portfolioCreate) => {
+      sendMessageToUser(GeneralTexts.INPUT_PORTFOLIO_NAME)
+      context become waitForPortfolioName
     }
+  }
+
+  def waitForPortfolioName: Receive = common orElse {
+    case IncomingMessage(portfolioName(name)) => {
+      sendMessageToUser(GeneralTexts.INPUT_PORTFOLIO_CURRENCY(name))
+      context become waitForPortfolioCurrency(name)
+    }
+    case _ => sendMessageToUser(GeneralTexts.INPUT_PORTFOLIO_NAME_INVALID)
+  }
+
+  def waitForPortfolioCurrency(name: String): Receive = common orElse {
+    case IncomingMessage(currencyName(currency)) => {
+      notificationService.addPortfolio(Portfolio(name, Seq(), userId)).onComplete {
+        case Success(_) =>
+          sendMessageToUser(GeneralTexts.INPUT_PORTFOLIO_CREATED(name, currency))
+          printPortfolios()
+        case _ =>
+          sendMessageToUser(GeneralTexts.PORTFOLIO_CREATE_ERROR)
+          returnToStartMenu()
+      }
+    }
+    case _ => sendMessageToUser(GeneralTexts.INPUT_PORTFOLIO_CURRENCY_INVALID)
   }
 
   def waitForStock: Receive = common orElse {
@@ -172,5 +204,7 @@ object UserActor {
 
   val stockName: Regex = "/?([A-Z]+)".r
   val notificationRegex: Regex = "([A-Z]+) ([<>]) ([^ ]+)".r
+  val portfolioName: Regex = "([a-zA-Z0-9_\\-\\ ]{3,64})".r
+  val currencyName: Regex = "(USD|EUR|RUB)".r
 
 }

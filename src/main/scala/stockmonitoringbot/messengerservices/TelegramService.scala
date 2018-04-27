@@ -2,7 +2,7 @@ package stockmonitoringbot.messengerservices
 
 import akka.actor.{ActorRef, PoisonPill}
 import info.mukel.telegrambot4s.api._
-import info.mukel.telegrambot4s.api.declarative.Commands
+import info.mukel.telegrambot4s.api.declarative.{Callbacks, Commands}
 import info.mukel.telegrambot4s.methods.SendMessage
 import stockmonitoringbot.datastorage.DataStorage
 import stockmonitoringbot.messengerservices.UserActor.IncomingMessage
@@ -53,6 +53,7 @@ trait TelegramService extends TelegramBot
         messageText <- msg.text
       } user ! IncomingMessage(messageText)
   }
+
 
   override def send(message: SendMessage): Unit = request(message).onComplete {
     case Success(_) =>

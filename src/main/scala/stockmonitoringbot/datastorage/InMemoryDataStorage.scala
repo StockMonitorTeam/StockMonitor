@@ -81,4 +81,10 @@ trait InMemoryDataStorage extends DataStorage {
   def containsStock(stock: String): Future[Boolean] = Future(synchronized {
     stockCurrentPrice.contains(stock)
   })
+
+  override def addPortfolio(portfolio: Portfolio): Future[Unit] = Future(synchronized {
+    userPortfolio.getOrElseUpdate(portfolio.userId, mutable.HashSet.empty).add(portfolio)
+  })
+
+
 }

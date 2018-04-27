@@ -31,4 +31,6 @@ trait DataStorage {
 
   def isPortfoliosExist(userId: Long): Future[Boolean]
 
+  def addPortfolio(portfolio: Portfolio): Future[Unit]
+
 }
