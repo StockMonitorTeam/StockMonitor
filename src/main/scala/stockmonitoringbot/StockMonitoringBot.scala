@@ -1,37 +1,47 @@
 package stockmonitoringbot
 
 import com.typesafe.scalalogging.Logger
-import info.mukel.telegrambot4s.methods.SendMessage
-import stockmonitoringbot.datastorage.DataStorage
+import stockmonitoringbot.datastorage.UserDataStorage
 import stockmonitoringbot.messengerservices.MessageSender
 import stockmonitoringbot.stockpriceservices.StockPriceService
+import stockmonitoringbot.stocksandratescache.StocksAndExchangeRatesCache
 
 import scala.concurrent.duration._
 import scala.language.postfixOps
+import scala.util.{Failure, Success}
 
 /**
   * Created by amir.
   */
 trait StockMonitoringBot {
   self: StockPriceService
-    with DataStorage
+    with UserDataStorage
+    with StocksAndExchangeRatesCache
     with MessageSender
     with ExecutionContextComponent
     with ActorSystemComponent =>
 
   private val logger = Logger(getClass)
 
-  def updatePrices(): Unit =
-    for {stocks <- getStocks
-         stockName <- stocks
-         stockInfo <- getStockPriceInfo(stockName)
-         _ = logger.info(s"Updating $stockName, new price is ${stockInfo.price}")
-         triggeredNotifications <- updateStockPrice(stockInfo.name, stockInfo.price.toDouble)
-         triggeredNotification <- triggeredNotifications
-    } {
-      send(SendMessage(triggeredNotification.userId, s"${stockInfo.name} price is ${stockInfo.price} now"))
-    }
+  def updateStockPrices(): Unit = {
+    getBatchPrices(getStocks.toSeq).map(_.foreach(setStockInfo))
+    //todo check triggered notifications and send notifications to users
+  }
 
-  system.scheduler.schedule(1 second, 1 minute)(updatePrices())
+  def updateExchangeRates(): Unit = {
+    getExchangePairs.foreach { pair =>
+      getCurrencyExchangeRate(pair._1, pair._2).onComplete {
+        case Success(exchangeRate) => setExchangeRate(exchangeRate)
+        case Failure(exception) => logger.error(s"Can't update $pair: $exception")
+      }
+    }
+    //todo check triggered notifications and send notifications to users
+  }
+
+  //todo schedule daily notifications
+
+  //update every minute StocksAndExchangeRatesCache
+  system.scheduler.schedule(1 second, 1 minute)(updateStockPrices())
+  system.scheduler.schedule(1 second, 1 minute)(updateExchangeRates())
 
 }

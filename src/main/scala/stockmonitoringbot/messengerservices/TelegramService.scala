@@ -2,10 +2,11 @@ package stockmonitoringbot.messengerservices
 
 import akka.actor.{ActorRef, PoisonPill}
 import info.mukel.telegrambot4s.api._
-import info.mukel.telegrambot4s.api.declarative.{Callbacks, Commands}
+import info.mukel.telegrambot4s.api.declarative.Commands
 import info.mukel.telegrambot4s.methods.SendMessage
-import stockmonitoringbot.datastorage.DataStorage
+import stockmonitoringbot.datastorage.UserDataStorage
 import stockmonitoringbot.messengerservices.UserActor.IncomingMessage
+import stockmonitoringbot.stocksandratescache.StocksAndExchangeRatesCache
 import stockmonitoringbot.{ActorSystemComponent, ApiKeys, ExecutionContextComponent}
 
 import scala.collection.mutable
@@ -20,7 +21,8 @@ trait TelegramService extends TelegramBot
   with MessageSender {
   self: ExecutionContextComponent
     with ActorSystemComponent
-    with DataStorage
+    with UserDataStorage
+    with StocksAndExchangeRatesCache
     with ApiKeys =>
 
   override val token: String = getKey("StockMonitor.Telegram.apitoken")
@@ -38,7 +40,7 @@ trait TelegramService extends TelegramBot
         msg.chat.firstName.get
       }")
       activeUsers.get(msg.chat.id).foreach(_ ! PoisonPill)
-      activeUsers += msg.chat.id -> system.actorOf(UserActor.props(msg.chat.id, this, this))
+      activeUsers += msg.chat.id -> system.actorOf(UserActor.props(msg.chat.id, this, this, this))
   }
 
   onMessage {
@@ -53,7 +55,6 @@ trait TelegramService extends TelegramBot
         messageText <- msg.text
       } user ! IncomingMessage(messageText)
   }
-
 
   override def send(message: SendMessage): Unit = request(message).onComplete {
     case Success(_) =>

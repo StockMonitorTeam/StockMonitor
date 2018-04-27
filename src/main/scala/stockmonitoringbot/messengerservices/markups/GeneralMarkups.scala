@@ -1,7 +1,7 @@
 package stockmonitoringbot.messengerservices.markups
 
 import info.mukel.telegrambot4s.models.{KeyboardButton, ReplyKeyboardMarkup}
-import stockmonitoringbot.datastorage.{FallNotification, Notification, RaiseNotification}
+import stockmonitoringbot.datastorage.models.{FallNotification, RaiseNotification, TriggerNotification}
 
 object Buttons {
 
@@ -57,15 +57,16 @@ object GeneralMarkups {
     Seq(KeyboardButton(Buttons.backToMain))
   ))
 
-  def notificationToString(notification: Notification): String = {
+  def notificationToString(notification: TriggerNotification): String = {
     val notificationType = notification.notificationType match {
       case RaiseNotification => ">"
       case FallNotification => "<"
     }
-    s"${notification.stock} $notificationType ${notification.price}"
+    //todo pattern match on stock/exchange rate/portfolio
+    s"??? $notificationType ${notification.boundPrice}"
   }
 
-  def notificationsMarkup(notifications: Seq[Notification]): Option[ReplyKeyboardMarkup] = Some(ReplyKeyboardMarkup.singleColumn(
+  def notificationsMarkup(notifications: Seq[TriggerNotification]): Option[ReplyKeyboardMarkup] = Some(ReplyKeyboardMarkup.singleColumn(
     notifications.map(notification => KeyboardButton(notificationToString(notification))),
     resizeKeyboard = Some(true),
     oneTimeKeyboard = Some(true)))

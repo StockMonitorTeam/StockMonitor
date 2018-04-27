@@ -3,10 +3,12 @@ package stockmonitoringbot.messengerservices
 import akka.actor.{Actor, Props}
 import akka.event.Logging
 import info.mukel.telegrambot4s.methods.SendMessage
-import info.mukel.telegrambot4s.models.{InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup}
+import info.mukel.telegrambot4s.models.{InlineKeyboardMarkup, ReplyKeyboardMarkup}
 import stockmonitoringbot.datastorage._
+import stockmonitoringbot.datastorage.models._
 import stockmonitoringbot.messengerservices.UserActor._
 import stockmonitoringbot.messengerservices.markups.{Buttons, GeneralMarkups, GeneralTexts}
+import stockmonitoringbot.stocksandratescache.StocksAndExchangeRatesCache
 
 import scala.util.matching.Regex
 import scala.util.{Failure, Success}
@@ -14,7 +16,10 @@ import scala.util.{Failure, Success}
 /**
   * Created by amir.
   */
-class UserActor(userId: Long, telegramService: MessageSender, notificationService: DataStorage) extends Actor {
+class UserActor(userId: Long,
+                telegramService: MessageSender,
+                userDataStorage: UserDataStorage,
+                cache: StocksAndExchangeRatesCache) extends Actor {
 
   import context.dispatcher
 
@@ -36,10 +41,10 @@ class UserActor(userId: Long, telegramService: MessageSender, notificationServic
   }
 
   def printPortfolios(): Unit = {
-    notificationService.getPortfolios(userId).onComplete {
+    userDataStorage.getUsersPortfolios(userId).onComplete {
       case Success(results) => results match {
         case portfolios: Seq[Portfolio] if portfolios.nonEmpty =>
-          sendMessageToUser(GeneralTexts.PORTFOLIO_GREETING(portfolios.map(x=>x.name).mkString("\n")), GeneralMarkups.portfolioMarkup)
+          sendMessageToUser(GeneralTexts.PORTFOLIO_GREETING(portfolios.map(x => x.name).mkString("\n")), GeneralMarkups.portfolioMarkup)
           context become waitForPortfolio
         case Nil =>
           sendMessageToUser(GeneralTexts.NO_PORTFOLIO_GREETING, GeneralMarkups.portfolioMarkup)
@@ -93,7 +98,7 @@ class UserActor(userId: Long, telegramService: MessageSender, notificationServic
 
   def waitForPortfolioCurrency(name: String): Receive = common orElse {
     case IncomingMessage(currencyName(currency)) => {
-      notificationService.addPortfolio(Portfolio(name, Seq(), userId)).onComplete {
+      userDataStorage.addPortfolio(Portfolio(userId, name, USD, Map.empty)).onComplete {
         case Success(_) =>
           sendMessageToUser(GeneralTexts.INPUT_PORTFOLIO_CREATED(name, currency))
           printPortfolios()
@@ -109,9 +114,9 @@ class UserActor(userId: Long, telegramService: MessageSender, notificationServic
 
     case IncomingMessage(stockName(name)) => {
       logger.info(s"Got message : $name")
-      notificationService.getPrice(name).onComplete {
+      cache.getStockInfo(name).onComplete {
         case Success(price) =>
-          sendMessageToUser(GeneralTexts.printStockPrice(name, price))
+          sendMessageToUser(GeneralTexts.printStockPrice(name, price.price.toDouble))
           context become waitForStock
         case Failure(exception) =>
           sendMessageToUser(GeneralTexts.printStockException(name))
@@ -129,10 +134,10 @@ class UserActor(userId: Long, telegramService: MessageSender, notificationServic
         case ">" => RaiseNotification
         case "<" => FallNotification
       }
-      val notification = Notification(stock, price.toDouble, notificationType, userId)
+      val notification = StockTriggerNotification(userId, stock, price.toDouble, notificationType)
       val currentPriceFuture = for {
-        _ <- notificationService.addNotification(notification)
-        price <- notificationService.getPrice(stock)
+        _ <- userDataStorage.addTriggerNotification(notification)
+        price <- cache.getStockInfo(stock)
       } yield price
       currentPriceFuture.onComplete {
         case Success(stockPrice) =>
@@ -153,8 +158,8 @@ class UserActor(userId: Long, telegramService: MessageSender, notificationServic
         case ">" => RaiseNotification
         case "<" => FallNotification
       }
-      val notification = Notification(stock, price.toDouble, notificationType, userId)
-      notificationService.deleteNotification(notification).onComplete {
+      val notification = StockTriggerNotification(userId, stock, price.toDouble, notificationType)
+      userDataStorage.deleteTriggerNotification(notification).onComplete {
         case Success(_) =>
           sendMessageToUser(s"Notification ${GeneralMarkups.notificationToString(notification)} has been deleted")
           returnToStartMenu()
@@ -169,7 +174,7 @@ class UserActor(userId: Long, telegramService: MessageSender, notificationServic
     //    case IncomingMessage(Buttons.backToMain) =>
     //      returnToStartMenu()
     case IncomingMessage(Buttons.notificationGet) =>
-      notificationService.getNotifications(userId).onComplete {
+      userDataStorage.getUsersTriggerNotifications(userId).onComplete {
         case Success(result) =>
           val notifications = result.map(GeneralMarkups.notificationToString)
           sendMessageToUser("Active notifications: \n" + notifications.mkString("\n"))
@@ -183,7 +188,7 @@ class UserActor(userId: Long, telegramService: MessageSender, notificationServic
       sendMessageToUser("Enter notification(for example \"MSFT > 95\"): ")
       context become waitForNewNotification
     case IncomingMessage(Buttons.notificationDel) =>
-      notificationService.getNotifications(userId).onComplete {
+      userDataStorage.getUsersTriggerNotifications(userId).onComplete {
         case Success(result) =>
           sendMessageToUser("Choose notification to delete", GeneralMarkups.notificationsMarkup(result))
           context become waitForNotificationToDelete
@@ -197,8 +202,8 @@ class UserActor(userId: Long, telegramService: MessageSender, notificationServic
 }
 
 object UserActor {
-  def props(id: Long, telegramService: MessageSender, notificationService: DataStorage): Props =
-    Props(new UserActor(id, telegramService, notificationService))
+  def props(id: Long, telegramService: MessageSender, userDataStorage: UserDataStorage, cache: StocksAndExchangeRatesCache): Props =
+    Props(new UserActor(id, telegramService, userDataStorage, cache))
 
   case class IncomingMessage(message: String)
 

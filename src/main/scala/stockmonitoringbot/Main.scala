@@ -1,8 +1,9 @@
 package stockmonitoringbot
 
-import stockmonitoringbot.datastorage.DataStorageWithStockInfoLoad
+import stockmonitoringbot.datastorage.InMemoryUserDataStorage
 import stockmonitoringbot.messengerservices.TelegramService
 import stockmonitoringbot.stockpriceservices.{AlphavantageHttpRequestExecutor, AlphavantageStockPriceService}
+import stockmonitoringbot.stocksandratescache.StocksAndExchangeRatesCacheImpl
 
 /**
   * Created by amir.
@@ -11,7 +12,8 @@ object Main extends App {
 
   val bot = new {}
     with StockMonitoringBot
-    with DataStorageWithStockInfoLoad
+    with InMemoryUserDataStorage
+    with StocksAndExchangeRatesCacheImpl
     with AlphavantageStockPriceService
     with AlphavantageHttpRequestExecutor
     with TelegramService
