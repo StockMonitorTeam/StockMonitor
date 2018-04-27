@@ -47,7 +47,8 @@ class UserActor(userId: Long,
           sendMessageToUser(GeneralTexts.NO_PORTFOLIO_GREETING, GeneralMarkups.portfolioMarkup)
           context become waitForPortfolio
         case portfolios =>
-          sendMessageToUser(GeneralTexts.PORTFOLIO_GREETING(portfolios.map(x => x.name).mkString("\n")), GeneralMarkups.portfolioMarkup)
+          sendInlineMessageToUser(GeneralTexts.PORTFOLIO_LIST, GeneralMarkups.generatePortfolioList(userId, portfolios))
+//          sendMessageToUser(GeneralTexts.PORTFOLIO_GREETING(portfolios.map(x => x.name).mkString("\n")), GeneralMarkups.portfolioMarkup)
           context become waitForPortfolio
       }
       case _ =>
