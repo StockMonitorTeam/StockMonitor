@@ -8,6 +8,9 @@ import stockmonitoringbot.messengerservices.UserActor._
 
 import scala.util.matching.Regex
 import scala.util.{Failure, Success}
+import stockmonitoringbot.messengerservices.markups.{Buttons, GeneralMarkups, GeneralTexts}
+
+import akka.event.Logging
 
 /**
   * Created by amir.
@@ -16,40 +19,57 @@ class UserActor(userId: Long, telegramService: MessageSender, notificationServic
 
   import context.dispatcher
 
+  val logger = Logging(context.system, this)
+
   private def sendMessageToUser(message: String, markup: Option[ReplyKeyboardMarkup] = None): Unit =
     telegramService.send(SendMessage(userId, message, replyMarkup = markup))
 
   override def preStart(): Unit = {
-    sendMessageToUser("Hello, choose action:", startMenuMarkup)
+    sendMessageToUser(GeneralTexts.INTRO_MESSAGE, GeneralMarkups.startMenuMarkup)
+  }
+
+  def common : Receive = {
+    case IncomingMessage(Buttons.backToMain) =>
+      returnToStartMenu()
   }
 
   override def receive: Receive = startMenu
 
   def returnToStartMenu(): Unit = {
-    sendMessageToUser("Choose Action: ", startMenuMarkup)
+    sendMessageToUser(GeneralTexts.MAIN_MENU_GREETING, GeneralMarkups.startMenuMarkup)
     context become startMenu
   }
 
-  def startMenu: Receive = {
-    case IncomingMessage(`getStockPrice`) =>
-      sendMessageToUser("Enter stock name")
+  def startMenu: Receive = common orElse {
+    case IncomingMessage(Buttons.stock) =>
+      sendMessageToUser(GeneralTexts.STOCK_INTRO_MESSAGE, GeneralMarkups.stockMarkup)
       context become waitForStock
-    case IncomingMessage(`notifications`) =>
-      sendMessageToUser("Notification menu", notificationsMenuMarkup)
+
+    case IncomingMessage(Buttons.currency) | IncomingMessage(Buttons.collection)
+    | IncomingMessage(Buttons.triggers) | IncomingMessage(Buttons.info) =>
+      sendMessageToUser(GeneralTexts.UNIMPLEMENTED)
+
+    case IncomingMessage(Buttons.notifications) =>
+      sendMessageToUser("Notification menu", GeneralMarkups.notificationsMenuMarkup)
       context become notificationsMenu
   }
 
-  def waitForStock: Receive = {
-    case IncomingMessage(stockName(name)) =>
+  def waitForStock: Receive = common orElse {
+
+    case IncomingMessage(stockName(name)) => {
+      logger.info(s"Got message : $name")
       notificationService.getPrice(name).onComplete {
         case Success(price) =>
-          sendMessageToUser(s"$name current price is $price")
-          returnToStartMenu()
+          sendMessageToUser(GeneralTexts.printStockPrice(name, price))
+          context become waitForStock
         case Failure(exception) =>
-          sendMessageToUser(s"$name is not valid stock name $exception")
-          returnToStartMenu()
+          sendMessageToUser(GeneralTexts.printStockException(name))
+          logger.warning(s"$exception")
+          context become waitForStock
       }
       context become Actor.emptyBehavior
+    }
+
   }
 
   def waitForNewNotification: Receive = {
@@ -85,7 +105,7 @@ class UserActor(userId: Long, telegramService: MessageSender, notificationServic
       val notification = Notification(stock, price.toDouble, notificationType, userId)
       notificationService.deleteNotification(notification).onComplete {
         case Success(_) =>
-          sendMessageToUser(s"Notification ${notificationToString(notification)} has been deleted")
+          sendMessageToUser(s"Notification ${GeneralMarkups.notificationToString(notification)} has been deleted")
           returnToStartMenu()
         case Failure(exception) =>
           sendMessageToUser(s"Can't delete notification: $exception")
@@ -94,11 +114,13 @@ class UserActor(userId: Long, telegramService: MessageSender, notificationServic
       context become Actor.emptyBehavior
   }
 
-  def notificationsMenu: Receive = {
-    case IncomingMessage(`getActiveNotifications`) =>
+  def notificationsMenu: Receive = common orElse {
+//    case IncomingMessage(Buttons.backToMain) =>
+//      returnToStartMenu()
+    case IncomingMessage(Buttons.notificationGet) =>
       notificationService.getNotifications(userId).onComplete {
         case Success(result) =>
-          val notifications = result.map(notificationToString)
+          val notifications = result.map(GeneralMarkups.notificationToString)
           sendMessageToUser("Active notifications: \n" + notifications.mkString("\n"))
           returnToStartMenu()
         case Failure(_) =>
@@ -106,13 +128,13 @@ class UserActor(userId: Long, telegramService: MessageSender, notificationServic
           returnToStartMenu()
       }
       context become Actor.emptyBehavior
-    case IncomingMessage(`addNotification`) =>
+    case IncomingMessage(Buttons.notificationAdd) =>
       sendMessageToUser("Enter notification(for example \"MSFT > 95\"): ")
       context become waitForNewNotification
-    case IncomingMessage(`delNotification`) =>
+    case IncomingMessage(Buttons.notificationDel) =>
       notificationService.getNotifications(userId).onComplete {
         case Success(result) =>
-          sendMessageToUser("Choose notification to delete", notificationsMarkup(result))
+          sendMessageToUser("Choose notification to delete", GeneralMarkups.notificationsMarkup(result))
           context become waitForNotificationToDelete
         case Failure(_) =>
           sendMessageToUser("Can't load your active notifications")
@@ -129,36 +151,7 @@ object UserActor {
 
   case class IncomingMessage(message: String)
 
-  val getStockPrice = "Get stock price"
-  val notifications = "Notifications"
-  val getActiveNotifications = "Get active notifications"
-  val addNotification = "Add notification"
-  val delNotification = "Delete notification"
-
-  val stockName: Regex = "([A-Z]+)".r
+  val stockName: Regex = "/?([A-Z]+)".r
   val notificationRegex: Regex = "([A-Z]+) ([<>]) ([^ ]+)".r
-
-  val startMenuMarkup: Option[ReplyKeyboardMarkup] = Some(ReplyKeyboardMarkup.singleColumn(
-    Seq(KeyboardButton(getStockPrice), KeyboardButton(notifications)),
-    resizeKeyboard = Some(true),
-    oneTimeKeyboard = Some(true)))
-
-  val notificationsMenuMarkup: Option[ReplyKeyboardMarkup] = Some(ReplyKeyboardMarkup.singleColumn(
-    Seq(KeyboardButton(getActiveNotifications), KeyboardButton(addNotification), KeyboardButton(delNotification)),
-    resizeKeyboard = Some(true),
-    oneTimeKeyboard = Some(true)))
-
-  def notificationsMarkup(notifications: Seq[Notification]): Option[ReplyKeyboardMarkup] = Some(ReplyKeyboardMarkup.singleColumn(
-    notifications.map(notification => KeyboardButton(notificationToString(notification))),
-    resizeKeyboard = Some(true),
-    oneTimeKeyboard = Some(true)))
-
-  def notificationToString(notification: Notification): String = {
-    val notificationType = notification.notificationType match {
-      case RaiseNotification => ">"
-      case FallNotification => "<"
-    }
-    s"${notification.stock} $notificationType ${notification.price}"
-  }
 
 }

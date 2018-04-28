@@ -85,7 +85,16 @@ class AlphavantageStockPriceServiceTest extends FlatSpec with Matchers with Scal
       DetailedStockInfo(stock, BigDecimal("94.9200"), BigDecimal("94.9300"), BigDecimal("94.8350"),
         BigDecimal("94.8500"), 29033, parseZonedDateTime("2018-04-20 15:05:00", "US/Eastern"))
   }
-
+  
+  "AlphavantageStockPriceService" should "return close price for the last segment" in new TestWiring {
+    stockPriceServiceMock.executeRequest
+      .expects(*)
+      .returning(Future.successful(HttpResponse(
+        entity = HttpEntity.apply(responseEntity).withContentType(ContentTypes.`application/json`))))
+    val result: Future[StockInfo] = stockPriceServiceMock.getStockPriceInfo(stock)
+    result.futureValue.price shouldBe BigDecimal("94.85")
+  }
+  
   //////////////BATCH REQUEST TESTS
 
   val batch = Seq("MSFT", "YNDX", "BAC")
