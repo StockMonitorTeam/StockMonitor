@@ -17,8 +17,8 @@ trait DataStorageWithStockInfoLoad extends InMemoryDataStorage {
         super.getPrice(stock)
       else
         for {stockInfo <- getStockPriceInfo(stock)
-             _ <- addStock(stock, stockInfo.price)
-        } yield stockInfo.price
+             _ <- addStock(stock, stockInfo.price.toDouble)
+        } yield stockInfo.price.toDouble
     }
 
   override def addNotification(notification: Notification): Future[Unit] =
@@ -27,7 +27,7 @@ trait DataStorageWithStockInfoLoad extends InMemoryDataStorage {
         super.addNotification(notification)
       else
         for {stockInfo <- getStockPriceInfo(notification.stock)
-             _ <- addStock(notification.stock, stockInfo.price)
+             _ <- addStock(notification.stock, stockInfo.price.toDouble)
              _ <- super.addNotification(notification)
         } yield ()
     }

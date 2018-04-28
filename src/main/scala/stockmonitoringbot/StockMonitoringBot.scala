@@ -26,7 +26,7 @@ trait StockMonitoringBot {
          stockName <- stocks
          stockInfo <- getStockPriceInfo(stockName)
          _ = logger.info(s"Updating $stockName, new price is ${stockInfo.price}")
-         triggeredNotifications <- updateStockPrice(stockInfo.name, stockInfo.price)
+         triggeredNotifications <- updateStockPrice(stockInfo.name, stockInfo.price.toDouble)
          triggeredNotification <- triggeredNotifications
     } {
       send(SendMessage(triggeredNotification.userId, s"${stockInfo.name} price is ${stockInfo.price} now"))
