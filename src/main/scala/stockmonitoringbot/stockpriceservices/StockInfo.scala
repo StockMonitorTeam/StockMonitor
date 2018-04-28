@@ -18,7 +18,7 @@ case class DetailedStockInfo(name: String,
                              close: BigDecimal,
                              volume: Int,
                              lastRefreshed: ZonedDateTime) extends StockInfo {
-  val price: BigDecimal = (high + low) / 2 //todo correct formula for stock price
+  val price: BigDecimal = close
 }
 
 case class BaseStockInfo(name: String,
