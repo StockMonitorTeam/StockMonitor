@@ -1,5 +1,7 @@
 package stockmonitoringbot.messengerservices.markups
 
+import stockmonitoringbot.datastorage.models.Portfolio
+
 object GeneralTexts {
 
   val INTRO_MESSAGE =
@@ -58,5 +60,11 @@ object GeneralTexts {
   val INPUT_PORTFOLIO_CREATED = (name: String, currency: String) =>
     s"Портфель «$name» с валютой $currency успешно создан."
   val PORTFOLIO_CREATE_ERROR = s"Ошибка добавления портфеля"
+
+  val PORTFOLIO_SHOW = (portfolio: Portfolio) =>
+    s"""
+       |Портфель «${portfolio.name}»
+       |Валюта: ${portfolio.currency}
+     """.stripMargin
 
 }

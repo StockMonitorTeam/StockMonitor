@@ -41,14 +41,13 @@ class UserActor(userId: Long,
   }
 
   def printPortfolios(): Unit = {
-    userDataStorage.getUsersPortfolios(userId).onComplete {
+    userDataStorage.getUserPortfolios(userId).onComplete {
       case Success(results) => results match {
         case Seq() =>
           sendMessageToUser(GeneralTexts.NO_PORTFOLIO_GREETING, GeneralMarkups.portfolioMarkup)
           context become waitForPortfolio
         case portfolios =>
           sendInlineMessageToUser(GeneralTexts.PORTFOLIO_LIST, GeneralMarkups.generatePortfolioList(userId, portfolios))
-//          sendMessageToUser(GeneralTexts.PORTFOLIO_GREETING(portfolios.map(x => x.name).mkString("\n")), GeneralMarkups.portfolioMarkup)
           context become waitForPortfolio
       }
       case _ =>
@@ -56,8 +55,19 @@ class UserActor(userId: Long,
     }
   }
 
+  override def receive: Receive = startMenu
+
+  // Telegram callback handlers
+  def tgCallback: Receive = {
+    case IncomingCallback(CallbackTypes.portfolio, data) =>
+      userDataStorage.getPortfolio(userId, data.message) map {
+        portfolio =>
+            sendMessageToUser(GeneralTexts.PORTFOLIO_SHOW(portfolio), GeneralMarkups.portfolioMarkup)
+      }
+  }
+
   // General menu items
-  def common: Receive = {
+  def common: Receive = tgCallback orElse {
 
     case IncomingMessage(Buttons.backToMain) =>
       returnToStartMenu()
@@ -73,8 +83,6 @@ class UserActor(userId: Long,
       sendMessageToUser(GeneralTexts.UNIMPLEMENTED)
 
   }
-
-  override def receive: Receive = startMenu
 
   def startMenu: Receive = common orElse {
     case IncomingMessage(Buttons.notifications) =>
@@ -99,7 +107,7 @@ class UserActor(userId: Long,
 
   def waitForPortfolioCurrency(name: String): Receive = common orElse {
     case IncomingMessage(currencyName(currency)) => {
-      userDataStorage.addPortfolio(Portfolio(userId, name, USD, Map.empty)).onComplete {
+      userDataStorage.addPortfolio(Portfolio(userId, name, Currency.define(currency), Map.empty)).onComplete {
         case Success(_) =>
           sendMessageToUser(GeneralTexts.INPUT_PORTFOLIO_CREATED(name, currency))
           printPortfolios()
@@ -202,11 +210,17 @@ class UserActor(userId: Long,
 
 }
 
+case class IncomingCallbackMessage(userId: String, message: String)
+object CallbackTypes {
+  val portfolio = "PRT"
+}
+
 object UserActor {
   def props(id: Long, telegramService: MessageSender, userDataStorage: UserDataStorage, cache: StocksAndExchangeRatesCache): Props =
     Props(new UserActor(id, telegramService, userDataStorage, cache))
 
   case class IncomingMessage(message: String)
+  case class IncomingCallback(handler: String, message: IncomingCallbackMessage)
 
   val stockName: Regex = "/?([A-Z]+)".r
   val notificationRegex: Regex = "([A-Z]+) ([<>]) ([^ ]+)".r

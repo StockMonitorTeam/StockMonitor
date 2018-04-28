@@ -2,6 +2,7 @@ package stockmonitoringbot.messengerservices.markups
 
 import info.mukel.telegrambot4s.models.{InlineKeyboardButton, InlineKeyboardMarkup, KeyboardButton, ReplyKeyboardMarkup}
 import stockmonitoringbot.datastorage.models.{FallNotification, Portfolio, RaiseNotification, TriggerNotification}
+import stockmonitoringbot.messengerservices.CallbackTypes
 
 object Buttons {
 
@@ -73,7 +74,7 @@ object GeneralMarkups {
 
   def generatePortfolioList(userId: Long, portfolios: Seq[Portfolio]): Option[InlineKeyboardMarkup] = Some(InlineKeyboardMarkup(
     portfolios.map(
-        portfolio => InlineKeyboardButton(text = portfolio.name, callbackData = Some(s"${userId}_${portfolio.name}"))
+        portfolio => InlineKeyboardButton(text = portfolio.name, callbackData = Some(s"${CallbackTypes.portfolio}_${userId}_${portfolio.name}"))
     ).grouped(3).toSeq
   ))
 

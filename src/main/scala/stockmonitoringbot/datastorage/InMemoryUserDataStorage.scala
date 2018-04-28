@@ -58,7 +58,7 @@ trait InMemoryUserDataStorage extends UserDataStorage {
     Future(usersPortfolios.synchronized {
       usersPortfolios(userId) = usersPortfolios(userId).filterNot(_.name == portfolioName)
     })
-  override def getUsersPortfolios(userId: Long): Future[Seq[Portfolio]] =
+  override def getUserPortfolios(userId: Long): Future[Seq[Portfolio]] =
     Future(usersPortfolios.synchronized {
       usersPortfolios(userId).toSeq
     })

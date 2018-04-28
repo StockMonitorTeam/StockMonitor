@@ -1,11 +1,14 @@
 package stockmonitoringbot.messengerservices
 
+import java.awt.Button
+
 import akka.actor.{ActorRef, PoisonPill}
 import info.mukel.telegrambot4s.api._
-import info.mukel.telegrambot4s.api.declarative.Commands
+import info.mukel.telegrambot4s.api.declarative.{Callbacks, Commands}
 import info.mukel.telegrambot4s.methods.SendMessage
 import stockmonitoringbot.datastorage.UserDataStorage
-import stockmonitoringbot.messengerservices.UserActor.IncomingMessage
+import stockmonitoringbot.messengerservices.UserActor.{IncomingCallback, IncomingMessage}
+import stockmonitoringbot.messengerservices.markups.{Buttons, GeneralMarkups}
 import stockmonitoringbot.stocksandratescache.StocksAndExchangeRatesCache
 import stockmonitoringbot.{ActorSystemComponent, ApiKeys, ExecutionContextComponent}
 
@@ -18,6 +21,7 @@ import scala.util.{Failure, Success}
 trait TelegramService extends TelegramBot
   with Webhook
   with Commands
+  with Callbacks
   with MessageSender {
   self: ExecutionContextComponent
     with ActorSystemComponent
@@ -45,7 +49,7 @@ trait TelegramService extends TelegramBot
 
   onMessage {
     msg =>
-      logger.info(s"message from ${
+      logger.info(s"message in ${msg.chat.id} from ${
         msg.chat.firstName.getOrElse("")
       } : ${
         msg.text.getOrElse("")
@@ -54,6 +58,26 @@ trait TelegramService extends TelegramBot
         user <- activeUsers.get(msg.chat.id)
         messageText <- msg.text
       } user ! IncomingMessage(messageText)
+  }
+
+  onCallbackQuery {
+    msg =>
+      logger.info(s"callback from ${
+        msg.from.firstName
+      } : ${
+        msg.data.getOrElse("")
+      }")
+
+      for {
+        message <- msg.message
+        user <- activeUsers.get(message.chat.id)
+        messageData <- msg.data
+      } messageData.split("_", 3) match {
+          case Array(callbackType, userId, message) =>
+            user ! IncomingCallback(callbackType, IncomingCallbackMessage(userId, message))
+          case _ =>
+            logger.warn(s"Callback not matched. ${messageData}")
+        }
   }
 
   override def send(message: SendMessage): Unit = request(message).onComplete {
