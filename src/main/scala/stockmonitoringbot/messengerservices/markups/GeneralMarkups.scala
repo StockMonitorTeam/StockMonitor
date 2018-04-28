@@ -21,6 +21,9 @@ object Buttons {
   val portfolioCreate = "➕ Создать новый портфель"
   val portfolioDelete = "❌ Удалить портфель"
 
+  val portfolioStockAdd = "➕ Добавить акцию"
+  val portfolioStockDelete = "🗑 Удалить акцию"
+
 }
 
 object GeneralMarkups {
@@ -49,6 +52,14 @@ object GeneralMarkups {
     Seq(KeyboardButton(Buttons.stock), KeyboardButton(Buttons.currency)),
     Seq(KeyboardButton(Buttons.notifications), KeyboardButton(Buttons.triggers)),
     Seq(KeyboardButton(Buttons.backToMain))
+  ))
+
+  val viewPortfolioMarkup = customKeyboard(Seq(
+    Seq(KeyboardButton(Buttons.portfolio)),
+    Seq(KeyboardButton(Buttons.portfolioStockAdd), KeyboardButton(Buttons.portfolioStockDelete)),
+    Seq(KeyboardButton(Buttons.notifications), KeyboardButton(Buttons.triggers)),
+    Seq(KeyboardButton(Buttons.backToMain)),
+    Seq(KeyboardButton(Buttons.portfolioDelete))
   ))
 
   val notificationsMenuMarkup = customKeyboard(Seq(

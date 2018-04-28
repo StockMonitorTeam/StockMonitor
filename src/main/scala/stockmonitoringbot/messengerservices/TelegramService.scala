@@ -78,6 +78,7 @@ trait TelegramService extends TelegramBot
           case _ =>
             logger.warn(s"Callback not matched. ${messageData}")
         }
+      ackCallback()(msg)
   }
 
   override def send(message: SendMessage): Unit = request(message).onComplete {
