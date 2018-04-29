@@ -8,7 +8,7 @@ import stockmonitoringbot.datastorage._
 import stockmonitoringbot.datastorage.models._
 import stockmonitoringbot.messengerservices.UserActor._
 import stockmonitoringbot.messengerservices.markups.{Buttons, GeneralMarkups, GeneralTexts}
-import stockmonitoringbot.stocksandratescache.StocksAndExchangeRatesCache
+import stockmonitoringbot.stocksandratescache.PriceCache
 
 import scala.util.matching.Regex
 import scala.util.{Failure, Success}
@@ -19,7 +19,7 @@ import scala.util.{Failure, Success}
 class UserActor(userId: Long,
                 telegramService: MessageSender,
                 userDataStorage: UserDataStorage,
-                cache: StocksAndExchangeRatesCache) extends Actor {
+                cache: PriceCache) extends Actor {
 
   import context.dispatcher
 
@@ -202,7 +202,7 @@ class UserActor(userId: Long,
 }
 
 object UserActor {
-  def props(id: Long, telegramService: MessageSender, userDataStorage: UserDataStorage, cache: StocksAndExchangeRatesCache): Props =
+  def props(id: Long, telegramService: MessageSender, userDataStorage: UserDataStorage, cache: PriceCache): Props =
     Props(new UserActor(id, telegramService, userDataStorage, cache))
 
   case class IncomingMessage(message: String)

@@ -6,7 +6,7 @@ import info.mukel.telegrambot4s.api.declarative.Commands
 import info.mukel.telegrambot4s.methods.SendMessage
 import stockmonitoringbot.datastorage.UserDataStorageComponent
 import stockmonitoringbot.messengerservices.UserActor.IncomingMessage
-import stockmonitoringbot.stocksandratescache.StocksAndExchangeRatesCache
+import stockmonitoringbot.stocksandratescache.PriceCacheComponent
 import stockmonitoringbot.{ActorSystemComponent, ApiKeys, ExecutionContextComponent}
 
 import scala.collection.mutable
@@ -22,7 +22,7 @@ trait TelegramService extends TelegramBot
   self: ExecutionContextComponent
     with ActorSystemComponent
     with UserDataStorageComponent
-    with StocksAndExchangeRatesCache
+    with PriceCacheComponent
     with ApiKeys =>
 
   override val token: String = getKey("StockMonitor.Telegram.apitoken")
@@ -40,7 +40,7 @@ trait TelegramService extends TelegramBot
         msg.chat.firstName.get
       }")
       activeUsers.get(msg.chat.id).foreach(_ ! PoisonPill)
-      activeUsers += msg.chat.id -> system.actorOf(UserActor.props(msg.chat.id, this, userDataStorage, this))
+      activeUsers += msg.chat.id -> system.actorOf(UserActor.props(msg.chat.id, this, userDataStorage, priceCache))
   }
 
   onMessage {

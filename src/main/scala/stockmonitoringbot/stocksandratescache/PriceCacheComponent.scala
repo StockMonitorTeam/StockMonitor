@@ -8,7 +8,11 @@ import scala.concurrent.Future
   * Created by amir.
   */
 
-trait StocksAndExchangeRatesCache {
+trait PriceCacheComponent {
+  val priceCache: PriceCache
+}
+
+trait PriceCache {
   def getStockInfo(stock: String): Future[StockInfo]
   def setStockInfo(stockInfo: StockInfo): Unit
   def getStocks: Set[String]

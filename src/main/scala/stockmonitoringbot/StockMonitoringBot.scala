@@ -4,7 +4,7 @@ import com.typesafe.scalalogging.Logger
 import stockmonitoringbot.datastorage.UserDataStorageComponent
 import stockmonitoringbot.messengerservices.MessageSender
 import stockmonitoringbot.stockpriceservices.StockPriceServiceComponent
-import stockmonitoringbot.stocksandratescache.StocksAndExchangeRatesCache
+import stockmonitoringbot.stocksandratescache.PriceCacheComponent
 
 import scala.concurrent.duration._
 import scala.language.postfixOps
@@ -16,7 +16,7 @@ import scala.util.{Failure, Success}
 trait StockMonitoringBot {
   self: StockPriceServiceComponent
     with UserDataStorageComponent
-    with StocksAndExchangeRatesCache
+    with PriceCacheComponent
     with MessageSender
     with ExecutionContextComponent
     with ActorSystemComponent =>
@@ -24,14 +24,14 @@ trait StockMonitoringBot {
   private val logger = Logger(getClass)
 
   def updateStockPrices(): Unit = {
-    stockPriceService.getBatchPrices(getStocks.toSeq).map(_.foreach(setStockInfo))
+    stockPriceService.getBatchPrices(priceCache.getStocks.toSeq).map(_.foreach(priceCache.setStockInfo))
     //todo check triggered notifications and send notifications to users
   }
 
   def updateExchangeRates(): Unit = {
-    getExchangePairs.foreach { pair =>
+    priceCache.getExchangePairs.foreach { pair =>
       stockPriceService.getCurrencyExchangeRate(pair._1, pair._2).onComplete {
-        case Success(exchangeRate) => setExchangeRate(exchangeRate)
+        case Success(exchangeRate) => priceCache.setExchangeRate(exchangeRate)
         case Failure(exception) => logger.error(s"Can't update $pair: $exception")
       }
     }
