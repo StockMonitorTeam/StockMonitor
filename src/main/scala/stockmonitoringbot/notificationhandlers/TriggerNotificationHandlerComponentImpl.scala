@@ -1,12 +1,13 @@
 package stockmonitoringbot.notificationhandlers
 
+import akka.actor.Cancellable
 import com.typesafe.scalalogging.Logger
 import info.mukel.telegrambot4s.methods.SendMessage
-import stockmonitoringbot.datastorage.UserDataStorage
+import stockmonitoringbot.datastorage.UserDataStorageComponent
 import stockmonitoringbot.datastorage.models._
-import stockmonitoringbot.messengerservices.MessageSender
-import stockmonitoringbot.stockpriceservices.StockPriceService
-import stockmonitoringbot.stocksandratescache.StocksAndExchangeRatesCache
+import stockmonitoringbot.messengerservices.MessageSenderComponent
+import stockmonitoringbot.stockpriceservices.StockPriceServiceComponent
+import stockmonitoringbot.stocksandratescache.PriceCacheComponent
 import stockmonitoringbot.{ActorSystemComponent, ExecutionContextComponent}
 
 import scala.concurrent.Future
@@ -18,10 +19,10 @@ import scala.util.{Failure, Success}
   * Created by amir.
   */
 trait TriggerNotificationHandlerComponentImpl extends TriggerNotificationHandlerComponent {
-  self: StockPriceService
-    with UserDataStorage
-    with StocksAndExchangeRatesCache
-    with MessageSender
+  self: StockPriceServiceComponent
+    with UserDataStorageComponent
+    with PriceCacheComponent
+    with MessageSenderComponent
     with ExecutionContextComponent
     with ActorSystemComponent =>
 
@@ -30,18 +31,19 @@ trait TriggerNotificationHandlerComponentImpl extends TriggerNotificationHandler
   class TriggerNotificationHandlerImpl extends TriggerNotificationHandler {
 
     private val logger = Logger(getClass)
+    private var mainTask: Cancellable = _
 
     /**
       *
       * @return number of updated stocks & exchange rates
       */
     def updateCache(): Future[(Int, Int)] = {
-      val stockUpdate: Future[Int] = getBatchPrices(getStocks.toSeq).map { updatedStocks =>
-        updatedStocks.foreach(setStockInfo)
+      val stockUpdate: Future[Int] = stockPriceService.getBatchPrices(priceCache.getStocks.toSeq).map { updatedStocks =>
+        updatedStocks.foreach(priceCache.setStockInfo)
         updatedStocks.size
       }
-      val ratesUpdate: Future[Int] = Future.traverse(getExchangePairs) { pair =>
-        getCurrencyExchangeRate(pair._1, pair._2).map(setExchangeRate)
+      val ratesUpdate: Future[Int] = Future.traverse(priceCache.getExchangePairs) { pair =>
+        stockPriceService.getCurrencyExchangeRate(pair._1, pair._2).map(priceCache.setExchangeRate)
       }.map(_.size)
       for {numOfUpdatedStocks <- stockUpdate
            numOfUpdatedRates <- ratesUpdate
@@ -65,21 +67,21 @@ trait TriggerNotificationHandlerComponentImpl extends TriggerNotificationHandler
       */
     private def isTriggered(notification: TriggerNotification): Future[Option[(TriggerNotification, BigDecimal)]] = notification match {
       case StockTriggerNotification(_, stock, _, _) =>
-        getStockInfo(stock).map { stockInfo =>
+        priceCache.getStockInfo(stock).map { stockInfo =>
           isTriggeredWithPrice(notification, stockInfo.price)
         }
       case ExchangeRateTriggerNotification(_, (from, to), _, _) =>
-        getExchangeRate(from, to).map { exchangeRateInfo =>
+        priceCache.getExchangeRate(from, to).map { exchangeRateInfo =>
           isTriggeredWithPrice(notification, exchangeRateInfo.rate)
         }
       case PortfolioTriggerNotification(userId, portfolioName, _, _) =>
-        for {portfolio <- getPortfolio(userId, portfolioName)
-             portfolioPrice <- getPortfolioCurrentPrice(portfolio, self)
+        for {portfolio <- userDataStorage.getPortfolio(userId, portfolioName)
+             portfolioPrice <- getPortfolioCurrentPrice(portfolio, priceCache)
         } yield
           isTriggeredWithPrice(notification, portfolioPrice)
     }
 
-    private def makeTriggerMessage(notification: TriggerNotification, price: BigDecimal): String = {
+    private def makeTriggerMessage(notification: TriggerNotification, price: BigDecimal): String = notification match {
       case StockTriggerNotification(_, stock, bound, notificationType) =>
         val x = notificationType match {
           case RaiseNotification =>
@@ -103,27 +105,32 @@ trait TriggerNotificationHandlerComponentImpl extends TriggerNotificationHandler
           case FallNotification =>
             "lower"
         }
-        s"Your notification is triggered! portfolio \"$portfolioName\" is $x than $bound. It's current price $price"
+        s"Your notification is triggered! portfolio $q$portfolioName$q is $x than $bound. It's current price $price"
     }
 
-    def start() {
+    override def start(): Unit = {
       // update every minute StocksAndExchangeRatesCache
       // and check all trigger notifications
-      system.scheduler.schedule(1 second, 1 minute) {
+      //todo load update frequency from config
+      mainTask = system.scheduler.schedule(1 second, 1 minute) {
         logger.info("Starting cache update...")
         updateCache().onComplete {
           case Success((numOfStocks, numOfRates)) =>
             logger.info(s"Cache successfully updated. Updated $numOfStocks stocks & $numOfRates exchange rates.")
-            for {notifications <- getAllTriggerNotifications
+            for {notifications <- userDataStorage.getAllTriggerNotifications
                  triggeredNotifications <- Future.traverse(notifications)(isTriggered)
             } {
               triggeredNotifications.flatten.foreach { notification =>
-                send(SendMessage(notification._1.ownerId, makeTriggerMessage(notification._1, notification._2)))
+                messageSender(SendMessage(notification._1.ownerId, makeTriggerMessage(notification._1, notification._2)))
               }
             }
           case Failure(exception) => logger.error(s"Can't update cache: $exception")
         }
       }
+    }
+
+    override def stop(): Unit = {
+      mainTask.cancel()
     }
   }
 
