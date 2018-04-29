@@ -1,7 +1,7 @@
 package stockmonitoringbot
 
 import com.typesafe.scalalogging.Logger
-import stockmonitoringbot.datastorage.UserDataStorage
+import stockmonitoringbot.datastorage.UserDataStorageComponent
 import stockmonitoringbot.messengerservices.MessageSender
 import stockmonitoringbot.stockpriceservices.StockPriceService
 import stockmonitoringbot.stocksandratescache.StocksAndExchangeRatesCache
@@ -15,7 +15,7 @@ import scala.util.{Failure, Success}
   */
 trait StockMonitoringBot {
   self: StockPriceService
-    with UserDataStorage
+    with UserDataStorageComponent
     with StocksAndExchangeRatesCache
     with MessageSender
     with ExecutionContextComponent

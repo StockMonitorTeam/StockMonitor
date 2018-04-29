@@ -4,7 +4,7 @@ import akka.actor.{ActorRef, PoisonPill}
 import info.mukel.telegrambot4s.api._
 import info.mukel.telegrambot4s.api.declarative.Commands
 import info.mukel.telegrambot4s.methods.SendMessage
-import stockmonitoringbot.datastorage.UserDataStorage
+import stockmonitoringbot.datastorage.UserDataStorageComponent
 import stockmonitoringbot.messengerservices.UserActor.IncomingMessage
 import stockmonitoringbot.stocksandratescache.StocksAndExchangeRatesCache
 import stockmonitoringbot.{ActorSystemComponent, ApiKeys, ExecutionContextComponent}
@@ -21,7 +21,7 @@ trait TelegramService extends TelegramBot
   with MessageSender {
   self: ExecutionContextComponent
     with ActorSystemComponent
-    with UserDataStorage
+    with UserDataStorageComponent
     with StocksAndExchangeRatesCache
     with ApiKeys =>
 
@@ -40,7 +40,7 @@ trait TelegramService extends TelegramBot
         msg.chat.firstName.get
       }")
       activeUsers.get(msg.chat.id).foreach(_ ! PoisonPill)
-      activeUsers += msg.chat.id -> system.actorOf(UserActor.props(msg.chat.id, this, this, this))
+      activeUsers += msg.chat.id -> system.actorOf(UserActor.props(msg.chat.id, this, userDataStorage, this))
   }
 
   onMessage {

@@ -1,6 +1,6 @@
 package stockmonitoringbot
 
-import stockmonitoringbot.datastorage.InMemoryUserDataStorage
+import stockmonitoringbot.datastorage.InMemoryUserDataStorageComponentImpl
 import stockmonitoringbot.messengerservices.TelegramService
 import stockmonitoringbot.stockpriceservices.{AlphavantageHttpRequestExecutor, AlphavantageStockPriceService}
 import stockmonitoringbot.stocksandratescache.StocksAndExchangeRatesCacheImpl
@@ -10,9 +10,8 @@ import stockmonitoringbot.stocksandratescache.StocksAndExchangeRatesCacheImpl
   */
 object Main extends App {
 
-  val bot = new {}
-    with StockMonitoringBot
-    with InMemoryUserDataStorage
+  val bot = new StockMonitoringBot
+    with InMemoryUserDataStorageComponentImpl
     with StocksAndExchangeRatesCacheImpl
     with AlphavantageStockPriceService
     with AlphavantageHttpRequestExecutor
