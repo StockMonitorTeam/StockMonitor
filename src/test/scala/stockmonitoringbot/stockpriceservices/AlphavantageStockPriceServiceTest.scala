@@ -25,7 +25,7 @@ class AlphavantageStockPriceServiceTest extends FlatSpec with Matchers with Scal
 
   private trait TestWiring {
     implicit val patienceConfig: PatienceConfig = PatienceConfig(500 millis, 20 millis)
-    val stockPriceServiceMock = new AlphavantageStockPriceService
+    val objWithStockPriceService = new AlphavantageStockPriceServiceComponent
       with ActorSystemComponentImpl
       with ExecutionContextImpl
       with HttpRequestExecutor
@@ -76,22 +76,22 @@ class AlphavantageStockPriceServiceTest extends FlatSpec with Matchers with Scal
 
   "AlphavantageStockPriceService" should "make correct request and correctly parse response in \"getStockPriceInfo\"" in new TestWiring {
     val expectedRequest = HttpRequest(uri = s"/query?function=TIME_SERIES_INTRADAY&symbol=$stock&interval=1min&apikey=$apiKey")
-    stockPriceServiceMock.executeRequest
+    objWithStockPriceService.executeRequest
       .expects(expectedRequest)
       .returning(Future.successful(HttpResponse(
         entity = HttpEntity.apply(responseEntity).withContentType(ContentTypes.`application/json`))))
-    val result: Future[StockInfo] = stockPriceServiceMock.getStockPriceInfo(stock)
+    val result: Future[StockInfo] = objWithStockPriceService.stockPriceService.getStockPriceInfo(stock)
     result.futureValue shouldBe
       DetailedStockInfo(stock, BigDecimal("94.9200"), BigDecimal("94.9300"), BigDecimal("94.8350"),
         BigDecimal("94.8500"), 29033, parseZonedDateTime("2018-04-20 15:05:00", "US/Eastern"))
   }
 
   "AlphavantageStockPriceService" should "return close price for the last segment" in new TestWiring {
-    stockPriceServiceMock.executeRequest
+    objWithStockPriceService.executeRequest
       .expects(*)
       .returning(Future.successful(HttpResponse(
         entity = HttpEntity.apply(responseEntity).withContentType(ContentTypes.`application/json`))))
-    val result: Future[StockInfo] = stockPriceServiceMock.getStockPriceInfo(stock)
+    val result: Future[StockInfo] = objWithStockPriceService.stockPriceService.getStockPriceInfo(stock)
     result.futureValue.price shouldBe BigDecimal("94.85")
   }
 
@@ -130,11 +130,11 @@ class AlphavantageStockPriceServiceTest extends FlatSpec with Matchers with Scal
 
   "AlphavantageStockPriceService" should "make correct request and correctly parse response in \"getBatchPrices\"" in new TestWiring {
     val expectedRequest = HttpRequest(uri = s"/query?function=BATCH_STOCK_QUOTES&symbols=MSFT,YNDX,BAC&apikey=$apiKey")
-    stockPriceServiceMock.executeRequest
+    objWithStockPriceService.executeRequest
       .expects(expectedRequest)
       .returning(Future.successful(
         HttpResponse(entity = HttpEntity.apply(batchResponse).withContentType(ContentTypes.`application/json`))))
-    val result = stockPriceServiceMock.getBatchPrices(batch)
+    val result = objWithStockPriceService.stockPriceService.getBatchPrices(batch)
     result.futureValue should contain theSameElementsAs
       Seq(BaseStockInfo("MSFT", BigDecimal("95.8200"), 8412698, parseZonedDateTime("2018-04-23 12:16:03", "US/Eastern")),
         BaseStockInfo("YNDX", BigDecimal("34.2900"), 3540531, parseZonedDateTime("2018-04-23 12:15:46", "US/Eastern")),
@@ -143,7 +143,7 @@ class AlphavantageStockPriceServiceTest extends FlatSpec with Matchers with Scal
   }
 
   "AlphavantageStockPriceService" should "shouldn't make any requests if batch is empty in \"getBatchPrices\"" in new TestWiring {
-    val result = stockPriceServiceMock.getBatchPrices(Seq.empty)
+    val result = objWithStockPriceService.stockPriceService.getBatchPrices(Seq.empty)
     result.futureValue shouldBe Seq.empty
   }
 
@@ -152,14 +152,14 @@ class AlphavantageStockPriceServiceTest extends FlatSpec with Matchers with Scal
     val expectedRequest1 = HttpRequest(uri = s"/query?function=BATCH_STOCK_QUOTES&symbols=${(1 to 100).map(_ => "A").mkString(",")}&apikey=$apiKey")
     val expectedRequest2 = HttpRequest(uri = s"/query?function=BATCH_STOCK_QUOTES&symbols=A&apikey=$apiKey")
     inAnyOrder {
-      stockPriceServiceMock.executeRequest
+      objWithStockPriceService.executeRequest
         .expects(expectedRequest1)
         .returning(Future.successful(HttpResponse(status = StatusCodes.Forbidden)))
-      stockPriceServiceMock.executeRequest
+      objWithStockPriceService.executeRequest
         .expects(expectedRequest2)
         .returning(Future.successful(HttpResponse(status = StatusCodes.Forbidden)))
     }
-    stockPriceServiceMock.getBatchPrices(batch101).failed.futureValue shouldBe a[ServerResponseException]
+    objWithStockPriceService.stockPriceService.getBatchPrices(batch101).failed.futureValue shouldBe a[ServerResponseException]
   }
 
   //////////////CURRENCY EXCHANGE TESTS
@@ -182,11 +182,11 @@ class AlphavantageStockPriceServiceTest extends FlatSpec with Matchers with Scal
 
   "AlphavantageStockPriceService" should "make correct request and correctly parse response in \"getCurrencyExchangeRate\"" in new TestWiring {
     val expectedRequest = HttpRequest(uri = s"/query?function=CURRENCY_EXCHANGE_RATE&from_currency=$from&to_currency=$to&apikey=$apiKey")
-    stockPriceServiceMock.executeRequest
+    objWithStockPriceService.executeRequest
       .expects(expectedRequest)
       .returning(Future.successful(HttpResponse(
         entity = HttpEntity.apply(currencyExchangeResponseEntity).withContentType(ContentTypes.`application/json`))))
-    val result = stockPriceServiceMock.getCurrencyExchangeRate(from, to)
+    val result = objWithStockPriceService.stockPriceService.getCurrencyExchangeRate(from, to)
     result.futureValue shouldBe
       CurrencyExchangeRateInfo("USD", "United States Dollar",
         "RUB", "Russian Ruble",

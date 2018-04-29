@@ -3,7 +3,7 @@ package stockmonitoringbot.stocksandratescache
 import java.util.concurrent.ConcurrentHashMap
 
 
-import stockmonitoringbot.stockpriceservices.{CurrencyExchangeRateInfo, StockInfo, StockPriceService}
+import stockmonitoringbot.stockpriceservices.{CurrencyExchangeRateInfo, StockInfo, StockPriceServiceComponent}
 
 import scala.collection.JavaConverters._
 import scala.concurrent.Future
@@ -13,7 +13,7 @@ import scala.concurrent.Future
   */
 
 trait StocksAndExchangeRatesCacheImpl extends StocksAndExchangeRatesCache {
-  self: StockPriceService => //todo initial load stocks in cache
+  self: StockPriceServiceComponent => //todo initial load stocks in cache
 
   private val stocks: ConcurrentHashMap[String, StockInfo] = new ConcurrentHashMap()
   private val exchangeRates: ConcurrentHashMap[(String, String), CurrencyExchangeRateInfo] = new ConcurrentHashMap()
@@ -22,7 +22,7 @@ trait StocksAndExchangeRatesCacheImpl extends StocksAndExchangeRatesCache {
     if (stocks.containsKey(stock))
       Future.successful(stocks.get(stock))
     else
-      getStockPriceInfo(stock)
+      stockPriceService.getStockPriceInfo(stock)
 
   override def setStockInfo(stockInfo: StockInfo): Unit =
     stocks.put(stockInfo.name, stockInfo)
@@ -37,7 +37,7 @@ trait StocksAndExchangeRatesCacheImpl extends StocksAndExchangeRatesCache {
     if (exchangeRates.containsKey((from, to)))
       Future.successful(exchangeRates.get((from, to)))
     else
-      getCurrencyExchangeRate(from, to)
+      stockPriceService.getCurrencyExchangeRate(from, to)
 
   override def setExchangeRate(exchangeRate: CurrencyExchangeRateInfo): Unit =
     exchangeRates.put((exchangeRate.from, exchangeRate.to), exchangeRate)
