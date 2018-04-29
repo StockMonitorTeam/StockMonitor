@@ -54,7 +54,8 @@ trait InMemoryUserDataStorage extends UserDataStorage {
     Future(usersPortfolios.synchronized {
       usersPortfolios(portfolio.userId) += portfolio
     })
-  //todo when user deletes portfolio, delete all notifications, should we lock on whole object? =(
+  //todo when user deletes portfolio, delete all notifications, should we lock on whole object?
+  //todo Don't forget to test this case!!! =(
   override def deletePortfolio(userId: Long, portfolioName: String): Future[Unit] =
     Future(usersPortfolios.synchronized {
       usersPortfolios(userId) = usersPortfolios(userId).filterNot(_.name == portfolioName)
