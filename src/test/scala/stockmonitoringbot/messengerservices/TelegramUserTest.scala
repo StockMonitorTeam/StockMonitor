@@ -3,6 +3,7 @@ package stockmonitoringbot.messengerservices
 import akka.actor.ActorSystem
 import info.mukel.telegrambot4s.methods.SendMessage
 import info.mukel.telegrambot4s.models.ChatId
+import org.scalamock.scalatest.MockFactory
 import org.scalatest.{FlatSpec, Matchers}
 import stockmonitoringbot.ExecutionContextComponent
 import stockmonitoringbot.messengerservices.UserActor.IncomingMessage
@@ -13,16 +14,9 @@ import scala.concurrent.ExecutionContext
 /**
   * Created by amir.
   */
-class TelegramUserTest extends FlatSpec with Matchers {
-
-  var outgoingMessages: Seq[SendMessage] = Seq()
+class TelegramUserTest extends FlatSpec with Matchers with MockFactory {
 
   val stock = "MSFT"
-
-  private val messageSenderMock = new {} with MessageSender {
-    override def send(message: SendMessage): Unit =
-      outgoingMessages = message +: outgoingMessages
-  }
 
   private val system = ActorSystem()
   //todo fix tests

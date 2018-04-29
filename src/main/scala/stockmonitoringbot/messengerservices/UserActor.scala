@@ -6,9 +6,10 @@ import info.mukel.telegrambot4s.methods.SendMessage
 import info.mukel.telegrambot4s.models.{InlineKeyboardMarkup, ReplyKeyboardMarkup}
 import stockmonitoringbot.datastorage._
 import stockmonitoringbot.datastorage.models._
+import stockmonitoringbot.messengerservices.MessageSenderComponent.MessageSender
 import stockmonitoringbot.messengerservices.UserActor._
 import stockmonitoringbot.messengerservices.markups.{Buttons, GeneralMarkups, GeneralTexts}
-import stockmonitoringbot.stocksandratescache.StocksAndExchangeRatesCache
+import stockmonitoringbot.stocksandratescache.PriceCache
 
 import scala.util.matching.Regex
 import scala.util.{Failure, Success}
@@ -17,19 +18,19 @@ import scala.util.{Failure, Success}
   * Created by amir.
   */
 class UserActor(userId: Long,
-                telegramService: MessageSender,
+                messageSender: MessageSender,
                 userDataStorage: UserDataStorage,
-                cache: StocksAndExchangeRatesCache) extends Actor {
+                cache: PriceCache) extends Actor {
 
   import context.dispatcher
 
   val logger = Logging(context.system, this)
 
   private def sendMessageToUser(message: String, markup: Option[ReplyKeyboardMarkup] = None): Unit =
-    telegramService.send(SendMessage(userId, message, replyMarkup = markup))
+    messageSender(SendMessage(userId, message, replyMarkup = markup))
 
   private def sendInlineMessageToUser(message: String, markup: Option[InlineKeyboardMarkup]): Unit =
-    telegramService.send(SendMessage(userId, message, replyMarkup = markup))
+    messageSender(SendMessage(userId, message, replyMarkup = markup))
 
   override def preStart(): Unit = {
     sendMessageToUser(GeneralTexts.INTRO_MESSAGE, GeneralMarkups.startMenuMarkup)
@@ -203,8 +204,8 @@ class UserActor(userId: Long,
 }
 
 object UserActor {
-  def props(id: Long, telegramService: MessageSender, userDataStorage: UserDataStorage, cache: StocksAndExchangeRatesCache): Props =
-    Props(new UserActor(id, telegramService, userDataStorage, cache))
+  def props(id: Long, messageSender: MessageSender, userDataStorage: UserDataStorage, cache: PriceCache): Props =
+    Props(new UserActor(id, messageSender, userDataStorage, cache))
 
   case class IncomingMessage(message: String)
 

@@ -1,22 +1,21 @@
 package stockmonitoringbot
 
-import stockmonitoringbot.datastorage.InMemoryUserDataStorage
+import stockmonitoringbot.datastorage.InMemoryUserDataStorageComponentImpl
 import stockmonitoringbot.messengerservices.TelegramService
 import stockmonitoringbot.notificationhandlers.{DailyNotificationHandlerComponentImpl, TriggerNotificationHandlerComponentImpl}
-import stockmonitoringbot.stockpriceservices.{AlphavantageHttpRequestExecutor, AlphavantageStockPriceService}
-import stockmonitoringbot.stocksandratescache.StocksAndExchangeRatesCacheImpl
+import stockmonitoringbot.stockpriceservices.{AlphavantageHttpRequestExecutor, AlphavantageStockPriceServiceComponent}
+import stockmonitoringbot.stocksandratescache.PriceCacheComponentImpl
 
 /**
   * Created by amir.
   */
 object Main extends App {
 
-  val bot = new {}
-    with DailyNotificationHandlerComponentImpl
+  val bot = new DailyNotificationHandlerComponentImpl
     with TriggerNotificationHandlerComponentImpl
-    with InMemoryUserDataStorage
-    with StocksAndExchangeRatesCacheImpl
-    with AlphavantageStockPriceService
+    with InMemoryUserDataStorageComponentImpl
+    with PriceCacheComponentImpl
+    with AlphavantageStockPriceServiceComponent
     with AlphavantageHttpRequestExecutor
     with TelegramService
     with ExecutionContextImpl

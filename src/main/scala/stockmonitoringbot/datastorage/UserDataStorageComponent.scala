@@ -7,8 +7,11 @@ import scala.concurrent.Future
 /**
   * Created by amir.
   */
-trait UserDataStorage {
+trait UserDataStorageComponent {
+  val userDataStorage: UserDataStorage
+}
 
+trait UserDataStorage {
   def getUsersDailyNotifications(userId: Long): Future[Seq[DailyNotification]]
   def addDailyNotification(notification: DailyNotification): Future[Unit]
   def deleteDailyNotification(notification: DailyNotification): Future[Unit]
