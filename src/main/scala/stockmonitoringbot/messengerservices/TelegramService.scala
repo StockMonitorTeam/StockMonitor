@@ -3,8 +3,8 @@ package stockmonitoringbot.messengerservices
 import akka.actor.{ActorRef, PoisonPill}
 import info.mukel.telegrambot4s.api._
 import info.mukel.telegrambot4s.api.declarative.Commands
-import info.mukel.telegrambot4s.methods.SendMessage
 import stockmonitoringbot.datastorage.UserDataStorageComponent
+import stockmonitoringbot.messengerservices.MessageSenderComponent.MessageSender
 import stockmonitoringbot.messengerservices.UserActor.IncomingMessage
 import stockmonitoringbot.stocksandratescache.PriceCacheComponent
 import stockmonitoringbot.{ActorSystemComponent, ApiKeys, ExecutionContextComponent}
@@ -18,7 +18,7 @@ import scala.util.{Failure, Success}
 trait TelegramService extends TelegramBot
   with Webhook
   with Commands
-  with MessageSender {
+  with MessageSenderComponent {
   self: ExecutionContextComponent
     with ActorSystemComponent
     with UserDataStorageComponent
@@ -40,7 +40,7 @@ trait TelegramService extends TelegramBot
         msg.chat.firstName.get
       }")
       activeUsers.get(msg.chat.id).foreach(_ ! PoisonPill)
-      activeUsers += msg.chat.id -> system.actorOf(UserActor.props(msg.chat.id, this, userDataStorage, priceCache))
+      activeUsers += msg.chat.id -> system.actorOf(UserActor.props(msg.chat.id, messageSender, userDataStorage, priceCache))
   }
 
   onMessage {
@@ -56,7 +56,7 @@ trait TelegramService extends TelegramBot
       } user ! IncomingMessage(messageText)
   }
 
-  override def send(message: SendMessage): Unit = request(message).onComplete {
+  override val messageSender: MessageSender = message => request(message).onComplete {
     case Success(_) =>
     case Failure(exception) =>
       logger.error(s"Can't deliver message: $exception")

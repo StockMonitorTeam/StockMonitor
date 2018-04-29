@@ -2,7 +2,7 @@ package stockmonitoringbot
 
 import com.typesafe.scalalogging.Logger
 import stockmonitoringbot.datastorage.UserDataStorageComponent
-import stockmonitoringbot.messengerservices.MessageSender
+import stockmonitoringbot.messengerservices.MessageSenderComponent
 import stockmonitoringbot.stockpriceservices.StockPriceServiceComponent
 import stockmonitoringbot.stocksandratescache.PriceCacheComponent
 
@@ -17,7 +17,7 @@ trait StockMonitoringBot {
   self: StockPriceServiceComponent
     with UserDataStorageComponent
     with PriceCacheComponent
-    with MessageSender
+    with MessageSenderComponent
     with ExecutionContextComponent
     with ActorSystemComponent =>
 
