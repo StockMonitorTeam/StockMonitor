@@ -9,5 +9,5 @@ trait TriggerNotificationHandlerComponent {
 
 trait TriggerNotificationHandler {
   def start(): Unit
-  def stop(): Unit
+  def stop(): Boolean
 }

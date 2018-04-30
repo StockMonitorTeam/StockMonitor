@@ -33,23 +33,6 @@ trait TriggerNotificationHandlerComponentImpl extends TriggerNotificationHandler
     private val logger = Logger(getClass)
     private var mainTask: Cancellable = _
 
-    /**
-      *
-      * @return number of updated stocks & exchange rates
-      */
-    def updateCache(): Future[(Int, Int)] = {
-      val stockUpdate: Future[Int] = stockPriceService.getBatchPrices(priceCache.getStocks.toSeq).map { updatedStocks =>
-        updatedStocks.foreach(priceCache.setStockInfo)
-        updatedStocks.size
-      }
-      val ratesUpdate: Future[Int] = Future.traverse(priceCache.getExchangePairs) { pair =>
-        stockPriceService.getCurrencyExchangeRate(pair._1, pair._2).map(priceCache.setExchangeRate)
-      }.map(_.size)
-      for {numOfUpdatedStocks <- stockUpdate
-           numOfUpdatedRates <- ratesUpdate
-      } yield (numOfUpdatedStocks, numOfUpdatedRates)
-    }
-
     private def isTriggeredWithPrice(notification: TriggerNotification, price: BigDecimal): Option[(TriggerNotification, BigDecimal)] = {
       notification.notificationType match {
         case RaiseNotification if price >= notification.boundPrice =>
@@ -62,7 +45,6 @@ trait TriggerNotificationHandlerComponentImpl extends TriggerNotificationHandler
 
     /**
       *
-      * @param notification
       * @return None, if notification is not triggered, Some((notification, price)), if notification is triggered, price - current price
       */
     private def isTriggered(notification: TriggerNotification): Future[Option[(TriggerNotification, BigDecimal)]] = notification match {
@@ -108,30 +90,52 @@ trait TriggerNotificationHandlerComponentImpl extends TriggerNotificationHandler
         s"Your notification is triggered! portfolio $q$portfolioName$q is $x than $bound. It's current price $price"
     }
 
-    override def start(): Unit = {
-      // update every minute StocksAndExchangeRatesCache
-      // and check all trigger notifications
-      //todo load update frequency from config
-      mainTask = system.scheduler.schedule(1 second, 1 minute) {
-        logger.info("Starting cache update...")
-        updateCache().onComplete {
-          case Success((numOfStocks, numOfRates)) =>
-            logger.info(s"Cache successfully updated. Updated $numOfStocks stocks & $numOfRates exchange rates.")
-            for {notifications <- userDataStorage.getAllTriggerNotifications
-                 triggeredNotifications <- Future.traverse(notifications)(isTriggered)
-            } {
-              triggeredNotifications.flatten.foreach { notification =>
-                messageSender(SendMessage(notification._1.ownerId, makeTriggerMessage(notification._1, notification._2)))
-              }
-            }
-          case Failure(exception) => logger.error(s"Can't update cache: $exception")
+    /**
+      *
+      * @return number of updated stocks & exchange rates
+      */
+    def updateCache(): Future[(Int, Int)] = {
+      val stockUpdate: Future[Int] = stockPriceService.getBatchPrices(priceCache.getStocks.toSeq).map { updatedStocks =>
+        updatedStocks.foreach(priceCache.setStockInfo)
+        updatedStocks.size
+      }
+      val ratesUpdate: Future[Int] = Future.traverse(priceCache.getExchangePairs) { pair =>
+        stockPriceService.getCurrencyExchangeRate(pair._1, pair._2).map(priceCache.setExchangeRate)
+      }.map(_.size)
+      for {numOfUpdatedStocks <- stockUpdate
+           numOfUpdatedRates <- ratesUpdate
+      } yield (numOfUpdatedStocks, numOfUpdatedRates)
+    }
+
+    def checkTriggers(): Future[Unit] = {
+      for {notifications <- userDataStorage.getAllTriggerNotifications
+           triggeredNotifications <- Future.traverse(notifications)(isTriggered)
+      } yield {
+        triggeredNotifications.flatten.foreach { notification =>
+          messageSender(SendMessage(notification._1.ownerId, makeTriggerMessage(notification._1, notification._2)))
         }
+        ()
       }
     }
 
-    override def stop(): Unit = {
-      mainTask.cancel()
+    private def updateCacheAndCheckTriggers(): Unit = {
+      logger.info("Starting cache update...")
+      updateCache().onComplete {
+        case Success((numOfStocks, numOfRates)) =>
+          logger.info(s"Cache successfully updated. Updated $numOfStocks stocks & $numOfRates exchange rates.")
+          checkTriggers()
+        case Failure(exception) => logger.error(s"Can't update cache: $exception")
+      }
     }
+
+    override def start(): Unit = {
+      // update every minute StocksAndExchangeRatesCache
+      // and check all trigger notifications
+      //todo load "updateFrequency" from config
+      mainTask = system.scheduler.schedule(1 second, 1 minute)(updateCacheAndCheckTriggers())
+    }
+
+    override def stop(): Boolean = mainTask.cancel()
   }
 
 }

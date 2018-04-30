@@ -28,7 +28,7 @@ class AlphavantageStockPriceServiceTest extends FlatSpec with Matchers with Scal
     with ExecutionContextImpl
     with HttpRequestExecutor
     with ApiKeysMock {
-    implicit val patienceConfig: PatienceConfig = PatienceConfig(500 millis, 20 millis)
+    implicit val patienceConfig: PatienceConfig = PatienceConfig(1 second, 20 millis)
     override val executeRequest = mockFunction[HttpRequest, Future[HttpResponse]]
   }
 

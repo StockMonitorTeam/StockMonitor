@@ -15,7 +15,6 @@ import scala.collection.mutable
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.language.postfixOps
-import scala.util.{Failure, Success}
 
 /**
   * Created by amir.
@@ -53,22 +52,27 @@ trait DailyNotificationHandlerComponentImpl extends DailyNotificationHandlerComp
         } yield s"your portfolio $q${portfolio.name}$q current price is $portfolioPrice"
     }
 
-    val secondsInDay: Int = 24 * 60 * 60
-    def untilTime(time: LocalTime): FiniteDuration = {
+    private val secondsInDay: Int = 24 * 60 * 60
+    private def untilTime(time: LocalTime): FiniteDuration = {
       val nowSec = LocalTime.now(ZoneId.of("UTC")).toSecondOfDay
       val timeSec = time.toSecondOfDay
       val dif = (timeSec + secondsInDay - nowSec) % secondsInDay
       dif seconds
     }
 
-    def addDailyNotification(notification: DailyNotification): Unit = {
-      notifications += notification -> system.scheduler.schedule(untilTime(notification.time), 24 hours) {
-        makeNotificationMessage(notification).onComplete {
-          case Success(message) =>
-            messageSender(SendMessage(notification.ownerId, message))
-          case Failure(exception) => logger.error(s"can't make notification message on notification $notification: $exception")
-        }
+    def notifyUser(notification: DailyNotification): Future[Unit] = {
+      val notificationSend = makeNotificationMessage(notification).map { message =>
+        messageSender(SendMessage(notification.ownerId, message))
       }
+      notificationSend.failed.map {
+        exception => logger.error(s"can't make notification message on notification $notification: $exception")
+      }
+      notificationSend
+    }
+
+    def addDailyNotification(notification: DailyNotification): Unit = {
+      notifications += notification ->
+        system.scheduler.schedule(untilTime(notification.time), 24 hours)(notifyUser(notification))
     }
 
     def deleteDailyNotification(notification: DailyNotification): Unit = {

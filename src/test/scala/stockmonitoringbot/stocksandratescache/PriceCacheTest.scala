@@ -13,19 +13,6 @@ import scala.language.postfixOps
   * Created by amir.
   */
 class PriceCacheTest extends FlatSpec with Matchers with ScalaFutures with MockFactory {
-  /*
-  trait PriceCache {
-  def getStockInfo(stock: String): Future[StockInfo]
-  def setStockInfo(stockInfo: StockInfo): Unit
-  def getStocks: Set[String]
-  def contains(stock: String): Boolean
-
-  def getExchangeRate(from: String, to: String): Future[CurrencyExchangeRateInfo]
-  def setExchangeRate(exchangeRate: CurrencyExchangeRateInfo): Unit
-  def getExchangePairs: Set[(String, String)]
-  def contains(exchangePair: (String, String)): Boolean
-}
-   */
 
   trait TestWiring extends PriceCacheComponentImpl with StockPriceServiceComponent {
     implicit val patienceConfig: PatienceConfig = PatienceConfig(500 millis, 20 millis)
