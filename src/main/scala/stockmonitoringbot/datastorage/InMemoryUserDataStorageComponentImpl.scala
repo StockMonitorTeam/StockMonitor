@@ -79,7 +79,7 @@ trait InMemoryUserDataStorageComponentImpl extends UserDataStorageComponent {
           usersDailyNotifications(userId) = usersDailyNotifications(userId).filterNot(shouldDelete)
         }
       })
-    override def getUsersPortfolios(userId: Long): Future[Seq[Portfolio]] =
+    override def getUserPortfolios(userId: Long): Future[Seq[Portfolio]] =
       Future(usersPortfolios.synchronized {
         usersPortfolios(userId).toSeq
       })

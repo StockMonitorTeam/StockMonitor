@@ -77,10 +77,10 @@ class InMemoryDataStorageTest extends FlatSpec with Matchers with ScalaFutures {
     val test = for {
       _ <- userDataStorage.addPortfolio(portfolio1)
       _ <- userDataStorage.addPortfolio(portfolio2)
-      portfolios <- userDataStorage.getUsersPortfolios(0)
+      portfolios <- userDataStorage.getUserPortfolios(0)
       _ = portfolios should contain theSameElementsAs Seq(portfolio1, portfolio2)
       _ <- userDataStorage.deletePortfolio(0, "newPortfolio")
-      portfolios <- userDataStorage.getUsersPortfolios(0)
+      portfolios <- userDataStorage.getUserPortfolios(0)
       _ = portfolios should contain theSameElementsAs Seq(portfolio2)
     } yield
       ()

@@ -1,5 +1,7 @@
 package stockmonitoringbot.messengerservices.markups
 
+import stockmonitoringbot.datastorage.models.Portfolio
+
 object GeneralTexts {
 
   val INTRO_MESSAGE =
@@ -58,5 +60,29 @@ object GeneralTexts {
   val INPUT_PORTFOLIO_CREATED = (name: String, currency: String) =>
     s"Портфель «$name» с валютой $currency успешно создан."
   val PORTFOLIO_CREATE_ERROR = s"Ошибка добавления портфеля"
+
+  val PORTFOLIO_SHOW = (portfolio: Portfolio) =>
+    s"""
+       |Портфель «${portfolio.name}»
+       |Валюта: ${portfolio.currency}
+       |""".stripMargin
+
+  val PORTFOLIO_SHOW_STOCK = "Акции в портфеле:\n"
+
+  val PORTFOLIO_STOCK_ADD =
+    """
+      |Для добавления новой акции в портфель «Мой долларовый портфель» введите её тикер как текст (YNDX) или как команду (/YNDX).
+      |
+      |Будьте внимательны с валютой, в которой торгуется данная акция. Мы пока не умеем автоматически её определять. Вы можете создать несколько портфелей для акций, торгуемых в разных валютах.
+    """.stripMargin
+
+  val PORTFOLIO_STOCK_ADD_ERROR = s"Ошибка добавления акции в портфель"
+
+  val PORTFOLIO_STOCK_ADD_QUERY = s"Данный тикер не найден в системе. Пытаемся запросить. Пожалуйста, подождите 😌"
+
+  val PORTFOLIO_STOCK_ADD_AMOUNT = (ticker: String, portfolioName: String) =>
+    s"""
+      |Для добавления $ticker в портфель «$portfolioName» введите количество акций. Например: 1 или 0.03
+    """.stripMargin
 
 }

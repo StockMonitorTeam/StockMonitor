@@ -24,7 +24,7 @@ trait UserDataStorage {
 
   def addPortfolio(portfolio: Portfolio): Future[Unit]
   def deletePortfolio(userId: Long, portfolioName: String): Future[Unit]
-  def getUsersPortfolios(userId: Long): Future[Seq[Portfolio]]
+  def getUserPortfolios(userId: Long): Future[Seq[Portfolio]]
   def getPortfolio(userId: Long, portfolioName: String): Future[Portfolio]
   def addStockToPortfolio(userId: Long, portfolioName: String, stock: String, count: Double): Future[Unit]
   def deleteStockFromPortfolio(userId: Long, portfolioName: String, stock: String): Future[Unit]

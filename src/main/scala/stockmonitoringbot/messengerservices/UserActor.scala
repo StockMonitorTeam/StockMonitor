@@ -42,14 +42,13 @@ class UserActor(userId: Long,
   }
 
   def printPortfolios(): Unit = {
-    userDataStorage.getUsersPortfolios(userId).onComplete {
+    userDataStorage.getUserPortfolios(userId).onComplete {
       case Success(results) => results match {
         case Seq() =>
           sendMessageToUser(GeneralTexts.NO_PORTFOLIO_GREETING, GeneralMarkups.portfolioMarkup)
           context become waitForPortfolio
         case portfolios =>
           sendInlineMessageToUser(GeneralTexts.PORTFOLIO_LIST, GeneralMarkups.generatePortfolioList(userId, portfolios))
-//          sendMessageToUser(GeneralTexts.PORTFOLIO_GREETING(portfolios.map(x => x.name).mkString("\n")), GeneralMarkups.portfolioMarkup)
           context become waitForPortfolio
       }
       case _ =>
@@ -57,8 +56,36 @@ class UserActor(userId: Long,
     }
   }
 
+  def printPortfolio(userId: Long, portfolioName: String): Unit = {
+    userDataStorage.getPortfolio(userId, portfolioName) map {
+      portfolio =>
+        val portfolioGreeting = GeneralTexts.PORTFOLIO_SHOW(portfolio) +
+          (
+            if (portfolio.stocks.isEmpty)
+              ""
+            else
+              GeneralTexts.PORTFOLIO_SHOW_STOCK +
+              portfolio.stocks.map {
+                case (k, v) =>
+                  s"$k ($v)"
+              }.mkString("\n")
+          )
+        // TODO: Calculate sum
+        sendMessageToUser(portfolioGreeting, GeneralMarkups.viewPortfolioMarkup)
+        context become waitForPortfolioStock(portfolio)
+    }
+  }
+
+  override def receive: Receive = startMenu
+
+  // Telegram callback handlers
+  def tgCallback: Receive = {
+    case IncomingCallback(CallbackTypes.portfolio, data) =>
+      printPortfolio(userId, data.message)
+  }
+
   // General menu items
-  def common: Receive = {
+  def common: Receive = tgCallback orElse {
 
     case IncomingMessage(Buttons.backToMain) =>
       returnToStartMenu()
@@ -72,10 +99,7 @@ class UserActor(userId: Long,
 
     case IncomingMessage(Buttons.currency) | IncomingMessage(Buttons.triggers) | IncomingMessage(Buttons.info) =>
       sendMessageToUser(GeneralTexts.UNIMPLEMENTED)
-
   }
-
-  override def receive: Receive = startMenu
 
   def startMenu: Receive = common orElse {
     case IncomingMessage(Buttons.notifications) =>
@@ -100,7 +124,7 @@ class UserActor(userId: Long,
 
   def waitForPortfolioCurrency(name: String): Receive = common orElse {
     case IncomingMessage(currencyName(currency)) => {
-      userDataStorage.addPortfolio(Portfolio(userId, name, USD, Map.empty)).onComplete {
+      userDataStorage.addPortfolio(Portfolio(userId, name, Currency.define(currency), Map.empty)).onComplete {
         case Success(_) =>
           sendMessageToUser(GeneralTexts.INPUT_PORTFOLIO_CREATED(name, currency))
           printPortfolios()
@@ -110,6 +134,45 @@ class UserActor(userId: Long,
       }
     }
     case _ => sendMessageToUser(GeneralTexts.INPUT_PORTFOLIO_CURRENCY_INVALID)
+  }
+
+  def waitForPortfolioStock(portfolio: Portfolio): Receive = common orElse {
+    case IncomingMessage(Buttons.portfolioStockAdd) =>
+      sendMessageToUser(GeneralTexts.PORTFOLIO_STOCK_ADD, GeneralMarkups.viewPortfolioMarkup)
+    case IncomingMessage(stockName(name)) => {
+      // Try to get the ticker
+
+      if (!cache.contains(name)) {
+        sendMessageToUser(GeneralTexts.PORTFOLIO_STOCK_ADD_QUERY)
+      }
+
+      cache.getStockInfo(name).onComplete {
+        case Success(_) =>
+          sendMessageToUser(GeneralTexts.PORTFOLIO_STOCK_ADD_AMOUNT(name, portfolio.name))
+          context become waitForPortfolioStockAmount(portfolio, name)
+        case Failure(exception) =>
+          sendMessageToUser(GeneralTexts.printStockException(name))
+          logger.warning(s"$exception")
+          context become waitForPortfolioStock(portfolio)
+        case _ =>
+          logger.warning(s"Unknown getStockInfo exception")
+          returnToStartMenu()
+      }
+
+      context become Actor.emptyBehavior
+    }
+  }
+
+  def waitForPortfolioStockAmount(portfolio: Portfolio, stockName: String): Receive = common orElse {
+    case IncomingMessage(floatAmount(amount)) =>
+      userDataStorage.addStockToPortfolio(userId, portfolio.name, stockName, amount.toDouble) onComplete {
+        case Success(_) =>
+          printPortfolio(userId, portfolio.name)
+          context become waitForPortfolio
+        case _ =>
+          sendMessageToUser(GeneralTexts.PORTFOLIO_STOCK_ADD_ERROR)
+          printPortfolios()
+      }
   }
 
   def waitForStock: Receive = common orElse {
@@ -203,15 +266,22 @@ class UserActor(userId: Long,
 
 }
 
+case class IncomingCallbackMessage(userId: String, message: String)
+object CallbackTypes {
+  val portfolio = "PRT"
+}
+
 object UserActor {
   def props(id: Long, messageSender: MessageSender, userDataStorage: UserDataStorage, cache: PriceCache): Props =
     Props(new UserActor(id, messageSender, userDataStorage, cache))
 
   case class IncomingMessage(message: String)
+  case class IncomingCallback(handler: String, message: IncomingCallbackMessage)
 
   val stockName: Regex = "/?([A-Z]+)".r
   val notificationRegex: Regex = "([A-Z]+) ([<>]) ([^ ]+)".r
   val portfolioName: Regex = "([a-zA-Z0-9_\\-\\ ]{3,64})".r
   val currencyName: Regex = "(USD|EUR|RUB)".r
+  val floatAmount: Regex = "([0-9]+[.]?[0-9]*)".r
 
 }
