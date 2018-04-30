@@ -1,16 +1,16 @@
 package stockmonitoringbot.messengerservices
 
+import java.util.concurrent.ConcurrentHashMap
+
 import akka.actor.{ActorRef, PoisonPill}
 import info.mukel.telegrambot4s.api._
 import info.mukel.telegrambot4s.api.declarative.{Callbacks, Commands}
-import info.mukel.telegrambot4s.methods.SendMessage
 import stockmonitoringbot.datastorage.UserDataStorageComponent
 import stockmonitoringbot.messengerservices.MessageSenderComponent.MessageSender
 import stockmonitoringbot.messengerservices.UserActor.{IncomingCallback, IncomingMessage}
 import stockmonitoringbot.stocksandratescache.PriceCacheComponent
 import stockmonitoringbot.{ActorSystemComponent, ApiKeys, ExecutionContextComponent}
 
-import scala.collection.mutable
 import scala.util.{Failure, Success}
 
 /**
@@ -33,16 +33,16 @@ trait TelegramService extends TelegramBot
 
   logger.info("starting telegram bot")
 
-  private val activeUsers: mutable.Map[Long, ActorRef] =
-    mutable.HashMap.empty
+  private val activeUsers = new ConcurrentHashMap[Long, ActorRef]()
 
   onCommand("/start") {
     implicit msg =>
       logger.info(s"starting chat with ${
         msg.chat.firstName.get
       }")
-      activeUsers.get(msg.chat.id).foreach(_ ! PoisonPill)
-      activeUsers += msg.chat.id -> system.actorOf(UserActor.props(msg.chat.id, messageSender, userDataStorage, priceCache))
+      val prev = activeUsers.put(msg.chat.id,
+        system.actorOf(UserActor.props(msg.chat.id, messageSender, userDataStorage, priceCache)))
+      Option(prev).foreach(_ ! PoisonPill)
   }
 
   onMessage {
@@ -53,7 +53,7 @@ trait TelegramService extends TelegramBot
         msg.text.getOrElse("")
       }")
       for {
-        user <- activeUsers.get(msg.chat.id)
+        user <- Option(activeUsers.get(msg.chat.id))
         messageText <- msg.text
       } user ! IncomingMessage(messageText)
   }
@@ -68,14 +68,14 @@ trait TelegramService extends TelegramBot
 
       for {
         message <- msg.message
-        user <- activeUsers.get(message.chat.id)
+        user <- Option(activeUsers.get(message.chat.id))
         messageData <- msg.data
       } messageData.split("_", 3) match {
-          case Array(callbackType, userId, message) =>
-            user ! IncomingCallback(callbackType, IncomingCallbackMessage(userId, message))
-          case _ =>
-            logger.warn(s"Callback not matched. ${messageData}")
-        }
+        case Array(callbackType, userId, message) =>
+          user ! IncomingCallback(callbackType, IncomingCallbackMessage(userId, message))
+        case _ =>
+          logger.warn(s"Callback not matched. $messageData")
+      }
       ackCallback()(msg)
   }
 
