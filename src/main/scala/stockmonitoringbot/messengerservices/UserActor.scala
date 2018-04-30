@@ -53,6 +53,7 @@ class UserActor(userId: Long,
           sendMessageToUser(GeneralTexts.NO_PORTFOLIO_GREETING, GeneralMarkups.portfolioMarkup)
           context become waitForPortfolio
         case portfolios =>
+          sendMessageToUser(GeneralTexts.PORTFOLIO_HELLO, GeneralMarkups.portfolioMarkup)
           sendInlineMessageToUser(GeneralTexts.PORTFOLIO_LIST, GeneralMarkups.generatePortfolioList(userId, portfolios))
           context become waitForPortfolio
       }
@@ -169,6 +170,7 @@ class UserActor(userId: Long,
   def portfolioMenu(portfolio: Portfolio): Receive = common orElse {
     case IncomingMessage(Buttons.portfolioStockAdd) =>
       sendMessageToUser(GeneralTexts.PORTFOLIO_STOCK_ADD(portfolio.name), GeneralMarkups.viewPortfolioMarkup)
+      context become waitForPortfolioStock(portfolio)
     case IncomingMessage(Buttons.notifications) => {
       userDataStorage.getUserPortfolioNotification(userId, portfolio.name) onComplete {
         case Success(notification) =>
