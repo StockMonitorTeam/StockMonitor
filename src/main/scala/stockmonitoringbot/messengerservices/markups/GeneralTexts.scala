@@ -1,6 +1,6 @@
 package stockmonitoringbot.messengerservices.markups
 
-import stockmonitoringbot.datastorage.models.Portfolio
+import stockmonitoringbot.datastorage.models.{Portfolio, PortfolioDailyNotification}
 
 object GeneralTexts {
 
@@ -82,7 +82,19 @@ object GeneralTexts {
 
   val PORTFOLIO_STOCK_ADD_AMOUNT = (ticker: String, portfolioName: String) =>
     s"""
-      |Для добавления $ticker в портфель «$portfolioName» введите количество акций. Например: 1 или 0.03
+       |Для добавления $ticker в портфель «$portfolioName» введите количество акций. Например: 1 или 0.03
     """.stripMargin
+
+  val PORTFOLIO_DAILY_NOTIFICATION = (portfolioName: String, notification: Option[PortfolioDailyNotification]) =>
+    s"""
+      |Для того, чтобы задать ежедневное оповещение о стоимости портфеля «${portfolioName}» выберите время, либо введите его в формате HH:MM.
+      |
+      |На текущий момент у вас""".stripMargin +
+      (notification match {
+        case Some(x) => s" установлены оповещения на ${x.time.toString}"
+        case None => " не установлены оповещения"
+      })
+
+  val ERROR = "Произошла ошибка 🙁. Будем благодарны, если вы сообщите подробности разработчикам."
 
 }

@@ -72,7 +72,7 @@ class UserActor(userId: Long,
           )
         // TODO: Calculate sum
         sendMessageToUser(portfolioGreeting, GeneralMarkups.viewPortfolioMarkup)
-        context become waitForPortfolioStock(portfolio)
+        context become portfolioMenu(portfolio)
     }
   }
 
@@ -107,9 +107,36 @@ class UserActor(userId: Long,
       context become notificationsMenu
   }
 
+  def waitForPortfolioNotificationTime: Receive = common orElse {
+
+    case IncomingCallback(CallbackTypes.portfolioSetNotification, x) =>
+      sendMessageToUser(x.message)
+
+  }
+
   def waitForPortfolio: Receive = common orElse {
     case IncomingMessage(Buttons.portfolioCreate) => {
       sendMessageToUser(GeneralTexts.INPUT_PORTFOLIO_NAME)
+      context become waitForPortfolioName
+    }
+  }
+
+  def portfolioMenu(portfolio: Portfolio): Receive = common orElse {
+    case IncomingMessage(Buttons.portfolioStockAdd) =>
+      sendMessageToUser(GeneralTexts.PORTFOLIO_STOCK_ADD, GeneralMarkups.viewPortfolioMarkup)
+    case IncomingMessage(Buttons.notifications) => {
+      userDataStorage.getUserPortfolioNotification(userId, portfolio.name) onComplete {
+        case Success(notification) =>
+          sendInlineMessageToUser(
+            GeneralTexts.PORTFOLIO_DAILY_NOTIFICATION(portfolio.name, notification),
+            GeneralMarkups.generatePortfolioNotificationOptions(userId, portfolio)
+          )
+          context become waitForPortfolioNotificationTime
+        case _ =>
+          sendMessageToUser(GeneralTexts.ERROR)
+          returnToStartMenu()
+      }
+
       context become waitForPortfolioName
     }
   }
@@ -137,8 +164,6 @@ class UserActor(userId: Long,
   }
 
   def waitForPortfolioStock(portfolio: Portfolio): Receive = common orElse {
-    case IncomingMessage(Buttons.portfolioStockAdd) =>
-      sendMessageToUser(GeneralTexts.PORTFOLIO_STOCK_ADD, GeneralMarkups.viewPortfolioMarkup)
     case IncomingMessage(stockName(name)) => {
       // Try to get the ticker
 
@@ -168,7 +193,6 @@ class UserActor(userId: Long,
       userDataStorage.addStockToPortfolio(userId, portfolio.name, stockName, amount.toDouble) onComplete {
         case Success(_) =>
           printPortfolio(userId, portfolio.name)
-          context become waitForPortfolio
         case _ =>
           sendMessageToUser(GeneralTexts.PORTFOLIO_STOCK_ADD_ERROR)
           printPortfolios()
@@ -269,6 +293,7 @@ class UserActor(userId: Long,
 case class IncomingCallbackMessage(userId: String, message: String)
 object CallbackTypes {
   val portfolio = "PRT"
+  val portfolioSetNotification = "PRN"
 }
 
 object UserActor {

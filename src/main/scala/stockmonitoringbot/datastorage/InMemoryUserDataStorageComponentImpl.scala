@@ -103,6 +103,12 @@ trait InMemoryUserDataStorageComponentImpl extends UserDataStorageComponent {
           usersPortfolios(userId) += newPortfolio
         }
       })
+    override def getUserPortfolioNotification(userId: Long, portfolioName: String): Future[Option[PortfolioDailyNotification]] =
+      Future(usersPortfolios.synchronized {
+        usersDailyNotifications(userId).collectFirst {
+          case x: PortfolioDailyNotification if x.portfolioName == portfolioName => x
+        }
+      })
 
   }
 }
