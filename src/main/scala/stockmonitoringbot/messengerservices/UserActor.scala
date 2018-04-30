@@ -1,5 +1,8 @@
 package stockmonitoringbot.messengerservices
 
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
+
 import akka.actor.{Actor, Props}
 import akka.event.Logging
 import info.mukel.telegrambot4s.methods.SendMessage
@@ -9,6 +12,7 @@ import stockmonitoringbot.datastorage.models._
 import stockmonitoringbot.messengerservices.MessageSenderComponent.MessageSender
 import stockmonitoringbot.messengerservices.UserActor._
 import stockmonitoringbot.messengerservices.markups.{Buttons, GeneralMarkups, GeneralTexts}
+import stockmonitoringbot.notificationhandlers.DailyNotificationHandler
 import stockmonitoringbot.stocksandratescache.PriceCache
 
 import scala.util.matching.Regex
@@ -20,6 +24,7 @@ import scala.util.{Failure, Success}
 class UserActor(userId: Long,
                 messageSender: MessageSender,
                 userDataStorage: UserDataStorage,
+                dailyNotification: DailyNotificationHandler,
                 cache: PriceCache) extends Actor {
 
   import context.dispatcher
@@ -76,6 +81,33 @@ class UserActor(userId: Long,
     }
   }
 
+  def clearPortfolioNotification(userId: Long, portfolio: Portfolio): Unit = {
+    userDataStorage.getUserPortfolioNotification(userId, portfolio.name).onComplete {
+      case Success(result) => result match {
+        case Some(x) => {
+          dailyNotification.deleteDailyNotification(x)
+          userDataStorage.deleteDailyNotification(x)
+        }
+        case None =>
+      }
+    }
+  }
+
+  def setPortfolioNotification(userId: Long, portfolio: Portfolio, time: String): Unit = {
+    try {
+      val localTime: LocalTime = LocalTime.parse(time, DateTimeFormatter.ofPattern("H:mm"))
+      val notification = PortfolioDailyNotification(userId, portfolio.name, localTime)
+
+      clearPortfolioNotification(userId, portfolio)
+      dailyNotification.addDailyNotification(notification)
+      userDataStorage.addDailyNotification(notification)
+      sendMessageToUser(GeneralTexts.PORTFOLIO_DAILY_NOTIFICATION_SET(time))
+    }
+    catch {
+      case e: Exception => sendMessageToUser(GeneralTexts.TIME_ERROR)
+    }
+  }
+
   override def receive: Receive = startMenu
 
   // Telegram callback handlers
@@ -107,10 +139,23 @@ class UserActor(userId: Long,
       context become notificationsMenu
   }
 
-  def waitForPortfolioNotificationTime: Receive = common orElse {
+  def waitForPortfolioNotificationTime(portfolio: Portfolio): Receive = common orElse {
 
-    case IncomingCallback(CallbackTypes.portfolioSetNotification, x) =>
-      sendMessageToUser(x.message)
+    case IncomingCallback(CallbackTypes.portfolioSetNotification, x) => x.message match {
+      case Buttons.notificationReject => {
+        clearPortfolioNotification(userId, portfolio)
+        sendMessageToUser(GeneralTexts.PORTFOLIO_DAILY_NOTIFICATION_UNSET)
+        context become portfolioMenu(portfolio)
+      }
+      case time: String => {
+        setPortfolioNotification(userId, portfolio, time)
+        context become portfolioMenu(portfolio)
+      }
+    }
+    case IncomingMessage(time) => {
+      setPortfolioNotification(userId, portfolio, time)
+      context become portfolioMenu(portfolio)
+    }
 
   }
 
@@ -131,7 +176,7 @@ class UserActor(userId: Long,
             GeneralTexts.PORTFOLIO_DAILY_NOTIFICATION(portfolio.name, notification),
             GeneralMarkups.generatePortfolioNotificationOptions(userId, portfolio)
           )
-          context become waitForPortfolioNotificationTime
+          context become waitForPortfolioNotificationTime(portfolio)
         case _ =>
           sendMessageToUser(GeneralTexts.ERROR)
           returnToStartMenu()
@@ -297,8 +342,8 @@ object CallbackTypes {
 }
 
 object UserActor {
-  def props(id: Long, messageSender: MessageSender, userDataStorage: UserDataStorage, cache: PriceCache): Props =
-    Props(new UserActor(id, messageSender, userDataStorage, cache))
+  def props(id: Long, messageSender: MessageSender, userDataStorage: UserDataStorage, dailyNotificationHandler: DailyNotificationHandler, cache: PriceCache): Props =
+    Props(new UserActor(id, messageSender, userDataStorage, dailyNotificationHandler, cache))
 
   case class IncomingMessage(message: String)
   case class IncomingCallback(handler: String, message: IncomingCallbackMessage)

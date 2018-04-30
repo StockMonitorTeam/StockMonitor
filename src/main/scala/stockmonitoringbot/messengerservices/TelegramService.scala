@@ -7,6 +7,7 @@ import info.mukel.telegrambot4s.methods.SendMessage
 import stockmonitoringbot.datastorage.UserDataStorageComponent
 import stockmonitoringbot.messengerservices.MessageSenderComponent.MessageSender
 import stockmonitoringbot.messengerservices.UserActor.{IncomingCallback, IncomingMessage}
+import stockmonitoringbot.notificationhandlers.DailyNotificationHandlerComponent
 import stockmonitoringbot.stocksandratescache.PriceCacheComponent
 import stockmonitoringbot.{ActorSystemComponent, ApiKeys, ExecutionContextComponent}
 
@@ -24,6 +25,7 @@ trait TelegramService extends TelegramBot
   self: ExecutionContextComponent
     with ActorSystemComponent
     with UserDataStorageComponent
+    with DailyNotificationHandlerComponent
     with PriceCacheComponent
     with ApiKeys =>
 
@@ -42,7 +44,7 @@ trait TelegramService extends TelegramBot
         msg.chat.firstName.get
       }")
       activeUsers.get(msg.chat.id).foreach(_ ! PoisonPill)
-      activeUsers += msg.chat.id -> system.actorOf(UserActor.props(msg.chat.id, messageSender, userDataStorage, priceCache))
+      activeUsers += msg.chat.id -> system.actorOf(UserActor.props(msg.chat.id, messageSender, userDataStorage, dailyNotificationHandler, priceCache))
   }
 
   onMessage {

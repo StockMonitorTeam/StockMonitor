@@ -30,5 +30,7 @@ trait UserDataStorage {
   def deleteStockFromPortfolio(userId: Long, portfolioName: String, stock: String): Future[Unit]
 
   def getUserPortfolioNotification(userId: Long, portfolioName: String): Future[Option[PortfolioDailyNotification]]
+  def deleteUserPortfolioNotification(userId: Long, portfolioName: String): Future[Unit]
+  def setUserPortfolioNotification(userId: Long, portfolioName: String, notification: PortfolioDailyNotification): Future[Unit]
 
 }

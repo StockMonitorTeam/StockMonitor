@@ -30,8 +30,8 @@ object Buttons {
 
 object Inline {
 
-  def generatePrefix(prefix: String, userId: Long, portfolioName: String, data: String) =
-    s"${prefix}_${userId}_${portfolioName}_${data}"
+  def generatePrefix(prefix: String, userId: Long, data: String) =
+    s"${prefix}_${userId}_${data}"
 
 }
 
@@ -101,12 +101,12 @@ object GeneralMarkups {
   def generatePortfolioNotificationOptions(userId: Long, portfolio: Portfolio): Option[InlineKeyboardMarkup] = Some(InlineKeyboardMarkup(
     Seq(
       Seq(
-        InlineKeyboardButton(text="09:00", callbackData=Some(Inline.generatePrefix(CallbackTypes.portfolioSetNotification, userId, portfolio.name, "09:00"))),
-        InlineKeyboardButton(text="18:00", callbackData=Some(Inline.generatePrefix(CallbackTypes.portfolioSetNotification, userId, portfolio.name, "18:00"))),
-        InlineKeyboardButton(text="22:00", callbackData=Some(Inline.generatePrefix(CallbackTypes.portfolioSetNotification, userId, portfolio.name, "22:00")))
+        InlineKeyboardButton(text="09:00", callbackData=Some(Inline.generatePrefix(CallbackTypes.portfolioSetNotification, userId, "09:00"))),
+        InlineKeyboardButton(text="18:00", callbackData=Some(Inline.generatePrefix(CallbackTypes.portfolioSetNotification, userId, "18:00"))),
+        InlineKeyboardButton(text="22:00", callbackData=Some(Inline.generatePrefix(CallbackTypes.portfolioSetNotification, userId, "22:00")))
       ),
       Seq(
-        InlineKeyboardButton(text=Buttons.notificationReject, callbackData=Some(Inline.generatePrefix(CallbackTypes.portfolioSetNotification, userId, portfolio.name, "---")))
+        InlineKeyboardButton(text=Buttons.notificationReject, callbackData=Some(Inline.generatePrefix(CallbackTypes.portfolioSetNotification, userId, Buttons.notificationReject)))
       )
     )
   ))

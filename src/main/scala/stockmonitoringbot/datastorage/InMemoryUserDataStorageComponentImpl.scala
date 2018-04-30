@@ -109,6 +109,17 @@ trait InMemoryUserDataStorageComponentImpl extends UserDataStorageComponent {
           case x: PortfolioDailyNotification if x.portfolioName == portfolioName => x
         }
       })
+    override def deleteUserPortfolioNotification(userId: Long, portfolioName: String): Future[Unit] =
+      Future(usersPortfolios.synchronized {
+        usersDailyNotifications(userId).collect {
+          case x: PortfolioDailyNotification if x.portfolioName == portfolioName => x
+        }.foreach(n => usersDailyNotifications(userId) -= n)
+      })
+    override def setUserPortfolioNotification(userId: Long, portfolioName: String, notification: PortfolioDailyNotification): Future[Unit] =
+      Future(usersPortfolios.synchronized {
+        this.deleteUserPortfolioNotification(userId, portfolioName)
+        usersDailyNotifications(userId) += notification
+      })
 
   }
 }
