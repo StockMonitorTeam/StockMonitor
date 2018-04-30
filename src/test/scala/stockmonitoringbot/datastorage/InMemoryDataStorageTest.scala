@@ -1,88 +1,128 @@
 package stockmonitoringbot.datastorage
 
+import java.time.LocalTime
+
+import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{FlatSpec, Matchers}
 import stockmonitoringbot.ExecutionContextComponent
+import stockmonitoringbot.datastorage.models._
 
-import scala.concurrent.duration.Duration
-import scala.concurrent.{Await, ExecutionContextExecutor}
-
+import scala.concurrent.ExecutionContextExecutor
+import scala.concurrent.duration._
+import scala.language.postfixOps
 
 /**
   * Created by amir.
   */
-class InMemoryDataStorageTest extends FlatSpec with Matchers {
+class InMemoryDataStorageTest extends FlatSpec with Matchers with ScalaFutures {
 
   val stock = "MSFT"
 
   implicit val executionContextGlobal: ExecutionContextExecutor = scala.concurrent.ExecutionContext.global
 
-  trait ExecutionContextGlobal extends ExecutionContextComponent {
-    override implicit val executionContext: ExecutionContextExecutor = scala.concurrent.ExecutionContext.global
+  trait TestWiring extends InMemoryUserDataStorageComponentImpl
+    with ExecutionContextComponent {
+    implicit val patienceConfig: PatienceConfig = PatienceConfig(500 millis, 20 millis)
+    override val executionContext = scala.concurrent.ExecutionContext.global
   }
 
-  def inMemoryStorage: DataStorage = {
-    new {} with InMemoryDataStorage with ExecutionContextGlobal
-  }
-
-  "InMemoryDataStorage" should "return stock price" in {
-    val notificationService = inMemoryStorage
-    val test = for {_ <- notificationService.addStock(stock, 23)
-                    firstPrice <- notificationService.getPrice(stock)
-                    _ <- notificationService.updateStockPrice(stock, 25)
-                    secondPrice <- notificationService.getPrice(stock)
-    } yield {
-      firstPrice shouldBe 23
-      secondPrice shouldBe 25
+  "InMemoryUserDataStorage" should "store daily notifications" in new TestWiring {
+    val dailyNotification1 = PortfolioDailyNotification(0, "newPortfolio", LocalTime.of(0, 0))
+    val dailyNotification2 = PortfolioDailyNotification(0, "newPortfolio2", LocalTime.of(0, 0))
+    val test = for {
+      _ <- userDataStorage.addDailyNotification(dailyNotification1)
+      _ <- userDataStorage.addDailyNotification(dailyNotification2)
+      notifications <- userDataStorage.getUsersDailyNotifications(0)
+      _ = notifications should contain theSameElementsAs Seq(dailyNotification1, dailyNotification2)
+      _ <- userDataStorage.deleteDailyNotification(dailyNotification1)
+      notifications <- userDataStorage.getUsersDailyNotifications(0)
+      _ = notifications should contain theSameElementsAs Seq(dailyNotification2)
+    } yield
       ()
-    }
-    Await.ready(test, Duration.Inf)
+    test.futureValue shouldBe (())
   }
 
-  "InMemoryDataStorage" should "return triggered notifications when price raise" in {
-    val notificationService = inMemoryStorage
-    val test = for {_ <- notificationService.addStock(stock, 23)
-                    _ <- notificationService.addNotification(Notification(stock, 24, RaiseNotification, 0))
-                    _ <- notificationService.addNotification(Notification(stock, 24, RaiseNotification, 1))
-                    _ <- notificationService.addNotification(Notification(stock, 26, RaiseNotification, 0))
-                    notifications <- notificationService.updateStockPrice(stock, 25)
-    } yield {
-      notifications should contain theSameElementsAs
-        Seq(Notification(stock, 24, RaiseNotification, 0), Notification(stock, 24, RaiseNotification, 1))
+  "InMemoryUserDataStorage" should "store trigger notifications" in new TestWiring {
+    val triggerNotification1 = PortfolioTriggerNotification(0, "newPortfolio", 40, RaiseNotification)
+    val triggerNotification2 = PortfolioTriggerNotification(0, "newPortfolio2", 40, RaiseNotification)
+    val test = for {
+      _ <- userDataStorage.addTriggerNotification(triggerNotification1)
+      _ <- userDataStorage.addTriggerNotification(triggerNotification2)
+      notifications <- userDataStorage.getUsersTriggerNotifications(0)
+      _ = notifications should contain theSameElementsAs Seq(triggerNotification1, triggerNotification2)
+      _ <- userDataStorage.deleteTriggerNotification(triggerNotification1)
+      notifications <- userDataStorage.getUsersTriggerNotifications(0)
+      _ = notifications should contain theSameElementsAs Seq(triggerNotification2)
+    } yield
       ()
-    }
-    Await.ready(test, Duration.Inf)
+    test.futureValue shouldBe (())
   }
 
-  "InMemoryDataStorage" should "return triggered notifications when price fall" in {
-    val notificationService = inMemoryStorage
-    val test = for {_ <- notificationService.addStock(stock, 23)
-                    _ <- notificationService.addNotification(Notification(stock, 22, RaiseNotification, 0))
-                    _ <- notificationService.addNotification(Notification(stock, 22, RaiseNotification, 1))
-                    _ <- notificationService.addNotification(Notification(stock, 19, RaiseNotification, 0))
-                    notifications <- notificationService.updateStockPrice(stock, 21)
-    } yield {
-      notifications should contain theSameElementsAs
-        Seq(Notification(stock, 22, RaiseNotification, 0), Notification(stock, 22, RaiseNotification, 1))
+  "InMemoryUserDataStorage" should "be able to return all trigger notifications" in new TestWiring {
+    val triggerNotification1 = PortfolioTriggerNotification(0, "newPortfolio", 40, RaiseNotification)
+    val triggerNotification2 = PortfolioTriggerNotification(1, "newPortfolio2", 40, RaiseNotification)
+    val test = for {
+      _ <- userDataStorage.addTriggerNotification(triggerNotification1)
+      _ <- userDataStorage.addTriggerNotification(triggerNotification2)
+      notifications <- userDataStorage.getAllTriggerNotifications
+      _ = notifications should contain theSameElementsAs Seq(triggerNotification1, triggerNotification2)
+    } yield
       ()
-    }
-    Await.ready(test, Duration.Inf)
+    test.futureValue shouldBe (())
   }
 
-  "InMemoryDataStorage" should "store user's notifications" in {
-    val notificationService = inMemoryStorage
-    val test = for {_ <- notificationService.addStock(stock, 23)
-                    _ <- notificationService.addNotification(Notification(stock, 22, RaiseNotification, 0))
-                    _ <- notificationService.addNotification(Notification(stock, 23, RaiseNotification, 0))
-                    _ <- notificationService.addNotification(Notification(stock, 24, RaiseNotification, 0))
-                    _ <- notificationService.deleteNotification(Notification(stock, 23, RaiseNotification, 0))
-                    notifications <- notificationService.getNotifications(0)
-    } yield {
-      notifications should contain theSameElementsAs
-        Seq(Notification(stock, 22, RaiseNotification, 0), Notification(stock, 24, RaiseNotification, 0))
+  "InMemoryUserDataStorage" should "store users portfolios" in new TestWiring {
+    val portfolio1 = Portfolio(0, "newPortfolio", USD, Map("MSFT" -> 23, "AAPL" -> 42))
+    val portfolio2 = Portfolio(0, "newPortfolio2", USD, Map("MSFT" -> 23))
+    val test = for {
+      _ <- userDataStorage.addPortfolio(portfolio1)
+      _ <- userDataStorage.addPortfolio(portfolio2)
+      portfolios <- userDataStorage.getUserPortfolios(0)
+      _ = portfolios should contain theSameElementsAs Seq(portfolio1, portfolio2)
+      _ <- userDataStorage.deletePortfolio(0, "newPortfolio")
+      portfolios <- userDataStorage.getUserPortfolios(0)
+      _ = portfolios should contain theSameElementsAs Seq(portfolio2)
+    } yield
       ()
-    }
-    Await.ready(test, Duration.Inf)
+    test.futureValue shouldBe (())
   }
 
+  "InMemoryUserDataStorage" should "add/delete stocks from portfolios" in new TestWiring {
+    val portfolio1 = Portfolio(0, "newPortfolio", USD, Map("MSFT" -> 23, "AAPL" -> 42))
+    val portfolio2 = Portfolio(0, "newPortfolio", USD, Map("MSFT" -> 23, "AAPL" -> 42, "YNDX" -> 1))
+    val test = for {
+      _ <- userDataStorage.addPortfolio(portfolio1)
+      _ <- userDataStorage.addStockToPortfolio(0, "newPortfolio", "YNDX", 1)
+      portfolio <- userDataStorage.getPortfolio(0, "newPortfolio")
+      _ = portfolio shouldBe portfolio2
+      _ <- userDataStorage.deleteStockFromPortfolio(0, "newPortfolio", "YNDX")
+      portfolio <- userDataStorage.getPortfolio(0, "newPortfolio")
+      _ = portfolio shouldBe portfolio1
+    } yield
+      ()
+    test.futureValue shouldBe (())
+  }
+
+  "InMemoryUserDataStorage" should "delete notifications when deleting portfolio" in new TestWiring {
+    val portfolio1 = Portfolio(0, "newPortfolio", USD, Map("MSFT" -> 23, "AAPL" -> 42))
+    val triggerNotification1 = PortfolioTriggerNotification(0, "newPortfolio", 40, RaiseNotification)
+    val triggerNotification2 = PortfolioTriggerNotification(0, "newPortfolio1", 40, RaiseNotification)
+    val dailyNotification1 = PortfolioDailyNotification(0, "newPortfolio", LocalTime.of(0, 0))
+    val dailyNotification2 = PortfolioDailyNotification(0, "newPortfolio1", LocalTime.of(0, 0))
+    val test = for {
+      _ <- userDataStorage.addPortfolio(portfolio1)
+      _ <- userDataStorage.addDailyNotification(dailyNotification1)
+      _ <- userDataStorage.addDailyNotification(dailyNotification2)
+      _ <- userDataStorage.addTriggerNotification(triggerNotification1)
+      _ <- userDataStorage.addTriggerNotification(triggerNotification2)
+      _ <- userDataStorage.deletePortfolio(0, "newPortfolio")
+      dailyNotifications <- userDataStorage.getUsersDailyNotifications(0)
+      _ = dailyNotifications should contain theSameElementsAs Seq(dailyNotification2)
+      triggerNotifications <- userDataStorage.getUsersTriggerNotifications(0)
+      _ = triggerNotifications should contain theSameElementsAs Seq(triggerNotification2)
+    } yield
+      ()
+    test.futureValue shouldBe (())
+  }
 
 }
