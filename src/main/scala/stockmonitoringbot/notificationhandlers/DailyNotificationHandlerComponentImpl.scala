@@ -65,7 +65,7 @@ trait DailyNotificationHandlerComponentImpl extends DailyNotificationHandlerComp
         messageSender(SendMessage(notification.ownerId, message))
       }
       notificationSend.failed.map {
-        exception => logger.error(s"can't make notification message on notification $notification: $exception")
+        exception => logger.error(s"can't make notification message on notification $notification", exception)
       }
       notificationSend
     }

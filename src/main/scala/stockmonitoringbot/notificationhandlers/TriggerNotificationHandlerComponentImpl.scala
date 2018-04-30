@@ -124,7 +124,7 @@ trait TriggerNotificationHandlerComponentImpl extends TriggerNotificationHandler
         case Success((numOfStocks, numOfRates)) =>
           logger.info(s"Cache successfully updated. Updated $numOfStocks stocks & $numOfRates exchange rates.")
           checkTriggers()
-        case Failure(exception) => logger.error(s"Can't update cache: $exception")
+        case Failure(exception) => logger.error(s"Can't update cache", exception)
       }
     }
 

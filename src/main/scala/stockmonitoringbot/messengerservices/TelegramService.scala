@@ -82,7 +82,7 @@ trait TelegramService extends TelegramBot
   override val messageSender: MessageSender = message => request(message).onComplete {
     case Success(_) =>
     case Failure(exception) =>
-      logger.error(s"Can't deliver message: $exception")
+      logger.error(s"Can't deliver message", exception)
   }
 
 }
