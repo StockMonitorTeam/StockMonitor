@@ -11,7 +11,7 @@ import scala.concurrent.Future
   */
 
 trait InMemoryUserDataStorageComponentImpl extends UserDataStorageComponent {
-  self: ExecutionContextComponent =>
+  this: ExecutionContextComponent =>
 
   override val userDataStorage: UserDataStorage = new InMemoryUserDataStorage
 

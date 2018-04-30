@@ -19,7 +19,7 @@ import scala.util.{Failure, Success}
   * Created by amir.
   */
 trait TriggerNotificationHandlerComponentImpl extends TriggerNotificationHandlerComponent {
-  self: StockPriceServiceComponent
+  this: StockPriceServiceComponent
     with UserDataStorageComponent
     with PriceCacheComponent
     with MessageSenderComponent

@@ -21,7 +21,7 @@ trait TelegramService extends TelegramBot
   with Commands
   with Callbacks
   with MessageSenderComponent {
-  self: ExecutionContextComponent
+  this: ExecutionContextComponent
     with ActorSystemComponent
     with UserDataStorageComponent
     with PriceCacheComponent

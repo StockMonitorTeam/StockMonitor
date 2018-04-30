@@ -20,7 +20,7 @@ import scala.language.postfixOps
   * Created by amir.
   */
 trait DailyNotificationHandlerComponentImpl extends DailyNotificationHandlerComponent {
-  self: UserDataStorageComponent
+  this: UserDataStorageComponent
     with PriceCacheComponent
     with MessageSenderComponent
     with ExecutionContextComponent

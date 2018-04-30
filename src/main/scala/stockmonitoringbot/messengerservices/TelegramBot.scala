@@ -10,7 +10,7 @@ import stockmonitoringbot.{ActorSystemComponent, ExecutionContextComponent}
   */
 //this trait was implemented to avoid creating ActorSystem by default TelegramBot
 trait TelegramBot extends BotBase {
-  self : ExecutionContextComponent with ActorSystemComponent =>
+  this : ExecutionContextComponent with ActorSystemComponent =>
   override lazy val logger = Logger(getClass)
   override lazy val client: RequestHandler = new AkkaClient(token)
 }

@@ -12,7 +12,7 @@ import scala.concurrent.Future
   */
 
 trait PriceCacheComponentImpl extends PriceCacheComponent {
-  self: StockPriceServiceComponent => //todo initial load stocks in cache
+  this: StockPriceServiceComponent => //todo initial load stocks in cache
 
   override val priceCache = new PriceCacheImpl
 
