@@ -168,7 +168,7 @@ class UserActor(userId: Long,
 
   def portfolioMenu(portfolio: Portfolio): Receive = common orElse {
     case IncomingMessage(Buttons.portfolioStockAdd) =>
-      sendMessageToUser(GeneralTexts.PORTFOLIO_STOCK_ADD, GeneralMarkups.viewPortfolioMarkup)
+      sendMessageToUser(GeneralTexts.PORTFOLIO_STOCK_ADD(portfolio.name), GeneralMarkups.viewPortfolioMarkup)
     case IncomingMessage(Buttons.notifications) => {
       userDataStorage.getUserPortfolioNotification(userId, portfolio.name) onComplete {
         case Success(notification) =>
