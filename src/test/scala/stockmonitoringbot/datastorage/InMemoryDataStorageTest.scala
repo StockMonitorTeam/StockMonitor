@@ -79,10 +79,10 @@ class InMemoryDataStorageTest extends FlatSpec with Matchers with BeforeAndAfter
     val portfolio2 = Portfolio(0, "newPortfolio2", USD, Map("MSFT" -> 23))
     val test = for {_ <- storage.addPortfolio(portfolio1)
                     _ <- storage.addPortfolio(portfolio2)
-                    portfolios <- storage.getUsersPortfolios(0)
+                    portfolios <- storage.getUserPortfolios(0)
                     _ = portfolios should contain theSameElementsAs Seq(portfolio1, portfolio2)
                     _ <- storage.deletePortfolio(0, "newPortfolio")
-                    portfolios <- storage.getUsersPortfolios(0)
+                    portfolios <- storage.getUserPortfolios(0)
                     _ = portfolios should contain theSameElementsAs Seq(portfolio2)
     } yield
       ()
