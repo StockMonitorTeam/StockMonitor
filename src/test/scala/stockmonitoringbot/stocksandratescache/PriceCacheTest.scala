@@ -3,6 +3,7 @@ package stockmonitoringbot.stocksandratescache
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.{FlatSpec, Matchers}
 import org.scalatest.concurrent.ScalaFutures
+import stockmonitoringbot.{ActorSystemComponentImpl, ExecutionContextImpl}
 import stockmonitoringbot.stockpriceservices._
 
 import scala.concurrent.Future
@@ -14,7 +15,10 @@ import scala.language.postfixOps
   */
 class PriceCacheTest extends FlatSpec with Matchers with ScalaFutures with MockFactory {
 
-  trait TestWiring extends PriceCacheComponentImpl with StockPriceServiceComponent {
+  trait TestWiring extends PriceCacheComponentImpl
+    with StockPriceServiceComponent
+    with ActorSystemComponentImpl
+    with ExecutionContextImpl {
     implicit val patienceConfig: PatienceConfig = PatienceConfig(500 millis, 20 millis)
     override val stockPriceService = mock[StockPriceService]
     val stock1 = "MSFT"
@@ -52,6 +56,11 @@ class PriceCacheTest extends FlatSpec with Matchers with ScalaFutures with MockF
     priceCache.getStockInfo(stock1).futureValue shouldBe stockInfo1
   }
 
+  "PriceCacheImpl" should "should save stockPriceInfo after retrieving" in new TestWiring {
+    stockPriceService.getStockPriceInfo _ expects stock1 returning Future.successful(stockInfo1)
+    priceCache.getStockInfo(stock1).futureValue shouldBe stockInfo1
+  }
+
   ////////TEST EXCHANGE RATES
 
   "PriceCacheImpl" should "store exchangeRateInfo" in new TestWiring {
@@ -69,6 +78,12 @@ class PriceCacheTest extends FlatSpec with Matchers with ScalaFutures with MockF
 
   "PriceCacheImpl" should "should make request to stockPriceService, if it hasn't information about exchange rate" in new TestWiring {
     stockPriceService.getCurrencyExchangeRate _ expects(exchangePair1._1, exchangePair1._2) returning Future.successful(exchangeRateInfo1)
+    priceCache.getExchangeRate(exchangePair1._1, exchangePair1._2).futureValue shouldBe exchangeRateInfo1
+  }
+
+  "PriceCacheImpl" should "should save exchangeRateInfo after retrieving" in new TestWiring {
+    stockPriceService.getCurrencyExchangeRate _ expects(exchangePair1._1, exchangePair1._2) returning Future.successful(exchangeRateInfo1) once()
+    priceCache.getExchangeRate(exchangePair1._1, exchangePair1._2).futureValue shouldBe exchangeRateInfo1
     priceCache.getExchangeRate(exchangePair1._1, exchangePair1._2).futureValue shouldBe exchangeRateInfo1
   }
 
