@@ -22,5 +22,6 @@ object Main extends App {
     with ActorSystemComponentImpl
     with ApiKeysImpl
   bot.messageReceiver.startReceiving()
+  bot.triggerNotificationHandler.start()
 
 }

@@ -90,4 +90,11 @@ class TriggerNotificationHandlerImplTest extends FlatSpec with Matchers with Sca
     triggerNotificationHandler.checkTriggers().futureValue shouldBe (())
   }
 
+  "TriggerNotificationHandler" should "shouldn't crush if there is no portfolio in data base" in new TestWiring {
+    val not = PortfolioTriggerNotification(0, "p", 22, RaiseNotification)
+    userDataStorage.getAllTriggerNotifications _ expects() returning Future.successful(Seq(not))
+    userDataStorage.getPortfolio _ expects(0, "p") returning Future.failed(new NoSuchElementException)
+    triggerNotificationHandler.checkTriggers().futureValue shouldBe (())
+  }
+
 }

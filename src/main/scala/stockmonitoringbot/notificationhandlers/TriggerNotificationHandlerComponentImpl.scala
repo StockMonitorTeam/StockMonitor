@@ -57,10 +57,13 @@ trait TriggerNotificationHandlerComponentImpl extends TriggerNotificationHandler
           isTriggeredWithPrice(notification, exchangeRateInfo.rate)
         }
       case PortfolioTriggerNotification(userId, portfolioName, _, _) =>
-        for {portfolio <- userDataStorage.getPortfolio(userId, portfolioName)
-             portfolioPrice <- getPortfolioCurrentPrice(portfolio, priceCache)
-        } yield
-          isTriggeredWithPrice(notification, portfolioPrice)
+        (for {portfolio <- userDataStorage.getPortfolio(userId, portfolioName)
+              portfolioPrice <- getPortfolioCurrentPrice(portfolio, priceCache)
+        } yield isTriggeredWithPrice(notification, portfolioPrice)).recover {
+          case _: NoSuchElementException =>
+            logger.warn(s"notification $notification exists, but portfolio doesn't")
+            None
+        }
     }
 
     private def makeTriggerMessage(notification: TriggerNotification, price: BigDecimal): String = notification match {

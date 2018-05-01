@@ -2,10 +2,10 @@ package stockmonitoringbot.datastorage
 
 import java.util.concurrent.ConcurrentHashMap
 
-import stockmonitoringbot.ExecutionContextComponent
 import stockmonitoringbot.datastorage.models._
 
 import scala.concurrent.Future
+import scala.util.Try
 
 /**
   * Created by amir.
@@ -70,7 +70,6 @@ trait InMemoryUserDataStorageComponentImpl extends UserDataStorageComponent {
 
     override def deletePortfolio(userId: Long, portfolioName: String): Future[Unit] =
       Future.successful {
-        usersPortfolios.compute(userId, (_, portfolios) => setOrEmptySet(portfolios).filterNot(_.name == portfolioName))
         //when deleting portfolio, should delete all notifications on this portfolio
         val shouldDelete: Notification => Boolean = {
           case not: PortfolioNotification => not.portfolioName == portfolioName
@@ -82,31 +81,47 @@ trait InMemoryUserDataStorageComponentImpl extends UserDataStorageComponent {
         usersDailyNotifications.compute(userId, (_, notifications) =>
           setOrEmptySet(notifications).filterNot(shouldDelete)
         )
+        usersPortfolios.compute(userId, (_, portfolios) => setOrEmptySet(portfolios).filterNot(_.name == portfolioName))
         ()
       }
 
     override def getUserPortfolios(userId: Long): Future[Seq[Portfolio]] =
       Future.successful(usersPortfolios.getOrDefault(userId, Set()).toSeq)
+
+    /**
+      *
+      * @return Failure with NoSuchElementException if there is no portfolio with specified name
+      */
     override def getPortfolio(userId: Long, portfolioName: String): Future[Portfolio] =
-      Future.successful(usersPortfolios.getOrDefault(userId, Set()).find(_.name == portfolioName).get)
+      Future.fromTry(Try(usersPortfolios.getOrDefault(userId, Set()).find(_.name == portfolioName).get))
+
+    /**
+      *
+      * @return Failure with NoSuchElementException if there is no portfolio with specified name
+      */
     override def addStockToPortfolio(userId: Long, portfolioName: String, stock: String, count: Double): Future[Unit] =
-      Future.successful {
+      Future.fromTry(Try {
         usersPortfolios.compute(userId, (_, portfolios) => {
           val oldPortfolio = portfolios.find(_.name == portfolioName).get
           val newPortfolio = oldPortfolio.copy(stocks = oldPortfolio.stocks + (stock -> count))
           portfolios - oldPortfolio + newPortfolio
         })
         ()
-      }
+      })
+
+    /**
+      *
+      * @return Failure with NoSuchElementException if there is no portfolio with specified name
+      */
     override def deleteStockFromPortfolio(userId: Long, portfolioName: String, stock: String): Future[Unit] =
-      Future.successful {
+      Future.fromTry(Try {
         usersPortfolios.compute(userId, (_, portfolios) => {
           val oldPortfolio = portfolios.find(_.name == portfolioName).get
           val newPortfolio = oldPortfolio.copy(stocks = oldPortfolio.stocks - stock)
           portfolios - oldPortfolio + newPortfolio
         })
         ()
-      }
+      })
 
     def setOrEmptySet[A](set: Set[A]): Set[A] = if (set == null) Set() else set
 
