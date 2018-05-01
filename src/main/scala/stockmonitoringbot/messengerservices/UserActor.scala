@@ -171,6 +171,12 @@ class UserActor(userId: Long,
     case IncomingMessage(Buttons.portfolioStockAdd) =>
       sendMessageToUser(GeneralTexts.PORTFOLIO_STOCK_ADD(portfolio.name), GeneralMarkups.viewPortfolioMarkup)
       context become waitForPortfolioStock(portfolio)
+    case IncomingMessage(Buttons.portfolioDelete) => {
+      userDataStorage.deletePortfolio(userId, portfolio.name).onComplete {
+        case Success(_) =>
+          printPortfolios()
+      }
+    }
     case IncomingMessage(Buttons.notifications) => {
       userDataStorage.getUserPortfolioNotification(userId, portfolio.name) onComplete {
         case Success(notification) =>
