@@ -20,10 +20,8 @@ class InMemoryDataStorageTest extends FlatSpec with Matchers with ScalaFutures {
 
   implicit val executionContextGlobal: ExecutionContextExecutor = scala.concurrent.ExecutionContext.global
 
-  trait TestWiring extends InMemoryUserDataStorageComponentImpl
-    with ExecutionContextComponent {
+  trait TestWiring extends InMemoryUserDataStorageComponentImpl {
     implicit val patienceConfig: PatienceConfig = PatienceConfig(500 millis, 20 millis)
-    override val executionContext = scala.concurrent.ExecutionContext.global
   }
 
   "InMemoryUserDataStorage" should "store daily notifications" in new TestWiring {

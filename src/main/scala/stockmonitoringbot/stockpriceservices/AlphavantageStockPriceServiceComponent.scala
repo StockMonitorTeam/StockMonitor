@@ -14,7 +14,7 @@ import scala.util.{Failure, Try}
   * Created by amir.
   */
 trait AlphavantageStockPriceServiceComponent extends StockPriceServiceComponent {
-  self: ActorSystemComponent
+  this: ActorSystemComponent
     with ExecutionContextComponent
     with HttpRequestExecutor
     with ApiKeys =>

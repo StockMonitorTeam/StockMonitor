@@ -29,4 +29,3 @@ libraryDependencies ++= Seq(
 //"sbt assembly" to make jar
 mainClass in assembly := Some("stockmonitoringbot.Main")
 assemblyJarName in assembly := "StockMonitor.jar"
-scriptClasspath := Seq((assemblyJarName in assembly).value)

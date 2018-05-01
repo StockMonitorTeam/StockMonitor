@@ -19,7 +19,7 @@ import scala.util.{Failure, Success}
   * Created by amir.
   */
 trait TriggerNotificationHandlerComponentImpl extends TriggerNotificationHandlerComponent {
-  self: StockPriceServiceComponent
+  this: StockPriceServiceComponent
     with UserDataStorageComponent
     with PriceCacheComponent
     with MessageSenderComponent
@@ -57,10 +57,13 @@ trait TriggerNotificationHandlerComponentImpl extends TriggerNotificationHandler
           isTriggeredWithPrice(notification, exchangeRateInfo.rate)
         }
       case PortfolioTriggerNotification(userId, portfolioName, _, _) =>
-        for {portfolio <- userDataStorage.getPortfolio(userId, portfolioName)
-             portfolioPrice <- getPortfolioCurrentPrice(portfolio, priceCache)
-        } yield
-          isTriggeredWithPrice(notification, portfolioPrice)
+        (for {portfolio <- userDataStorage.getPortfolio(userId, portfolioName)
+              portfolioPrice <- getPortfolioCurrentPrice(portfolio, priceCache)
+        } yield isTriggeredWithPrice(notification, portfolioPrice)).recover {
+          case _: NoSuchElementException =>
+            logger.warn(s"notification $notification exists, but portfolio doesn't")
+            None
+        }
     }
 
     private def makeTriggerMessage(notification: TriggerNotification, price: BigDecimal): String = notification match {
@@ -124,7 +127,7 @@ trait TriggerNotificationHandlerComponentImpl extends TriggerNotificationHandler
         case Success((numOfStocks, numOfRates)) =>
           logger.info(s"Cache successfully updated. Updated $numOfStocks stocks & $numOfRates exchange rates.")
           checkTriggers()
-        case Failure(exception) => logger.error(s"Can't update cache: $exception")
+        case Failure(exception) => logger.error(s"Can't update cache", exception)
       }
     }
 

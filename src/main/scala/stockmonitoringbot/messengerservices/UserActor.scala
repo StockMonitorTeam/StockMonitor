@@ -71,11 +71,11 @@ class UserActor(userId: Long,
               ""
             else
               GeneralTexts.PORTFOLIO_SHOW_STOCK +
-              portfolio.stocks.map {
-                case (k, v) =>
-                  s"$k ($v)"
-              }.mkString("\n")
-          )
+                portfolio.stocks.map {
+                  case (k, v) =>
+                    s"$k ($v)"
+                }.mkString("\n")
+            )
         // TODO: Calculate sum
         sendMessageToUser(portfolioGreeting, GeneralMarkups.viewPortfolioMarkup)
         context become portfolioMenu(portfolio)
@@ -236,7 +236,7 @@ class UserActor(userId: Long,
           context become waitForPortfolioStockAmount(portfolio, name)
         case Failure(exception) =>
           sendMessageToUser(GeneralTexts.printStockException(name))
-          logger.warning(s"$exception")
+          logger.warning(s"$exception", exception)
           context become waitForPortfolioStock(portfolio)
         case _ =>
           logger.warning(s"Unknown getStockInfo exception")
@@ -278,7 +278,7 @@ class UserActor(userId: Long,
           context become waitForStock
         case Failure(exception) =>
           sendMessageToUser(GeneralTexts.printStockException(name))
-          logger.warning(s"$exception")
+          logger.warning(s"$exception", exception)
           context become waitForStock
       }
       context become Actor.emptyBehavior

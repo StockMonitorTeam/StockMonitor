@@ -1,6 +1,7 @@
 package stockmonitoringbot.notificationhandlers
 
 import java.time.{LocalTime, ZoneId}
+import java.util.concurrent.ConcurrentHashMap
 
 import akka.actor.Cancellable
 import com.typesafe.scalalogging.Logger
@@ -11,7 +12,6 @@ import stockmonitoringbot.messengerservices.MessageSenderComponent
 import stockmonitoringbot.stocksandratescache.PriceCacheComponent
 import stockmonitoringbot.{ActorSystemComponent, ExecutionContextComponent}
 
-import scala.collection.mutable
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.language.postfixOps
@@ -20,7 +20,7 @@ import scala.language.postfixOps
   * Created by amir.
   */
 trait DailyNotificationHandlerComponentImpl extends DailyNotificationHandlerComponent {
-  self: UserDataStorageComponent
+  this: UserDataStorageComponent
     with PriceCacheComponent
     with MessageSenderComponent
     with ExecutionContextComponent
@@ -32,7 +32,7 @@ trait DailyNotificationHandlerComponentImpl extends DailyNotificationHandlerComp
 
     private val logger = Logger(getClass)
 
-    private val notifications = mutable.Map.empty[DailyNotification, Cancellable]
+    private val notifications = new ConcurrentHashMap[DailyNotification, Cancellable]()
 
     private def makeNotificationMessage(notification: DailyNotification): Future[String] = notification match {
       case StockDailyNotification(_, stock, _) =>
@@ -65,19 +65,19 @@ trait DailyNotificationHandlerComponentImpl extends DailyNotificationHandlerComp
         messageSender(SendMessage(notification.ownerId, message))
       }
       notificationSend.failed.map {
-        exception => logger.error(s"can't make notification message on notification $notification: $exception")
+        exception => logger.error(s"can't make notification message on notification $notification", exception)
       }
       notificationSend
     }
 
     def addDailyNotification(notification: DailyNotification): Unit = {
-      notifications += notification ->
-        system.scheduler.schedule(untilTime(notification.time), 24 hours)(notifyUser(notification))
+      val prev = notifications.put(notification,
+        system.scheduler.schedule(untilTime(notification.time), 24 hours)(notifyUser(notification)))
+      Option(prev).foreach(_.cancel())
     }
 
     def deleteDailyNotification(notification: DailyNotification): Unit = {
-      notifications.get(notification).foreach(_.cancel())
-      notifications -= notification
+      Option(notifications.remove(notification)).foreach(_.cancel())
     }
 
   }
