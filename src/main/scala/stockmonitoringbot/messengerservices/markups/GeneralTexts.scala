@@ -101,6 +101,14 @@ object GeneralTexts {
 
   val PORTFOLIO_DAILY_NOTIFICATION_UNSET = "Оповещения удалены"
 
+  val PORTFOLIO_STOCK_DELETE = (name: String) => s"Для удаления акции из портфеля «${name}» нажмите на соответствующую кнопку"
+
+  val PORTFOLIO_STOCK_DELETE_SUCCESS = (stock: String, name: String) => s"Акция ${stock} успешно удалена из портфеля «${name}»"
+
+  val PORTFOLIO_STOCK_DELETE_FAIL = (stock: String, name: String) => s"Не удалось удалить акцию ${stock} из портфеля «${name}»"
+
+  val PORTFOLIO_STOCK_EMPTY = (name: String) => s"В портфеле ${name} нет акций"
+
   val TIME_ERROR = "Неверно задан формат времени"
 
   val ERROR = "Произошла ошибка 🙁. Будем благодарны, если вы сообщите подробности разработчикам."

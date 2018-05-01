@@ -111,4 +111,11 @@ object GeneralMarkups {
     )
   ))
 
+  def generatePortfolioStockDelete(userId: Long, portfolio: Portfolio): Option[InlineKeyboardMarkup] = Some(InlineKeyboardMarkup(
+    portfolio.stocks.map {
+        case (name, quantity) =>
+          InlineKeyboardButton(text=name, callbackData=Some(Inline.generatePrefix(CallbackTypes.portfolioDeleteStock, userId, name)))
+      }.toSeq.grouped(3).toSeq
+  ))
+
 }

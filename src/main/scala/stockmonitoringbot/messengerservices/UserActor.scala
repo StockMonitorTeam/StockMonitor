@@ -171,6 +171,15 @@ class UserActor(userId: Long,
     case IncomingMessage(Buttons.portfolioStockAdd) =>
       sendMessageToUser(GeneralTexts.PORTFOLIO_STOCK_ADD(portfolio.name), GeneralMarkups.viewPortfolioMarkup)
       context become waitForPortfolioStock(portfolio)
+    case IncomingMessage(Buttons.portfolioStockDelete) => {
+
+      if (portfolio.stocks.isEmpty) {
+        sendMessageToUser(GeneralTexts.PORTFOLIO_STOCK_EMPTY(portfolio.name))
+      } else {
+        sendInlineMessageToUser(GeneralTexts.PORTFOLIO_STOCK_DELETE(portfolio.name), GeneralMarkups.generatePortfolioStockDelete(userId, portfolio))
+        context become waitForPortfolioStock(portfolio)
+      }
+    }
     case IncomingMessage(Buttons.portfolioDelete) => {
       userDataStorage.deletePortfolio(userId, portfolio.name).onComplete {
         case Success(_) =>
@@ -238,6 +247,16 @@ class UserActor(userId: Long,
       }
 
       context become Actor.emptyBehavior
+    }
+    case IncomingCallback(CallbackTypes.portfolioDeleteStock, x) => {
+      userDataStorage.deleteStockFromPortfolio(userId, portfolio.name, x.message).onComplete {
+        case Success(_) =>
+          sendMessageToUser(GeneralTexts.PORTFOLIO_STOCK_DELETE_SUCCESS(x.message, portfolio.name))
+          printPortfolio(userId, portfolio.name)
+        case _ =>
+          sendMessageToUser(GeneralTexts.PORTFOLIO_STOCK_DELETE_FAIL(x.message, portfolio.name), GeneralMarkups.viewPortfolioMarkup)
+          printPortfolio(userId, portfolio.name)
+      }
     }
   }
 
@@ -347,6 +366,7 @@ case class IncomingCallbackMessage(userId: String, message: String)
 object CallbackTypes {
   val portfolio = "PRT"
   val portfolioSetNotification = "PRN"
+  val portfolioDeleteStock = "PRD"
 }
 
 object UserActor {
