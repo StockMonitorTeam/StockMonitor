@@ -12,7 +12,7 @@ import stockmonitoringbot.datastorage.models._
 import stockmonitoringbot.messengerservices.MessageSenderComponent.MessageSender
 import stockmonitoringbot.messengerservices.UserActor._
 import stockmonitoringbot.messengerservices.markups.{Buttons, GeneralMarkups, GeneralTexts}
-import stockmonitoringbot.notificationhandlers.{DailyNotificationHandler, getPortfolioCurrentPrice}
+import stockmonitoringbot.notificationhandlers.{DailyNotificationHandler, getPortfolioCurrentPrice, getPortfolioStocksPrice}
 import stockmonitoringbot.stocksandratescache.PriceCache
 
 import scala.util.matching.Regex
@@ -63,22 +63,24 @@ class UserActor(userId: Long,
   }
 
   def printPortfolio(userId: Long, portfolioName: String): Unit = {
-    userDataStorage.getPortfolio(userId, portfolioName) map {
-      portfolio =>
-        val portfolioGreeting = GeneralTexts.PORTFOLIO_SHOW(portfolio) +
-          (
-            if (portfolio.stocks.isEmpty)
-              ""
-            else
-              GeneralTexts.PORTFOLIO_SHOW_STOCK +
-                portfolio.stocks.map {
-                  case (k, v) =>
-                    s"$k ($v)"
-                }.mkString("\n")
-            )
-        // TODO: Calculate sum
-        sendMessageToUser(portfolioGreeting, GeneralMarkups.viewPortfolioMarkup)
-        context become portfolioMenu(portfolio)
+    for {
+      portfolio <- userDataStorage.getPortfolio(userId, portfolioName)
+      stockPrices <- getPortfolioStocksPrice(portfolio, cache)
+    } {
+      val sum = stockPrices.foldLeft(BigDecimal(0))(_+_._2)
+      val portfolioGreeting = GeneralTexts.PORTFOLIO_SHOW(portfolio, sum) +
+      (
+        if (portfolio.stocks.isEmpty)
+          ""
+        else
+          GeneralTexts.PORTFOLIO_SHOW_STOCK +
+            portfolio.stocks.map {
+              case (k, v) =>
+                s"$k ($v) ➔ ${stockPrices(k)}"
+            }.mkString("\n")
+      )
+      sendMessageToUser(portfolioGreeting, GeneralMarkups.viewPortfolioMarkup)
+      context become portfolioMenu(portfolio)
     }
   }
 

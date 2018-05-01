@@ -58,9 +58,10 @@ object GeneralTexts {
     s"Портфель «$name» с валютой $currency успешно создан."
   val PORTFOLIO_CREATE_ERROR = s"Ошибка добавления портфеля"
 
-  val PORTFOLIO_SHOW = (portfolio: Portfolio) =>
+  val PORTFOLIO_SHOW = (portfolio: Portfolio, price: BigDecimal) =>
     s"""Портфель «${portfolio.name}»
        |Валюта: ${portfolio.currency}
+       |Стоимость портфеля: ${price}
        |""".stripMargin
 
   val PORTFOLIO_SHOW_STOCK = "Акции в портфеле:\n"
