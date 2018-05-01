@@ -1,6 +1,6 @@
 package stockmonitoringbot.messengerservices.markups
 
-import stockmonitoringbot.datastorage.models.{Portfolio, PortfolioDailyNotification}
+import stockmonitoringbot.datastorage.models.{Portfolio, PortfolioDailyNotification, PortfolioTriggerNotification}
 
 object GeneralTexts {
 
@@ -108,5 +108,22 @@ object GeneralTexts {
     s"""Для того, чтобы задать оповещение о резком изменении стоимости портфеля «${name}» введите интересующий вас порог.
       |
       |Текущая стоимость портфеля ➔ ${price}
-    """.stripMargin
+      |
+      |На текущий момент у вас установлены оповещения:
+      |""".stripMargin
+
+  val PORTFOLIO_TRIGGERS_LIST = (triggers: Seq[PortfolioTriggerNotification]) => triggers match {
+    case Nil => "ни одного 🤨"
+    case xList => xList map (x => s"🔈 на ${x.boundPrice} (${x.notificationType})") mkString "\n"
+  }
+
+  val PORTFOLIO_TRIGGER_REMOVE = "Выберите триггер, который желаете удалить"
+
+  val PORTFOLIO_TRIGGER_TYPE = "Выберите тип срабатывания триггера при преодолении порога"
+
+  val PORTFOLIO_TRIGGER_BOUND = "Введите порог срабатывания. Например: 1 или 133.7"
+
+  val PORTFOLIO_TRIGGER_ADDED = "Триггер успешно установлен"
+
+  val PORTFOLIO_TRIGGER_REMOVED = (name: String) => s"Триггер ${name} успешно удалён"
 }

@@ -19,8 +19,25 @@ trait TriggerNotification extends Notification {
 }
 
 sealed trait TriggerNotificationType
-case object RaiseNotification extends TriggerNotificationType
-case object FallNotification extends TriggerNotificationType
+case object RaiseNotification extends TriggerNotificationType {
+  override def toString: String = "📈"
+}
+case object FallNotification extends TriggerNotificationType {
+  override def toString: String = "📉"
+}
+case object BothNotification extends TriggerNotificationType {
+  override def toString: String = "📈➕📉"
+}
+
+object TriggerNotificationType {
+  // TODO: Move symbols to interface
+  def define(notificationType: String): TriggerNotificationType = notificationType match {
+    case "📉" => FallNotification
+    case "📈" => RaiseNotification
+    case "📈➕📉" => BothNotification
+    case _ => throw new IllegalStateException()
+  }
+}
 
 ///
 

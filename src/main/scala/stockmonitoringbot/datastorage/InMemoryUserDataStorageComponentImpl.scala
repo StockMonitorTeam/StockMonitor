@@ -139,6 +139,12 @@ trait InMemoryUserDataStorageComponentImpl extends UserDataStorageComponent {
         deleteUserPortfolioNotification(userId, portfolioName)
         addDailyNotification(notification)
       }
+    override def getUserPortfolioTriggerNotification(userId: Long, portfolioName: String): Future[Seq[PortfolioTriggerNotification]] =
+      Future.successful {
+        usersTriggerNotifications.getOrDefault(userId, Set()).collect {
+          case x: PortfolioTriggerNotification if x.portfolioName == portfolioName => x
+        }.toSeq
+      }
 
     def setOrEmptySet[A](set: Set[A]): Set[A] = if (set == null) Set() else set
 

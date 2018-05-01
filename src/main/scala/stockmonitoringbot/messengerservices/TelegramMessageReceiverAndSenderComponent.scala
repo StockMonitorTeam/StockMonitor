@@ -12,7 +12,7 @@ import info.mukel.telegrambot4s.methods.SendMessage
 import stockmonitoringbot.datastorage.UserDataStorageComponent
 import stockmonitoringbot.messengerservices.MessageSenderComponent.MessageSender
 import stockmonitoringbot.messengerservices.UserActor.{IncomingCallback, IncomingMessage}
-import stockmonitoringbot.notificationhandlers.DailyNotificationHandlerComponent
+import stockmonitoringbot.notificationhandlers.{DailyNotificationHandlerComponent, TriggerNotificationHandler, TriggerNotificationHandlerComponent}
 import stockmonitoringbot.stocksandratescache.PriceCacheComponent
 import stockmonitoringbot.{ActorSystemComponent, ApiKeys, ExecutionContextComponent}
 

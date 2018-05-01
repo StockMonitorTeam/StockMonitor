@@ -1,6 +1,6 @@
 package stockmonitoringbot.datastorage
 
-import stockmonitoringbot.datastorage.models.{DailyNotification, Portfolio, PortfolioDailyNotification, TriggerNotification}
+import stockmonitoringbot.datastorage.models._
 
 import scala.concurrent.Future
 
@@ -33,4 +33,5 @@ trait UserDataStorage {
   def deleteUserPortfolioNotification(userId: Long, portfolioName: String): Future[Unit]
   def setUserPortfolioNotification(userId: Long, portfolioName: String, notification: PortfolioDailyNotification): Future[Unit]
 
+  def getUserPortfolioTriggerNotification(userId: Long, portfolioName: String): Future[Seq[PortfolioTriggerNotification]]
 }

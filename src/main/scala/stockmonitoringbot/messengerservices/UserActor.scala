@@ -85,11 +85,12 @@ class UserActor(userId: Long,
   }
 
   def printPortfolioTriggers(userId: Long, portfolio: Portfolio): Unit = {
-    getPortfolioCurrentPrice(portfolio, cache) onComplete {
-      case Success(price) =>
-        sendMessageToUser(GeneralTexts.PORTFOLIO_TRIGGERS(portfolio.name, price))
-      case _ =>
-
+    for {
+      price <- getPortfolioCurrentPrice(portfolio, cache)
+      triggers <- userDataStorage.getUserPortfolioTriggerNotification(userId, portfolio.name)
+    } {
+      val message = GeneralTexts.PORTFOLIO_TRIGGERS(portfolio.name, price) + GeneralTexts.PORTFOLIO_TRIGGERS_LIST(triggers)
+      sendMessageToUser(message, GeneralMarkups.portfolioTriggerMenuMarkup)
     }
   }
 
@@ -153,9 +154,54 @@ class UserActor(userId: Long,
   }
 
   def waitForPortfolioTrigger(portfolio: Portfolio): Receive = common orElse {
-    case IncomingMessage(floatAmount(bound)) =>
-      logger.info(bound)
+    case IncomingMessage(Buttons.triggerAdd) => {
+      sendInlineMessageToUser(GeneralTexts.PORTFOLIO_TRIGGER_TYPE, GeneralMarkups.generatePortfolioTriggerOptions(userId, portfolio))
+      context become waitForPortfolioTriggerAddType(portfolio)
+    }
+    case IncomingMessage(Buttons.triggerRemove) => {
+      userDataStorage.getUserPortfolioTriggerNotification(userId, portfolio.name) onComplete {
+        case Success(x) =>
+          sendInlineMessageToUser(GeneralTexts.PORTFOLIO_TRIGGER_REMOVE, GeneralMarkups.generatePortfolioTriggersDelete(userId, x))
+        case _ =>
+          sendMessageToUser(GeneralTexts.ERROR)
+      }
+    }
+    case IncomingMessage(Buttons.back) =>
+      printPortfolio(userId, portfolio.name)
+    case IncomingCallback(CallbackTypes.portfolioDeleteTrigger, message) => {
+      message.message.split(" - ", 2) match {
+        case Array(notificationType, boundPrice) =>
+          val notification = PortfolioTriggerNotification(userId, portfolio.name, BigDecimal(boundPrice), TriggerNotificationType.define(notificationType))
+          userDataStorage.deleteTriggerNotification(notification)
+          sendMessageToUser(GeneralTexts.PORTFOLIO_TRIGGER_REMOVED(message.message))
+        case _ =>
+          sendMessageToUser(GeneralTexts.ERROR)
+      }
+    }
   }
+
+  def waitForPortfolioTriggerAddType(portfolio: Portfolio): Receive = waitForPortfolioTrigger(portfolio) orElse {
+    case IncomingCallback(CallbackTypes.triggerSetType, x) => {
+      val nType = TriggerNotificationType.define(x.message)
+      sendMessageToUser(GeneralTexts.PORTFOLIO_TRIGGER_BOUND)
+      context become waitForPortfolioTriggerAddBound(portfolio, nType)
+    }
+  }
+
+  def waitForPortfolioTriggerAddBound(portfolio: Portfolio, nType: TriggerNotificationType): Receive = waitForPortfolioTrigger(portfolio) orElse {
+    case IncomingMessage(floatAmount(bound)) => {
+      val boundPrice = BigDecimal(bound)
+      val notification = PortfolioTriggerNotification(userId, portfolio.name, boundPrice, nType)
+      userDataStorage.addTriggerNotification(notification).onComplete {
+        case Success(_) =>
+          sendMessageToUser(GeneralTexts.PORTFOLIO_TRIGGER_ADDED)
+          printPortfolio(userId, portfolio.name)
+        case _ =>
+      }
+      context become portfolioMenu(portfolio)
+    }
+  }
+
 
   def waitForPortfolioNotificationTime(portfolio: Portfolio): Receive = common orElse {
 
@@ -220,6 +266,7 @@ class UserActor(userId: Long,
     }
     case IncomingMessage(Buttons.triggers) => {
       printPortfolioTriggers(userId, portfolio)
+      context become waitForPortfolioTrigger(portfolio)
     }
   }
 
@@ -387,6 +434,8 @@ object CallbackTypes {
   val portfolio = "PRT"
   val portfolioSetNotification = "PRN"
   val portfolioDeleteStock = "PRD"
+  val triggerSetType = "TRG"
+  val portfolioDeleteTrigger = "PDT"
 }
 
 object UserActor {

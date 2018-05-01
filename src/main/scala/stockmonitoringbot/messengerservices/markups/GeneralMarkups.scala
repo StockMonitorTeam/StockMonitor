@@ -1,7 +1,7 @@
 package stockmonitoringbot.messengerservices.markups
 
 import info.mukel.telegrambot4s.models.{InlineKeyboardButton, InlineKeyboardMarkup, KeyboardButton, ReplyKeyboardMarkup}
-import stockmonitoringbot.datastorage.models.{FallNotification, Portfolio, RaiseNotification, TriggerNotification}
+import stockmonitoringbot.datastorage.models._
 import stockmonitoringbot.messengerservices.CallbackTypes
 
 object Buttons {
@@ -13,6 +13,7 @@ object Buttons {
   val triggers = "🚨 События триггеры"
   val info = "❓ Информация"
   val backToMain = "⏮ Главное меню"
+  val back = "⏪ Назад"
 
   val notificationGet = "⏱ Список оповещений"
   val notificationAdd = "➕ Новое оповещение"
@@ -25,6 +26,9 @@ object Buttons {
   val portfolioStockDelete = "🗑 Удалить акцию"
 
   val notificationReject = "Отменить оповещения"
+
+  val triggerAdd = "🚨 Установить триггер"
+  val triggerRemove = "🗑 Удалить триггер"
 
 }
 
@@ -78,6 +82,13 @@ object GeneralMarkups {
     Seq(KeyboardButton(Buttons.backToMain))
   ))
 
+  val portfolioTriggerMenuMarkup = customKeyboard(Seq(
+    Seq(KeyboardButton(Buttons.triggerAdd), KeyboardButton(Buttons.triggerRemove)),
+    Seq(KeyboardButton(Buttons.back)),
+    Seq(KeyboardButton(Buttons.portfolioStockAdd), KeyboardButton(Buttons.portfolioStockDelete)),
+    Seq(KeyboardButton(Buttons.backToMain))
+  ))
+
   def notificationToString(notification: TriggerNotification): String = {
     val notificationType = notification.notificationType match {
       case RaiseNotification => ">"
@@ -111,11 +122,27 @@ object GeneralMarkups {
     )
   ))
 
+  def generatePortfolioTriggersDelete(userId: Long, triggers: Seq[PortfolioTriggerNotification]): Option[InlineKeyboardMarkup] = Some(InlineKeyboardMarkup(
+    triggers.map { x => {
+      val triggerUniqueName = s"${x.notificationType} - ${x.boundPrice}"
+      InlineKeyboardButton(text=triggerUniqueName, callbackData=Some(Inline.generatePrefix(CallbackTypes.portfolioDeleteTrigger, userId, triggerUniqueName)))
+    }
+    }.toSeq.grouped(3).toSeq
+  ))
+
   def generatePortfolioStockDelete(userId: Long, portfolio: Portfolio): Option[InlineKeyboardMarkup] = Some(InlineKeyboardMarkup(
     portfolio.stocks.map {
         case (name, quantity) =>
           InlineKeyboardButton(text=name, callbackData=Some(Inline.generatePrefix(CallbackTypes.portfolioDeleteStock, userId, name)))
       }.toSeq.grouped(3).toSeq
+  ))
+
+  def generatePortfolioTriggerOptions(userId: Long, portfolio: Portfolio): Option[InlineKeyboardMarkup] = Some(InlineKeyboardMarkup(
+    Seq(
+      Seq(InlineKeyboardButton(text="Выше порога", callbackData=Some(Inline.generatePrefix(CallbackTypes.triggerSetType, userId, RaiseNotification.toString)))),
+      Seq(InlineKeyboardButton(text="Ниже порога", callbackData=Some(Inline.generatePrefix(CallbackTypes.triggerSetType, userId, FallNotification.toString)))),
+      Seq(InlineKeyboardButton(text="Обе стороны", callbackData=Some(Inline.generatePrefix(CallbackTypes.triggerSetType, userId, BothNotification.toString))))
+    )
   ))
 
 }
