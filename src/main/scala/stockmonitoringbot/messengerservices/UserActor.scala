@@ -88,6 +88,7 @@ class UserActor(userId: Long,
         dailyNotification.deleteDailyNotification(x)
         userDataStorage.deleteDailyNotification(x)
       }
+      case _ =>
     }
   }
 
