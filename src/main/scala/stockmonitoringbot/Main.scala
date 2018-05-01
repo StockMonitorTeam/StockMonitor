@@ -1,7 +1,7 @@
 package stockmonitoringbot
 
 import stockmonitoringbot.datastorage.InMemoryUserDataStorageComponentImpl
-import stockmonitoringbot.messengerservices.TelegramService
+import stockmonitoringbot.messengerservices.TelegramMessageReceiverAndSenderComponent
 import stockmonitoringbot.notificationhandlers.{DailyNotificationHandlerComponentImpl, TriggerNotificationHandlerComponentImpl}
 import stockmonitoringbot.stockpriceservices.{AlphavantageHttpRequestExecutor, AlphavantageStockPriceServiceComponent}
 import stockmonitoringbot.stocksandratescache.PriceCacheComponentImpl
@@ -17,10 +17,10 @@ object Main extends App {
     with PriceCacheComponentImpl
     with AlphavantageStockPriceServiceComponent
     with AlphavantageHttpRequestExecutor
-    with TelegramService
+    with TelegramMessageReceiverAndSenderComponent
     with ExecutionContextImpl
     with ActorSystemComponentImpl
     with ApiKeysImpl
-  bot.run()
+  bot.messageReceiver.startReceiving()
 
 }
