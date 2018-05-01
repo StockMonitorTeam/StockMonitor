@@ -11,7 +11,8 @@ object Currency {
   def define(currency: String): Currency = currency match {
     case "EUR" => EUR
     case "RUB" => RUB
-    case _ => USD
+    case "USD" => USD
+    case _ => throw new IllegalStateException()
   }
 }
 

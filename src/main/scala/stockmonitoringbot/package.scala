@@ -24,7 +24,7 @@ package object stockmonitoringbot {
   }
 
   trait ExecutionContextImpl extends ExecutionContextComponent {
-    self: ActorSystemComponent =>
+    this: ActorSystemComponent =>
     override implicit lazy val executionContext: ExecutionContext = system.dispatcher
   }
 

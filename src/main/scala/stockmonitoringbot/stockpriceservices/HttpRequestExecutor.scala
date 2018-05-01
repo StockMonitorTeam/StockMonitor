@@ -19,7 +19,7 @@ trait HttpRequestExecutor {
 }
 
 trait AlphavantageHttpRequestExecutor extends HttpRequestExecutor {
-  self: ActorSystemComponent
+  this: ActorSystemComponent
     with ExecutionContextComponent =>
 
   private val ApiURL = "www.alphavantage.co"

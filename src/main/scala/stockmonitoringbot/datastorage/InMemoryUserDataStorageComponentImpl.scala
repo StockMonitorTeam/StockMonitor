@@ -1,108 +1,129 @@
 package stockmonitoringbot.datastorage
 
-import stockmonitoringbot.ExecutionContextComponent
+import java.util.concurrent.ConcurrentHashMap
+
 import stockmonitoringbot.datastorage.models._
 
-import scala.collection.mutable
 import scala.concurrent.Future
+import scala.util.Try
 
 /**
   * Created by amir.
   */
 
 trait InMemoryUserDataStorageComponentImpl extends UserDataStorageComponent {
-  self: ExecutionContextComponent =>
 
   override val userDataStorage: UserDataStorage = new InMemoryUserDataStorage
 
   class InMemoryUserDataStorage extends UserDataStorage {
 
-    private val usersTriggerNotifications: mutable.Map[Long, Set[TriggerNotification]] =
-      mutable.Map.empty.withDefaultValue(Set.empty)
-    private val usersDailyNotifications: mutable.Map[Long, Set[DailyNotification]] =
-      mutable.Map.empty.withDefaultValue(Set.empty)
-    private val usersPortfolios: mutable.Map[Long, Set[Portfolio]] =
-      mutable.Map.empty.withDefaultValue(Set.empty)
+    private val usersDailyNotifications = new ConcurrentHashMap[Long, Set[DailyNotification]]()
+    private val usersTriggerNotifications = new ConcurrentHashMap[Long, Set[TriggerNotification]]()
+    private val usersPortfolios = new ConcurrentHashMap[Long, Set[Portfolio]]()
 
     override def getUsersDailyNotifications(userId: Long): Future[Seq[DailyNotification]] =
-      Future(usersDailyNotifications.synchronized {
-        usersDailyNotifications(userId).toSeq
-      })
+      Future.successful(usersDailyNotifications.getOrDefault(userId, Set()).toSeq)
     override def addDailyNotification(notification: DailyNotification): Future[Unit] =
-      Future(usersDailyNotifications.synchronized {
-        usersDailyNotifications(notification.ownerId) += notification
-      })
+      Future.successful {
+        usersDailyNotifications.compute(notification.ownerId,
+          (_, notifications) => setOrEmptySet(notifications) + notification
+        )
+        ()
+      }
     override def deleteDailyNotification(notification: DailyNotification): Future[Unit] =
-      Future(usersDailyNotifications.synchronized {
-        usersDailyNotifications(notification.ownerId) -= notification
-      })
+      Future.successful {
+        usersDailyNotifications.compute(notification.ownerId,
+          (_, notifications) => setOrEmptySet(notifications) - notification
+        )
+        ()
+      }
 
     override def getUsersTriggerNotifications(userId: Long): Future[Seq[TriggerNotification]] =
-      Future(usersTriggerNotifications.synchronized {
-        usersTriggerNotifications(userId).toSeq
-      })
+      Future.successful(usersTriggerNotifications.getOrDefault(userId, Set()).toSeq)
     override def addTriggerNotification(notification: TriggerNotification): Future[Unit] =
-      Future(usersTriggerNotifications.synchronized {
-        usersTriggerNotifications(notification.ownerId) += notification
-      })
+      Future.successful {
+        usersTriggerNotifications.compute(notification.ownerId,
+          (_, notifications) => setOrEmptySet(notifications) + notification
+        )
+        ()
+      }
     override def deleteTriggerNotification(notification: TriggerNotification): Future[Unit] =
-      Future(usersTriggerNotifications.synchronized {
-        usersTriggerNotifications(notification.ownerId) -= notification
-      })
+      Future.successful {
+        usersTriggerNotifications.compute(notification.ownerId,
+          (_, notifications) => setOrEmptySet(notifications) - notification
+        )
+        ()
+      }
 
     override def getAllTriggerNotifications: Future[Iterable[TriggerNotification]] =
-      Future(usersTriggerNotifications.synchronized {
-        usersTriggerNotifications.values.flatten
-      })
+      Future.successful(
+        usersTriggerNotifications.reduceValues(4, _ ++ _)
+      )
 
     override def addPortfolio(portfolio: Portfolio): Future[Unit] =
-      Future(usersPortfolios.synchronized {
-        usersPortfolios(portfolio.userId) += portfolio
-      })
+      Future.successful {
+        usersPortfolios.compute(portfolio.userId,
+          (_, portfolios) => setOrEmptySet(portfolios) + portfolio
+        )
+        ()
+      }
 
     override def deletePortfolio(userId: Long, portfolioName: String): Future[Unit] =
-      Future(usersPortfolios.synchronized {
-        usersPortfolios(userId) = usersPortfolios(userId).filterNot(_.name == portfolioName)
-
+      Future.successful {
         //when deleting portfolio, should delete all notifications on this portfolio
-        def shouldDelete(notification: Notification): Boolean = notification match {
-          case not: PortfolioNotification =>
-            not.portfolioName == portfolioName
-          case _ =>
-            false
+        val shouldDelete: Notification => Boolean = {
+          case not: PortfolioNotification => not.portfolioName == portfolioName
+          case _ => false
         }
+        usersTriggerNotifications.compute(userId, (_, notifications) =>
+          setOrEmptySet(notifications).filterNot(shouldDelete)
+        )
+        usersDailyNotifications.compute(userId, (_, notifications) =>
+          setOrEmptySet(notifications).filterNot(shouldDelete)
+        )
+        usersPortfolios.compute(userId, (_, portfolios) => setOrEmptySet(portfolios).filterNot(_.name == portfolioName))
+        ()
+      }
 
-        usersTriggerNotifications.synchronized {
-          usersTriggerNotifications(userId) = usersTriggerNotifications(userId).filterNot(shouldDelete)
-        }
-        usersDailyNotifications.synchronized {
-          usersDailyNotifications(userId) = usersDailyNotifications(userId).filterNot(shouldDelete)
-        }
-      })
     override def getUserPortfolios(userId: Long): Future[Seq[Portfolio]] =
-      Future(usersPortfolios.synchronized {
-        usersPortfolios(userId).toSeq
-      })
+      Future.successful(usersPortfolios.getOrDefault(userId, Set()).toSeq)
+
+    /**
+      *
+      * @return Failure with NoSuchElementException if there is no portfolio with specified name
+      */
     override def getPortfolio(userId: Long, portfolioName: String): Future[Portfolio] =
-      Future(usersPortfolios.synchronized {
-        usersPortfolios(userId).find(_.name == portfolioName).get
-      })
+      Future.fromTry(Try(usersPortfolios.getOrDefault(userId, Set()).find(_.name == portfolioName).get))
+
+    /**
+      *
+      * @return Failure with NoSuchElementException if there is no portfolio with specified name
+      */
     override def addStockToPortfolio(userId: Long, portfolioName: String, stock: String, count: Double): Future[Unit] =
-      Future(usersPortfolios.synchronized {
-        usersPortfolios(userId).find(_.name == portfolioName).foreach { oldPortfolio =>
+      Future.fromTry(Try {
+        usersPortfolios.compute(userId, (_, portfolios) => {
+          val oldPortfolio = portfolios.find(_.name == portfolioName).get
           val newPortfolio = oldPortfolio.copy(stocks = oldPortfolio.stocks + (stock -> count))
-          usersPortfolios(userId) -= oldPortfolio
-          usersPortfolios(userId) += newPortfolio
-        }
+          portfolios - oldPortfolio + newPortfolio
+        })
+        ()
       })
+
+    /**
+      *
+      * @return Failure with NoSuchElementException if there is no portfolio with specified name
+      */
     override def deleteStockFromPortfolio(userId: Long, portfolioName: String, stock: String): Future[Unit] =
-      Future(usersPortfolios.synchronized {
-        usersPortfolios(userId).find(_.name == portfolioName).foreach { oldPortfolio =>
+      Future.fromTry(Try {
+        usersPortfolios.compute(userId, (_, portfolios) => {
+          val oldPortfolio = portfolios.find(_.name == portfolioName).get
           val newPortfolio = oldPortfolio.copy(stocks = oldPortfolio.stocks - stock)
-          usersPortfolios(userId) -= oldPortfolio
-          usersPortfolios(userId) += newPortfolio
-        }
+          portfolios - oldPortfolio + newPortfolio
+        })
+        ()
       })
+
+    def setOrEmptySet[A](set: Set[A]): Set[A] = if (set == null) Set() else set
 
   }
 }
