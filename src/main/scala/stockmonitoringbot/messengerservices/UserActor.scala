@@ -12,7 +12,7 @@ import stockmonitoringbot.datastorage.models._
 import stockmonitoringbot.messengerservices.MessageSenderComponent.MessageSender
 import stockmonitoringbot.messengerservices.UserActor._
 import stockmonitoringbot.messengerservices.markups.{Buttons, GeneralMarkups, GeneralTexts}
-import stockmonitoringbot.notificationhandlers.DailyNotificationHandler
+import stockmonitoringbot.notificationhandlers.{DailyNotificationHandler, getPortfolioCurrentPrice}
 import stockmonitoringbot.stocksandratescache.PriceCache
 
 import scala.util.matching.Regex
@@ -82,6 +82,15 @@ class UserActor(userId: Long,
     }
   }
 
+  def printPortfolioTriggers(userId: Long, portfolio: Portfolio): Unit = {
+    getPortfolioCurrentPrice(portfolio, cache) onComplete {
+      case Success(price) =>
+        sendMessageToUser(GeneralTexts.PORTFOLIO_TRIGGERS(portfolio.name, price))
+      case _ =>
+
+    }
+  }
+
   def clearPortfolioNotification(userId: Long, portfolio: Portfolio): Unit = {
     userDataStorage.getUserPortfolioNotification(userId, portfolio.name).onComplete {
       case Success(Some(x)) => {
@@ -128,7 +137,7 @@ class UserActor(userId: Long,
     case IncomingMessage(Buttons.portfolio) =>
       printPortfolios()
 
-    case IncomingMessage(Buttons.currency) | IncomingMessage(Buttons.triggers) | IncomingMessage(Buttons.info) =>
+    case IncomingMessage(Buttons.currency) | IncomingMessage(Buttons.info) =>
       sendMessageToUser(GeneralTexts.UNIMPLEMENTED)
   }
 
@@ -136,6 +145,14 @@ class UserActor(userId: Long,
     case IncomingMessage(Buttons.notifications) =>
       sendMessageToUser("Notification menu", GeneralMarkups.notificationsMenuMarkup)
       context become notificationsMenu
+    case IncomingMessage(Buttons.triggers) =>
+      sendMessageToUser("Triggers menu", GeneralMarkups.notificationsMenuMarkup)
+      context become notificationsMenu
+  }
+
+  def waitForPortfolioTrigger(portfolio: Portfolio): Receive = common orElse {
+    case IncomingMessage(floatAmount(bound)) =>
+      logger.info(bound)
   }
 
   def waitForPortfolioNotificationTime(portfolio: Portfolio): Receive = common orElse {
@@ -198,6 +215,9 @@ class UserActor(userId: Long,
       }
 
       context become waitForPortfolioName
+    }
+    case IncomingMessage(Buttons.triggers) => {
+      printPortfolioTriggers(userId, portfolio)
     }
   }
 
