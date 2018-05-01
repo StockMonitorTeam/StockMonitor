@@ -122,6 +122,23 @@ trait InMemoryUserDataStorageComponentImpl extends UserDataStorageComponent {
         })
         ()
       })
+    override def getUserPortfolioNotification(userId: Long, portfolioName: String): Future[Option[PortfolioDailyNotification]] =
+      Future.successful {
+        usersDailyNotifications.getOrDefault(userId, Set()).collectFirst {
+          case x: PortfolioDailyNotification if x.portfolioName == portfolioName => x
+        }
+      }
+    override def deleteUserPortfolioNotification(userId: Long, portfolioName: String): Future[Unit] =
+      Future.successful {
+        usersDailyNotifications.getOrDefault(userId, Set()).collectFirst {
+          case x: PortfolioDailyNotification if x.portfolioName == portfolioName => x
+        }.foreach(n => deleteDailyNotification(n))
+      }
+    override def setUserPortfolioNotification(userId: Long, portfolioName: String, notification: PortfolioDailyNotification): Future[Unit] =
+      Future.successful {
+        deleteUserPortfolioNotification(userId, portfolioName)
+        addDailyNotification(notification)
+      }
 
     def setOrEmptySet[A](set: Set[A]): Set[A] = if (set == null) Set() else set
 

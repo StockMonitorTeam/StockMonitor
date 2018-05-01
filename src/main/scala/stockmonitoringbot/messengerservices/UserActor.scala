@@ -1,5 +1,8 @@
 package stockmonitoringbot.messengerservices
 
+import java.time.LocalTime
+import java.time.format.DateTimeFormatter
+
 import akka.actor.{Actor, Props}
 import akka.event.Logging
 import info.mukel.telegrambot4s.methods.SendMessage
@@ -9,6 +12,7 @@ import stockmonitoringbot.datastorage.models._
 import stockmonitoringbot.messengerservices.MessageSenderComponent.MessageSender
 import stockmonitoringbot.messengerservices.UserActor._
 import stockmonitoringbot.messengerservices.markups.{Buttons, GeneralMarkups, GeneralTexts}
+import stockmonitoringbot.notificationhandlers.DailyNotificationHandler
 import stockmonitoringbot.stocksandratescache.PriceCache
 
 import scala.util.matching.Regex
@@ -20,6 +24,7 @@ import scala.util.{Failure, Success}
 class UserActor(userId: Long,
                 messageSender: MessageSender,
                 userDataStorage: UserDataStorage,
+                dailyNotification: DailyNotificationHandler,
                 cache: PriceCache) extends Actor {
 
   import context.dispatcher
@@ -48,6 +53,7 @@ class UserActor(userId: Long,
           sendMessageToUser(GeneralTexts.NO_PORTFOLIO_GREETING, GeneralMarkups.portfolioMarkup)
           context become waitForPortfolio
         case portfolios =>
+          sendMessageToUser(GeneralTexts.PORTFOLIO_HELLO, GeneralMarkups.portfolioMarkup)
           sendInlineMessageToUser(GeneralTexts.PORTFOLIO_LIST, GeneralMarkups.generatePortfolioList(userId, portfolios))
           context become waitForPortfolio
       }
@@ -72,7 +78,32 @@ class UserActor(userId: Long,
             )
         // TODO: Calculate sum
         sendMessageToUser(portfolioGreeting, GeneralMarkups.viewPortfolioMarkup)
-        context become waitForPortfolioStock(portfolio)
+        context become portfolioMenu(portfolio)
+    }
+  }
+
+  def clearPortfolioNotification(userId: Long, portfolio: Portfolio): Unit = {
+    userDataStorage.getUserPortfolioNotification(userId, portfolio.name).onComplete {
+      case Success(Some(x)) => {
+        dailyNotification.deleteDailyNotification(x)
+        userDataStorage.deleteDailyNotification(x)
+      }
+      case _ =>
+    }
+  }
+
+  def setPortfolioNotification(userId: Long, portfolio: Portfolio, time: String): Unit = {
+    try {
+      val localTime: LocalTime = LocalTime.parse(time, DateTimeFormatter.ofPattern("H:mm"))
+      val notification = PortfolioDailyNotification(userId, portfolio.name, localTime)
+
+      clearPortfolioNotification(userId, portfolio)
+      dailyNotification.addDailyNotification(notification)
+      userDataStorage.addDailyNotification(notification)
+      sendMessageToUser(GeneralTexts.PORTFOLIO_DAILY_NOTIFICATION_SET(time))
+    }
+    catch {
+      case e: Exception => sendMessageToUser(GeneralTexts.TIME_ERROR)
     }
   }
 
@@ -107,9 +138,65 @@ class UserActor(userId: Long,
       context become notificationsMenu
   }
 
+  def waitForPortfolioNotificationTime(portfolio: Portfolio): Receive = common orElse {
+
+    case IncomingCallback(CallbackTypes.portfolioSetNotification, x) => x.message match {
+      case Buttons.notificationReject => {
+        clearPortfolioNotification(userId, portfolio)
+        sendMessageToUser(GeneralTexts.PORTFOLIO_DAILY_NOTIFICATION_UNSET)
+        context become portfolioMenu(portfolio)
+      }
+      case time: String => {
+        setPortfolioNotification(userId, portfolio, time)
+        context become portfolioMenu(portfolio)
+      }
+    }
+    case IncomingMessage(time) => {
+      setPortfolioNotification(userId, portfolio, time)
+      context become portfolioMenu(portfolio)
+    }
+
+  }
+
   def waitForPortfolio: Receive = common orElse {
     case IncomingMessage(Buttons.portfolioCreate) => {
       sendMessageToUser(GeneralTexts.INPUT_PORTFOLIO_NAME)
+      context become waitForPortfolioName
+    }
+  }
+
+  def portfolioMenu(portfolio: Portfolio): Receive = common orElse {
+    case IncomingMessage(Buttons.portfolioStockAdd) =>
+      sendMessageToUser(GeneralTexts.PORTFOLIO_STOCK_ADD(portfolio.name), GeneralMarkups.viewPortfolioMarkup)
+      context become waitForPortfolioStock(portfolio)
+    case IncomingMessage(Buttons.portfolioStockDelete) => {
+
+      if (portfolio.stocks.isEmpty) {
+        sendMessageToUser(GeneralTexts.PORTFOLIO_STOCK_EMPTY(portfolio.name))
+      } else {
+        sendInlineMessageToUser(GeneralTexts.PORTFOLIO_STOCK_DELETE(portfolio.name), GeneralMarkups.generatePortfolioStockDelete(userId, portfolio))
+        context become waitForPortfolioStock(portfolio)
+      }
+    }
+    case IncomingMessage(Buttons.portfolioDelete) => {
+      userDataStorage.deletePortfolio(userId, portfolio.name).onComplete {
+        case Success(_) =>
+          printPortfolios()
+      }
+    }
+    case IncomingMessage(Buttons.notifications) => {
+      userDataStorage.getUserPortfolioNotification(userId, portfolio.name) onComplete {
+        case Success(notification) =>
+          sendInlineMessageToUser(
+            GeneralTexts.PORTFOLIO_DAILY_NOTIFICATION(portfolio.name, notification),
+            GeneralMarkups.generatePortfolioNotificationOptions(userId, portfolio)
+          )
+          context become waitForPortfolioNotificationTime(portfolio)
+        case _ =>
+          sendMessageToUser(GeneralTexts.ERROR)
+          returnToStartMenu()
+      }
+
       context become waitForPortfolioName
     }
   }
@@ -137,8 +224,6 @@ class UserActor(userId: Long,
   }
 
   def waitForPortfolioStock(portfolio: Portfolio): Receive = common orElse {
-    case IncomingMessage(Buttons.portfolioStockAdd) =>
-      sendMessageToUser(GeneralTexts.PORTFOLIO_STOCK_ADD, GeneralMarkups.viewPortfolioMarkup)
     case IncomingMessage(stockName(name)) => {
       // Try to get the ticker
 
@@ -161,6 +246,16 @@ class UserActor(userId: Long,
 
       context become Actor.emptyBehavior
     }
+    case IncomingCallback(CallbackTypes.portfolioDeleteStock, x) => {
+      userDataStorage.deleteStockFromPortfolio(userId, portfolio.name, x.message).onComplete {
+        case Success(_) =>
+          sendMessageToUser(GeneralTexts.PORTFOLIO_STOCK_DELETE_SUCCESS(x.message, portfolio.name))
+          printPortfolio(userId, portfolio.name)
+        case _ =>
+          sendMessageToUser(GeneralTexts.PORTFOLIO_STOCK_DELETE_FAIL(x.message, portfolio.name), GeneralMarkups.viewPortfolioMarkup)
+          printPortfolio(userId, portfolio.name)
+      }
+    }
   }
 
   def waitForPortfolioStockAmount(portfolio: Portfolio, stockName: String): Receive = common orElse {
@@ -168,7 +263,6 @@ class UserActor(userId: Long,
       userDataStorage.addStockToPortfolio(userId, portfolio.name, stockName, amount.toDouble) onComplete {
         case Success(_) =>
           printPortfolio(userId, portfolio.name)
-          context become waitForPortfolio
         case _ =>
           sendMessageToUser(GeneralTexts.PORTFOLIO_STOCK_ADD_ERROR)
           printPortfolios()
@@ -269,11 +363,13 @@ class UserActor(userId: Long,
 case class IncomingCallbackMessage(userId: String, message: String)
 object CallbackTypes {
   val portfolio = "PRT"
+  val portfolioSetNotification = "PRN"
+  val portfolioDeleteStock = "PRD"
 }
 
 object UserActor {
-  def props(id: Long, messageSender: MessageSender, userDataStorage: UserDataStorage, cache: PriceCache): Props =
-    Props(new UserActor(id, messageSender, userDataStorage, cache))
+  def props(id: Long, messageSender: MessageSender, userDataStorage: UserDataStorage, dailyNotificationHandler: DailyNotificationHandler, cache: PriceCache): Props =
+    Props(new UserActor(id, messageSender, userDataStorage, dailyNotificationHandler, cache))
 
   case class IncomingMessage(message: String)
   case class IncomingCallback(handler: String, message: IncomingCallbackMessage)

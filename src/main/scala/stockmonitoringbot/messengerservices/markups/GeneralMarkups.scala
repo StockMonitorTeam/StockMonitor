@@ -24,6 +24,15 @@ object Buttons {
   val portfolioStockAdd = "➕ Добавить акцию"
   val portfolioStockDelete = "🗑 Удалить акцию"
 
+  val notificationReject = "Отменить оповещения"
+
+}
+
+object Inline {
+
+  def generatePrefix(prefix: String, userId: Long, data: String) =
+    s"${prefix}_${userId}_${data}"
+
 }
 
 object GeneralMarkups {
@@ -89,5 +98,24 @@ object GeneralMarkups {
     ).grouped(3).toSeq
   ))
 
+  def generatePortfolioNotificationOptions(userId: Long, portfolio: Portfolio): Option[InlineKeyboardMarkup] = Some(InlineKeyboardMarkup(
+    Seq(
+      Seq(
+        InlineKeyboardButton(text="09:00", callbackData=Some(Inline.generatePrefix(CallbackTypes.portfolioSetNotification, userId, "09:00"))),
+        InlineKeyboardButton(text="18:00", callbackData=Some(Inline.generatePrefix(CallbackTypes.portfolioSetNotification, userId, "18:00"))),
+        InlineKeyboardButton(text="22:00", callbackData=Some(Inline.generatePrefix(CallbackTypes.portfolioSetNotification, userId, "22:00")))
+      ),
+      Seq(
+        InlineKeyboardButton(text=Buttons.notificationReject, callbackData=Some(Inline.generatePrefix(CallbackTypes.portfolioSetNotification, userId, Buttons.notificationReject)))
+      )
+    )
+  ))
+
+  def generatePortfolioStockDelete(userId: Long, portfolio: Portfolio): Option[InlineKeyboardMarkup] = Some(InlineKeyboardMarkup(
+    portfolio.stocks.map {
+        case (name, quantity) =>
+          InlineKeyboardButton(text=name, callbackData=Some(Inline.generatePrefix(CallbackTypes.portfolioDeleteStock, userId, name)))
+      }.toSeq.grouped(3).toSeq
+  ))
 
 }
