@@ -84,12 +84,9 @@ class UserActor(userId: Long,
 
   def clearPortfolioNotification(userId: Long, portfolio: Portfolio): Unit = {
     userDataStorage.getUserPortfolioNotification(userId, portfolio.name).onComplete {
-      case Success(result) => result match {
-        case Some(x) => {
-          dailyNotification.deleteDailyNotification(x)
-          userDataStorage.deleteDailyNotification(x)
-        }
-        case None =>
+      case Success(Some(x)) => {
+        dailyNotification.deleteDailyNotification(x)
+        userDataStorage.deleteDailyNotification(x)
       }
     }
   }
