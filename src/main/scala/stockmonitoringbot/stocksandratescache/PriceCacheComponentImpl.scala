@@ -2,6 +2,7 @@ package stockmonitoringbot.stocksandratescache
 
 import java.util.concurrent.ConcurrentHashMap
 
+import stockmonitoringbot.ExecutionContextComponent
 import stockmonitoringbot.stockpriceservices.{CurrencyExchangeRateInfo, StockInfo, StockPriceServiceComponent}
 
 import scala.collection.JavaConverters._
@@ -12,7 +13,8 @@ import scala.concurrent.Future
   */
 
 trait PriceCacheComponentImpl extends PriceCacheComponent {
-  self: StockPriceServiceComponent => //todo initial load stocks in cache
+  self: StockPriceServiceComponent //todo initial load stocks in cache
+    with ExecutionContextComponent =>
 
   override val priceCache = new PriceCacheImpl
 
@@ -25,10 +27,15 @@ trait PriceCacheComponentImpl extends PriceCacheComponent {
       if (stocks.containsKey(stock))
         Future.successful(stocks.get(stock))
       else
-        stockPriceService.getStockPriceInfo(stock)
+        stockPriceService.getStockPriceInfo(stock).map { info =>
+          setStockInfo(info)
+          info
+        }
 
-    override def setStockInfo(stockInfo: StockInfo): Unit =
+    override def setStockInfo(stockInfo: StockInfo): Unit = {
       stocks.put(stockInfo.name, stockInfo)
+      ()
+    }
 
     override def getStocks: Set[String] =
       stocks.keySet().asScala.toSet
@@ -40,10 +47,15 @@ trait PriceCacheComponentImpl extends PriceCacheComponent {
       if (exchangeRates.containsKey((from, to)))
         Future.successful(exchangeRates.get((from, to)))
       else
-        stockPriceService.getCurrencyExchangeRate(from, to)
+        stockPriceService.getCurrencyExchangeRate(from, to).map { info =>
+          setExchangeRate(info)
+          info
+        }
 
-    override def setExchangeRate(exchangeRate: CurrencyExchangeRateInfo): Unit =
+    override def setExchangeRate(exchangeRate: CurrencyExchangeRateInfo): Unit = {
       exchangeRates.put((exchangeRate.from, exchangeRate.to), exchangeRate)
+      ()
+    }
 
     override def getExchangePairs: Set[(String, String)] =
       exchangeRates.keySet().asScala.toSet
