@@ -33,4 +33,15 @@ class PortfolioPriceCalculationTest extends FlatSpec with Matchers with ScalaFut
     }
     getPortfolioCurrentPrice(portfolio, priceCache).futureValue shouldBe 3 * 23 + 5 * 32
   }
+
+  "getPortfolioStocksPriceList" should "calculate stock prices inside portfolio" in new TestWiring {
+    inAnyOrder {
+      priceCache.getStockInfo _ expects "MSFT" returning Future.successful(BaseStockInfo("MSFT", 23, 0, null))
+      priceCache.getStockInfo _ expects "AAPL" returning Future.successful(BaseStockInfo("AAPL", 32, 0, null))
+    }
+    getPortfolioStocksPrice(portfolio, priceCache).futureValue shouldBe Map(
+      "AAPL" -> 5 * 32,
+      "MSFT" -> 3 * 23
+    )
+  }
 }
