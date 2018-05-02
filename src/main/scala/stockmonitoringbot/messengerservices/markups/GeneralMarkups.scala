@@ -85,8 +85,12 @@ object GeneralMarkups {
   val portfolioTriggerMenuMarkup = customKeyboard(Seq(
     Seq(KeyboardButton(Buttons.triggerAdd), KeyboardButton(Buttons.triggerRemove)),
     Seq(KeyboardButton(Buttons.back)),
-    Seq(KeyboardButton(Buttons.portfolioStockAdd), KeyboardButton(Buttons.portfolioStockDelete)),
+//    Seq(KeyboardButton(Buttons.portfolioStockAdd), KeyboardButton(Buttons.portfolioStockDelete)),
     Seq(KeyboardButton(Buttons.backToMain))
+  ))
+
+  val basicBackMarkup = customKeyboard(Seq(
+    Seq(KeyboardButton(Buttons.back), KeyboardButton(Buttons.portfolio))
   ))
 
   def notificationToString(notification: TriggerNotification): String = {
@@ -139,9 +143,13 @@ object GeneralMarkups {
 
   def generatePortfolioTriggerOptions(userId: Long, portfolio: Portfolio): Option[InlineKeyboardMarkup] = Some(InlineKeyboardMarkup(
     Seq(
-      Seq(InlineKeyboardButton(text="Выше порога", callbackData=Some(Inline.generatePrefix(CallbackTypes.triggerSetType, userId, RaiseNotification.toString)))),
-      Seq(InlineKeyboardButton(text="Ниже порога", callbackData=Some(Inline.generatePrefix(CallbackTypes.triggerSetType, userId, FallNotification.toString)))),
-      Seq(InlineKeyboardButton(text="Обе стороны", callbackData=Some(Inline.generatePrefix(CallbackTypes.triggerSetType, userId, BothNotification.toString))))
+      Seq(
+        InlineKeyboardButton(text="Выше порога 📈", callbackData=Some(Inline.generatePrefix(CallbackTypes.triggerSetType, userId, RaiseNotification.toString))),
+        InlineKeyboardButton(text="Ниже порога 📉", callbackData=Some(Inline.generatePrefix(CallbackTypes.triggerSetType, userId, FallNotification.toString))),
+      ),
+      Seq(
+        InlineKeyboardButton(text="Обе стороны 📈➕📉", callbackData=Some(Inline.generatePrefix(CallbackTypes.triggerSetType, userId, BothNotification.toString)))
+      )
     )
   ))
 

@@ -32,7 +32,7 @@ class UserActor(userId: Long,
   val logger = Logging(context.system, this)
 
   private def sendMessageToUser(message: String, markup: Option[ReplyKeyboardMarkup] = None): Unit =
-    messageSender(SendMessage(userId, message, replyMarkup = markup))
+    messageSender(SendMessage(userId, message, disableWebPagePreview=Some(true), replyMarkup = markup))
 
   private def sendInlineMessageToUser(message: String, markup: Option[InlineKeyboardMarkup]): Unit =
     messageSender(SendMessage(userId, message, replyMarkup = markup))
@@ -160,6 +160,8 @@ class UserActor(userId: Long,
     }
     case IncomingMessage(Buttons.triggerRemove) => {
       userDataStorage.getUserPortfolioTriggerNotification(userId, portfolio.name) onComplete {
+        case Success(Nil) =>
+          sendMessageToUser(GeneralTexts.PORTFOLIO_TRIGGER_EMPTY)
         case Success(x) =>
           sendInlineMessageToUser(GeneralTexts.PORTFOLIO_TRIGGER_REMOVE, GeneralMarkups.generatePortfolioTriggersDelete(userId, x))
         case _ =>
@@ -203,7 +205,7 @@ class UserActor(userId: Long,
   }
 
 
-  def waitForPortfolioNotificationTime(portfolio: Portfolio): Receive = common orElse {
+  def waitForPortfolioNotificationTime(portfolio: Portfolio): Receive = portfolioMenu(portfolio) orElse {
 
     case IncomingCallback(CallbackTypes.portfolioSetNotification, x) => x.message match {
       case Buttons.notificationReject => {
@@ -235,7 +237,6 @@ class UserActor(userId: Long,
       sendMessageToUser(GeneralTexts.PORTFOLIO_STOCK_ADD(portfolio.name), GeneralMarkups.viewPortfolioMarkup)
       context become waitForPortfolioStock(portfolio)
     case IncomingMessage(Buttons.portfolioStockDelete) => {
-
       if (portfolio.stocks.isEmpty) {
         sendMessageToUser(GeneralTexts.PORTFOLIO_STOCK_EMPTY(portfolio.name))
       } else {
@@ -292,7 +293,7 @@ class UserActor(userId: Long,
     case _ => sendMessageToUser(GeneralTexts.INPUT_PORTFOLIO_CURRENCY_INVALID)
   }
 
-  def waitForPortfolioStock(portfolio: Portfolio): Receive = common orElse {
+  def waitForPortfolioStock(portfolio: Portfolio): Receive = portfolioMenu(portfolio) orElse {
     case IncomingMessage(stockName(name)) => {
       // Try to get the ticker
 
@@ -327,7 +328,7 @@ class UserActor(userId: Long,
     }
   }
 
-  def waitForPortfolioStockAmount(portfolio: Portfolio, stockName: String): Receive = common orElse {
+  def waitForPortfolioStockAmount(portfolio: Portfolio, stockName: String): Receive = portfolioMenu(portfolio) orElse {
     case IncomingMessage(floatAmount(amount)) =>
       userDataStorage.addStockToPortfolio(userId, portfolio.name, stockName, amount.toDouble) onComplete {
         case Success(_) =>
