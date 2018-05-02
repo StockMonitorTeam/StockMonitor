@@ -140,7 +140,7 @@ class UserActor(userId: Long,
     case IncomingMessage(Buttons.portfolio) =>
       printPortfolios()
 
-    case IncomingMessage(Buttons.currency) | IncomingMessage(Buttons.info) =>
+    case IncomingMessage(Buttons.currency) | IncomingMessage(Buttons.settings) =>
       sendMessageToUser(GeneralTexts.UNIMPLEMENTED)
   }
 

@@ -12,6 +12,7 @@ object Buttons {
   val notifications = "⏱ Регулярные отчёты"
   val triggers = "🚨 События триггеры"
   val info = "❓ Информация"
+  val settings = "⚙️ Настройки"
   val backToMain = "⏮ Главное меню"
   val back = "⏪ Назад"
 
@@ -51,8 +52,8 @@ object GeneralMarkups {
   val startMenuMarkup = customKeyboard(Seq(
       Seq(KeyboardButton(Buttons.stock), KeyboardButton(Buttons.currency)),
       Seq(KeyboardButton(Buttons.portfolio)),
-      Seq(KeyboardButton(Buttons.notifications), KeyboardButton(Buttons.triggers)),
-      Seq(KeyboardButton(Buttons.info))
+//      Seq(KeyboardButton(Buttons.notifications), KeyboardButton(Buttons.triggers)),
+      Seq(KeyboardButton(Buttons.settings))
     ))
 
   val stockMarkup = customKeyboard(Seq(
@@ -63,7 +64,7 @@ object GeneralMarkups {
   val portfolioMarkup = customKeyboard(Seq(
     Seq(KeyboardButton(Buttons.portfolioCreate)),
     Seq(KeyboardButton(Buttons.stock), KeyboardButton(Buttons.currency)),
-    Seq(KeyboardButton(Buttons.notifications), KeyboardButton(Buttons.triggers)),
+//    Seq(KeyboardButton(Buttons.notifications), KeyboardButton(Buttons.triggers)),
     Seq(KeyboardButton(Buttons.backToMain))
   ))
 
@@ -110,7 +111,7 @@ object GeneralMarkups {
   def generatePortfolioList(userId: Long, portfolios: Seq[Portfolio]): Option[InlineKeyboardMarkup] = Some(InlineKeyboardMarkup(
     portfolios.map(
         portfolio => InlineKeyboardButton(text = portfolio.name, callbackData = Some(s"${CallbackTypes.portfolio}_${userId}_${portfolio.name}"))
-    ).grouped(3).toSeq
+    ).grouped(2).toSeq
   ))
 
   def generatePortfolioNotificationOptions(userId: Long, portfolio: Portfolio): Option[InlineKeyboardMarkup] = Some(InlineKeyboardMarkup(
