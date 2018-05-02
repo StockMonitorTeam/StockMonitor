@@ -65,6 +65,8 @@ class TriggerNotificationHandlerImplTest extends FlatSpec with Matchers with Sca
     val notR = StockTriggerNotification(0, si1.name, 22, RaiseNotification)
     val notF = StockTriggerNotification(0, si1.name, 24, FallNotification)
     userDataStorage.getAllTriggerNotifications _ expects() returning Future.successful(Seq(notR, notF))
+    userDataStorage.deleteTriggerNotification _ expects notR returning Future.unit
+    userDataStorage.deleteTriggerNotification _ expects notF returning Future.unit
     priceCache.getStockInfo _ expects si1.name returning Future.successful(si1) atLeastOnce()
     messageSender expects * twice()
     triggerNotificationHandler.checkTriggers().futureValue shouldBe (())
@@ -74,6 +76,8 @@ class TriggerNotificationHandlerImplTest extends FlatSpec with Matchers with Sca
     val notR = ExchangeRateTriggerNotification(0, (eri.from, eri.to), 22, RaiseNotification)
     val notF = ExchangeRateTriggerNotification(0, (eri.from, eri.to), 24, FallNotification)
     userDataStorage.getAllTriggerNotifications _ expects() returning Future.successful(Seq(notR, notF))
+    userDataStorage.deleteTriggerNotification _ expects notR returning Future.unit
+    userDataStorage.deleteTriggerNotification _ expects notF returning Future.unit
     priceCache.getExchangeRate _ expects(eri.from, eri.to) returning Future.successful(eri) atLeastOnce()
     messageSender expects * twice()
     triggerNotificationHandler.checkTriggers().futureValue shouldBe (())
@@ -84,6 +88,8 @@ class TriggerNotificationHandlerImplTest extends FlatSpec with Matchers with Sca
     val notR = PortfolioTriggerNotification(0, "p", 22, RaiseNotification)
     val notF = PortfolioTriggerNotification(0, "p", 24, FallNotification)
     userDataStorage.getAllTriggerNotifications _ expects() returning Future.successful(Seq(notR, notF))
+    userDataStorage.deleteTriggerNotification _ expects notR returning Future.unit
+    userDataStorage.deleteTriggerNotification _ expects notF returning Future.unit
     userDataStorage.getPortfolio _ expects(0, "p") returning Future.successful(portfolio) atLeastOnce()
     priceCache.getStockInfo _ expects si1.name returning Future.successful(si1) atLeastOnce()
     messageSender expects * twice()
