@@ -116,6 +116,7 @@ trait TriggerNotificationHandlerComponentImpl extends TriggerNotificationHandler
       } yield {
         triggeredNotifications.flatten.foreach { notification =>
           messageSender(SendMessage(notification._1.ownerId, makeTriggerMessage(notification._1, notification._2)))
+          userDataStorage.deleteTriggerNotification(notification._1)
         }
         ()
       }
