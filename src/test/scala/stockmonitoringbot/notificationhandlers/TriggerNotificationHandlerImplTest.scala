@@ -42,8 +42,8 @@ class TriggerNotificationHandlerImplTest extends FlatSpec with Matchers with Sca
   }
 
   val time = parseZonedDateTime("2018-04-20 15:05:00", "US/Eastern")
-  val si1 = BaseStockInfo("MSFT", 23, 0, time)
-  val si2 = BaseStockInfo("AAPL", 32, 0, time)
+  val si1 = BaseStockInfo("MSFT", 23, Some(0), time)
+  val si2 = BaseStockInfo("AAPL", 32, Some(0), time)
   val eri = CurrencyExchangeRateInfo("USD", "", "RUB", "", 23, time)
 
   "TriggerNotificationHandler" should "update cache" in new TestWiring {
@@ -69,7 +69,7 @@ class TriggerNotificationHandlerImplTest extends FlatSpec with Matchers with Sca
     userDataStorage.deleteTriggerNotification _ expects notF returning Future.unit
     priceCache.getStockInfo _ expects si1.name returning Future.successful(si1) atLeastOnce()
     messageSender expects * twice()
-    triggerNotificationHandler.checkTriggers().futureValue shouldBe (())
+    triggerNotificationHandler.checkTriggers(priceCache, priceCache).futureValue shouldBe (())
   }
 
   "TriggerNotificationHandler" should "send messages if exchangeRateTriggerNotification triggers" in new TestWiring {
@@ -80,7 +80,7 @@ class TriggerNotificationHandlerImplTest extends FlatSpec with Matchers with Sca
     userDataStorage.deleteTriggerNotification _ expects notF returning Future.unit
     priceCache.getExchangeRate _ expects(eri.from, eri.to) returning Future.successful(eri) atLeastOnce()
     messageSender expects * twice()
-    triggerNotificationHandler.checkTriggers().futureValue shouldBe (())
+    triggerNotificationHandler.checkTriggers(priceCache, priceCache).futureValue shouldBe (())
   }
 
   "TriggerNotificationHandler" should "send messages if PortfolioTriggerNotification triggers" in new TestWiring {
@@ -93,14 +93,31 @@ class TriggerNotificationHandlerImplTest extends FlatSpec with Matchers with Sca
     userDataStorage.getPortfolio _ expects(0, "p") returning Future.successful(portfolio) atLeastOnce()
     priceCache.getStockInfo _ expects si1.name returning Future.successful(si1) atLeastOnce()
     messageSender expects * twice()
-    triggerNotificationHandler.checkTriggers().futureValue shouldBe (())
+    triggerNotificationHandler.checkTriggers(priceCache, priceCache).futureValue shouldBe (())
   }
 
   "TriggerNotificationHandler" should "shouldn't crush if there is no portfolio in data base" in new TestWiring {
     val not = PortfolioTriggerNotification(0, "p", 22, RaiseNotification)
     userDataStorage.getAllTriggerNotifications _ expects() returning Future.successful(Seq(not))
     userDataStorage.getPortfolio _ expects(0, "p") returning Future.failed(new NoSuchElementException)
-    triggerNotificationHandler.checkTriggers().futureValue shouldBe (())
+    triggerNotificationHandler.checkTriggers(priceCache, priceCache).futureValue shouldBe (())
   }
+
+  "TriggerNotificationHandler" should "send messages if stockTriggerNotification with BothNotification type triggers" in
+    new TestWiring {
+      val notB1 = StockTriggerNotification(0, si1.name, 22, BothNotification)
+      val notB2 = StockTriggerNotification(0, si1.name, 24, BothNotification)
+      userDataStorage.getAllTriggerNotifications _ expects() returning Future.successful(Seq(notB1, notB2)) twice()
+      userDataStorage.deleteTriggerNotification _ expects notB1 returning Future.unit
+      userDataStorage.deleteTriggerNotification _ expects notB2 returning Future.unit
+      priceCache.getStockInfo _ expects si1.name returning Future.successful(si1) atLeastOnce()
+      val newPriceCache1 = mock[PriceCache]
+      newPriceCache1.getStockInfo _ expects si1.name returning Future.successful(si1.copy(price = 25)) atLeastOnce()
+      val newPriceCache2 = mock[PriceCache]
+      newPriceCache2.getStockInfo _ expects si1.name returning Future.successful(si1.copy(price = 20)) atLeastOnce()
+      messageSender expects * twice()
+      triggerNotificationHandler.checkTriggers(priceCache, newPriceCache1).futureValue shouldBe (())
+      triggerNotificationHandler.checkTriggers(priceCache, newPriceCache2).futureValue shouldBe (())
+    }
 
 }

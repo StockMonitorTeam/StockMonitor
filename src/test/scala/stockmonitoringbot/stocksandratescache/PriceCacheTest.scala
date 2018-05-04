@@ -23,8 +23,8 @@ class PriceCacheTest extends FlatSpec with Matchers with ScalaFutures with MockF
     override val stockPriceService = mock[StockPriceService]
     val stock1 = "MSFT"
     val stock2 = "YNDX"
-    val stockInfo1 = BaseStockInfo(stock1, BigDecimal("94.8500"), 29033, parseZonedDateTime("2018-04-20 15:05:00", "US/Eastern"))
-    val stockInfo2 = BaseStockInfo(stock2, BigDecimal("34.2900"), 3540531, parseZonedDateTime("2018-04-23 12:15:46", "US/Eastern"))
+    val stockInfo1 = BaseStockInfo(stock1, BigDecimal("94.8500"), Some(29033), parseZonedDateTime("2018-04-20 15:05:00", "US/Eastern"))
+    val stockInfo2 = BaseStockInfo(stock2, BigDecimal("34.2900"), Some(3540531), parseZonedDateTime("2018-04-23 12:15:46", "US/Eastern"))
     val exchangePair1 = ("USD", "EUR")
     val exchangePair2 = ("USD", "RUB")
     val exchangeRateInfo1 = CurrencyExchangeRateInfo("USD", "United States Dollar",
@@ -85,6 +85,14 @@ class PriceCacheTest extends FlatSpec with Matchers with ScalaFutures with MockF
     stockPriceService.getCurrencyExchangeRate _ expects(exchangePair1._1, exchangePair1._2) returning Future.successful(exchangeRateInfo1) once()
     priceCache.getExchangeRate(exchangePair1._1, exchangePair1._2).futureValue shouldBe exchangeRateInfo1
     priceCache.getExchangeRate(exchangePair1._1, exchangePair1._2).futureValue shouldBe exchangeRateInfo1
+  }
+
+  "PriceCacheImpl" should "should copy itself" in new TestWiring {
+    priceCache.setExchangeRate(exchangeRateInfo1)
+    priceCache.setStockInfo(stockInfo1)
+    val copy = priceCache.copy()
+    copy.getExchangeRate(exchangePair1._1, exchangePair1._2).futureValue shouldBe exchangeRateInfo1
+    copy.getStockInfo(stock1).futureValue shouldBe stockInfo1
   }
 
 }

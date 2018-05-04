@@ -62,5 +62,12 @@ trait PriceCacheComponentImpl extends PriceCacheComponent {
 
     override def contains(exchangePair: (String, String)): Boolean =
       exchangeRates.containsKey(exchangePair)
+
+    override def copy(): PriceCacheImpl = {
+      val cache = new PriceCacheImpl()
+      stocks.forEach((_, stockInfo) => cache.setStockInfo(stockInfo))
+      exchangeRates.forEach((_, rateInfo) => cache.setExchangeRate(rateInfo))
+      cache
+    }
   }
 }

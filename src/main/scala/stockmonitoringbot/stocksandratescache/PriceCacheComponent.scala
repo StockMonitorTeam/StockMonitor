@@ -22,4 +22,6 @@ trait PriceCache {
   def setExchangeRate(exchangeRate: CurrencyExchangeRateInfo): Unit
   def getExchangePairs: Set[(String, String)]
   def contains(exchangePair: (String, String)): Boolean
+
+  def copy(): PriceCache
 }
