@@ -42,7 +42,7 @@ trait AlphavantageStockPriceServiceComponent extends StockPriceServiceComponent 
           latestPrice("2. high").convertTo[BigDecimal],
           latestPrice("3. low").convertTo[BigDecimal],
           latestPrice("4. close").convertTo[BigDecimal],
-          latestPrice("5. volume").convertTo[String].toInt,
+          Try(latestPrice("5. volume").convertTo[String].toLong).toOption,
           parseZonedDateTime(latestTime, zone))
       }.recoverWith {
         case exception => Failure(new JsonParseException(json, exception))
@@ -57,7 +57,7 @@ trait AlphavantageStockPriceServiceComponent extends StockPriceServiceComponent 
           BaseStockInfo(
             json("1. symbol").convertTo[String],
             json("2. price").convertTo[BigDecimal],
-            json("3. volume").convertTo[String].toInt,
+            Try(json("3. volume").convertTo[String].toLong).toOption,
             parseZonedDateTime(json("4. timestamp").convertTo[String], zone))
         )
       }.recoverWith {
