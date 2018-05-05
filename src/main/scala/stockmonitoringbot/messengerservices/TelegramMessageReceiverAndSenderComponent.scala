@@ -11,8 +11,9 @@ import info.mukel.telegrambot4s.clients.AkkaClient
 import info.mukel.telegrambot4s.methods.SendMessage
 import stockmonitoringbot.datastorage.UserDataStorageComponent
 import stockmonitoringbot.messengerservices.MessageSenderComponent.MessageSender
-import stockmonitoringbot.messengerservices.UserActor.{IncomingCallback, IncomingMessage}
-import stockmonitoringbot.notificationhandlers.{DailyNotificationHandlerComponent, TriggerNotificationHandler, TriggerNotificationHandlerComponent}
+import stockmonitoringbot.messengerservices.useractor.UserActor
+import stockmonitoringbot.messengerservices.useractor.UserActor.{IncomingCallback, IncomingCallbackMessage, IncomingMessage}
+import stockmonitoringbot.notificationhandlers.DailyNotificationHandlerComponent
 import stockmonitoringbot.stocksandratescache.PriceCacheComponent
 import stockmonitoringbot.{ActorSystemComponent, ApiKeys, ExecutionContextComponent}
 

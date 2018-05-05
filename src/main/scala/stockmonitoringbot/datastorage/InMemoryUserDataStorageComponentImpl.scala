@@ -122,31 +122,45 @@ trait InMemoryUserDataStorageComponentImpl extends UserDataStorageComponent {
         })
         ()
       })
-    override def getUserPortfolioNotification(userId: Long, portfolioName: String): Future[Option[PortfolioDailyNotification]] =
+
+    override def getUserNotification(userId: Long, assetType: AssetType): Future[Option[DailyNotification]] =
       Future.successful {
-        usersDailyNotifications.getOrDefault(userId, Set()).collectFirst {
-          case x: PortfolioDailyNotification if x.portfolioName == portfolioName => x
+        usersDailyNotifications.getOrDefault(userId, Set()).collectFirst(isOk(assetType)).collect {
+          case x: DailyNotification => x
         }
       }
-    override def deleteUserPortfolioNotification(userId: Long, portfolioName: String): Future[Unit] =
+    override def deleteUserNotification(userId: Long, assetType: AssetType): Future[Unit] =
       Future.successful {
-        usersDailyNotifications.getOrDefault(userId, Set()).collectFirst {
-          case x: PortfolioDailyNotification if x.portfolioName == portfolioName => x
+        usersDailyNotifications.getOrDefault(userId, Set()).collectFirst(isOk(assetType)).collect {
+          case x: DailyNotification => x
         }.foreach(n => deleteDailyNotification(n))
       }
-    override def setUserPortfolioNotification(userId: Long, portfolioName: String, notification: PortfolioDailyNotification): Future[Unit] =
+    override def setUserNotification(userId: Long, assetType: AssetType, notification: DailyNotification): Future[Unit] =
       Future.successful {
-        deleteUserPortfolioNotification(userId, portfolioName)
+        deleteUserNotification(userId, assetType)
         addDailyNotification(notification)
       }
-    override def getUserPortfolioTriggerNotification(userId: Long, portfolioName: String): Future[Seq[PortfolioTriggerNotification]] =
+
+    override def getUserTriggerNotification(userId: Long, assetType: AssetType): Future[Seq[TriggerNotification]] =
       Future.successful {
-        usersTriggerNotifications.getOrDefault(userId, Set()).collect {
-          case x: PortfolioTriggerNotification if x.portfolioName == portfolioName => x
+        usersTriggerNotifications.getOrDefault(userId, Set()).collect(isOk(assetType)).collect {
+          case x: TriggerNotification => x
         }.toSeq
       }
 
     def setOrEmptySet[A](set: Set[A]): Set[A] = if (set == null) Set() else set
+
+    def isOk(assetType: AssetType): PartialFunction[Notification, Notification] = assetType match {
+      case PortfolioAsset(name) => {
+        case x: PortfolioNotification if x.portfolioName == name => x
+      }
+      case StockAsset(name) => {
+        case x: StockNotification if x.stock == name => x
+      }
+      case ExchangeRateAsset(from, to) => {
+        case x: ExchangeRateNotification if x.exchangePair == ((from, to)) => x
+      }
+    }
 
   }
 }

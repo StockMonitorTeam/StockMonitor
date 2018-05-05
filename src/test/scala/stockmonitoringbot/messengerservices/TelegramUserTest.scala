@@ -1,15 +1,8 @@
 package stockmonitoringbot.messengerservices
 
 import akka.actor.ActorSystem
-import info.mukel.telegrambot4s.methods.SendMessage
-import info.mukel.telegrambot4s.models.ChatId
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.{FlatSpec, Matchers}
-import stockmonitoringbot.ExecutionContextComponent
-import stockmonitoringbot.messengerservices.UserActor.IncomingMessage
-import stockmonitoringbot.messengerservices.markups.{Buttons, GeneralMarkups, GeneralTexts}
-
-import scala.concurrent.ExecutionContext
 
 /**
   * Created by amir.

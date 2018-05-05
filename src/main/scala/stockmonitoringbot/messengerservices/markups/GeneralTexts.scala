@@ -1,6 +1,7 @@
 package stockmonitoringbot.messengerservices.markups
 
-import stockmonitoringbot.datastorage.models.{Portfolio, PortfolioDailyNotification, PortfolioTriggerNotification}
+import stockmonitoringbot.datastorage.models._
+import stockmonitoringbot.stockpriceservices.CurrencyExchangeRateInfo
 
 object GeneralTexts {
 
@@ -24,15 +25,61 @@ object GeneralTexts {
       |Больше примеров тикеров по адресу https://goo.gl/s7pnNS
     """.stripMargin
 
-  val printStockPrice = (name: String, price: Double) =>
+  val EXCHANGE_RATE_INTRO_MESSAGE =
+    """Для получения информации о курсе валют введите пару через "\".
+      |
+      |Например: USD/RUB
+      |
+    """.stripMargin
+
+  val SETTINGS_INTRO_MESSAGE =
+    """Настройки вашего профиля. Здесь вы можете отредактировать ваши уведомления и часовой пояс
+      |
+    """.stripMargin
+
+  val INFO_MESSAGE =
+    """О всех проблемах или пожеланиях пишите на этот email: XXXXXXXXXX.
+      |Данные взяты с сайта: https://www.alphavantage.co/
+      |
+    """.stripMargin
+
+  val printStockPrice = (name: String, price: Double,
+                         triggerNot: Seq[TriggerNotification],
+                         dailyNot: Option[DailyNotification]) => {
+    val dailyNotStr = dailyNot.fold("Ежедневное оповещение не установлено") { not =>
+      s"Ежедневное оповещение о $name установлено на: ${not.time}"
+    }
     s"""Акции $name
        |Стоимость: $price
+       |Подробнее: https://www.marketwatch.com/investing/stock/$name
        |
-       |Подробнее: https://www.marketwatch.com/investing/stock/${name}
+       |Активные оповещения тригеры на $name:
+       |${triggerNot.map(tnToStr).mkString("\n")}
+       |
+       |$dailyNotStr
     """.stripMargin
+  }
+
+  val printExchangeRate = (rate: CurrencyExchangeRateInfo,
+                           triggerNot: Seq[TriggerNotification],
+                           dailyNot: Option[DailyNotification]) => {
+    val dailyNotStr = dailyNot.fold("Ежедневное оповещение не установлено") { not =>
+      s"Ежедневное оповещение о курсе ${rate.from}/${rate.to} установлено на: ${not.time}"
+    }
+    s"""Курс ${rate.from} к ${rate.to} равен ${rate.rate}
+       |
+       |Активные оповещения тригеры на курс ${rate.from}/${rate.to}:
+       |${triggerNot.map(tnToStr).mkString("\n")}
+       |
+       |$dailyNotStr
+     """.stripMargin
+  }
 
   val printStockException = (name: String) =>
     s"Ошибка получения информации об акции: $name 😔"
+
+  val printExchangeRateException = (from: String, to: String) =>
+    s"Ошибка получения информации о курсе: $from/$to 😔"
 
   val UNIMPLEMENTED = "В стадии разработки. Приносим извинения за неудобства. 😌"
 
@@ -73,7 +120,7 @@ object GeneralTexts {
 
   val PORTFOLIO_STOCK_ADD = (name: String) =>
     s"""Для добавления новой акции в портфель «${name}» введите её тикер как текст (YNDX) или как команду (/YNDX).
-      |
+       |
       |Будьте внимательны с валютой, в которой торгуется данная акция. Мы пока не умеем автоматически её определять. Вы можете создать несколько портфелей для акций, торгуемых в разных валютах.
     """.stripMargin
 
@@ -84,18 +131,19 @@ object GeneralTexts {
   val PORTFOLIO_STOCK_ADD_AMOUNT = (ticker: String, portfolioName: String) =>
     s"Для добавления $ticker в портфель «$portfolioName» введите количество акций. Например: 1 или 0.03"
 
-  val PORTFOLIO_DAILY_NOTIFICATION = (portfolioName: String, notification: Option[PortfolioDailyNotification]) =>
-    s"""Для того, чтобы задать ежедневное оповещение о стоимости портфеля «${portfolioName}» выберите время, либо введите его в формате HH:MM.
-      |
+  val DAILY_NOTIFICATION_ADD_INFO = (assetType: AssetType, notification: Option[DailyNotification]) =>
+    //todo
+    s"""Для того, чтобы задать ежедневное оповещение о стоимости $assetType выберите время, либо введите его в формате HH:MM.
+       |
       |На текущий момент у вас""".stripMargin +
       (notification match {
         case Some(x) => s" установлены оповещения на ${x.time.toString}"
         case None => " не установлены оповещения"
       })
 
-  val PORTFOLIO_DAILY_NOTIFICATION_SET = (time: String) => s"Оповещение установлено на ${time}"
+  val DAILY_NOTIFICATION_SET = (time: String) => s"Оповещение установлено на ${time}"
 
-  val PORTFOLIO_DAILY_NOTIFICATION_UNSET = "Оповещения удалены"
+  val DAILY_NOTIFICATION_UNSET = "Оповещения удалены"
 
   val PORTFOLIO_STOCK_DELETE = (name: String) => s"Для удаления акции из портфеля «${name}» нажмите на соответствующую кнопку"
 
@@ -111,28 +159,53 @@ object GeneralTexts {
 
   val PORTFOLIO_TRIGGERS = (name: String, price: BigDecimal) =>
     s"""Для того, чтобы задать оповещение о резком изменении стоимости портфеля «${name}» введите интересующий вас порог.
-      |
+       |
       |Текущая стоимость портфеля ➔ ${price}
-      |
+       |
       |На данный момент у вас установлены оповещения:
-      |""".stripMargin
+       |""".stripMargin
 
-  val PORTFOLIO_TRIGGERS_LIST = (triggers: Seq[PortfolioTriggerNotification]) => triggers match {
+  val PORTFOLIO_TRIGGERS_LIST = (triggers: Seq[TriggerNotification]) => triggers match {
     case Nil => """
-        |ни одного 🤨
-      """.stripMargin
+                  |ни одного 🤨
+                """.stripMargin
     case xList => xList map (x => s"🔈 на ${x.boundPrice} (${x.notificationType})") mkString "\n"
   }
 
+  val TRIGGERS_LIST = (triggers: Seq[TriggerNotification]) => "Ваши активные тригеры: \n" + (triggers match {
+    case Seq() => """
+                    |Ни одного.
+                  """.stripMargin
+    case xList => xList.map(tnToStr).mkString("\n")
+  })
+
+  val DAILY_NOTIFICATIONS_LIST = (not: Seq[DailyNotification]) => "Ваши ежедневные оповещения: \n" + (not match {
+    case Seq() => """
+                    |Ни одного.
+                  """.stripMargin
+    case xList => xList.map(dnToStr).mkString("\n")
+  })
+
   val PORTFOLIO_TRIGGER_REMOVE = "Выберите триггер, который желаете удалить"
+
+  val TRIGGER_REMOVE = "Выберите триггер, который желаете удалить"
+
+  val DAILY_NOTIFICATION_REMOVE = "Выберите оповещение, которое желаете удалить"
 
   val PORTFOLIO_TRIGGER_EMPTY = "Список триггеров пуст 📭"
 
-  val PORTFOLIO_TRIGGER_TYPE = "Выберите тип срабатывания триггера при преодолении порога"
+  val TRIGGER_TYPE = "Выберите тип срабатывания триггера при преодолении порога"
 
-  val PORTFOLIO_TRIGGER_BOUND = "Введите порог срабатывания. Например: 1 или 133.7"
+  val TRIGGER_BOUND = "Введите порог срабатывания. Например: 1 или 133.7"
 
-  val PORTFOLIO_TRIGGER_ADDED = "Триггер успешно установлен"
+  val TRIGGER_ADDED = "Триггер успешно установлен"
+
+  val TRIGGER_ADD_ERROR = "Триггер успешно установлен"
 
   val PORTFOLIO_TRIGGER_REMOVED = (name: String) => s"Триггер ${name} успешно удалён"
+
+  val TRIGGER_REMOVED = s"Триггер успешно удалён"
+
+  val DAILY_NOTIFICATION_REMOVED = s"Триггер успешно удалён"
+
 }

@@ -1,52 +1,24 @@
-package stockmonitoringbot.messengerservices
+package stockmonitoringbot.messengerservices.useractor
 
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 
-import akka.actor.{Actor, Props}
-import akka.event.Logging
-import info.mukel.telegrambot4s.methods.SendMessage
-import info.mukel.telegrambot4s.models.{InlineKeyboardMarkup, ReplyKeyboardMarkup}
-import stockmonitoringbot.datastorage._
+import akka.actor.Actor
+import akka.actor.Actor.Receive
 import stockmonitoringbot.datastorage.models._
-import stockmonitoringbot.messengerservices.MessageSenderComponent.MessageSender
-import stockmonitoringbot.messengerservices.UserActor._
 import stockmonitoringbot.messengerservices.markups.{Buttons, GeneralMarkups, GeneralTexts}
-import stockmonitoringbot.notificationhandlers.{DailyNotificationHandler, getPortfolioCurrentPrice, getPortfolioStocksPrice}
-import stockmonitoringbot.stocksandratescache.PriceCache
+import stockmonitoringbot.messengerservices.useractor.UserActor.{CallbackTypes, IncomingCallback, IncomingMessage, SetBehavior}
+import stockmonitoringbot.notificationhandlers.{getPortfolioCurrentPrice, getPortfolioStocksPrice}
 
-import scala.util.matching.Regex
 import scala.util.{Failure, Success}
 
 /**
   * Created by amir.
   */
-class UserActor(userId: Long,
-                messageSender: MessageSender,
-                userDataStorage: UserDataStorage,
-                dailyNotification: DailyNotificationHandler,
-                cache: PriceCache) extends Actor {
-
-  import context.dispatcher
-
-  val logger = Logging(context.system, this)
-
-  private def sendMessageToUser(message: String, markup: Option[ReplyKeyboardMarkup] = None): Unit =
-    messageSender(SendMessage(userId, message, disableWebPagePreview=Some(true), replyMarkup = markup))
-
-  private def sendInlineMessageToUser(message: String, markup: Option[InlineKeyboardMarkup]): Unit =
-    messageSender(SendMessage(userId, message, replyMarkup = markup))
-
-  override def preStart(): Unit = {
-    sendMessageToUser(GeneralTexts.INTRO_MESSAGE, GeneralMarkups.startMenuMarkup)
-  }
-
-  def returnToStartMenu(): Unit = {
-    sendMessageToUser(GeneralTexts.MAIN_MENU_GREETING, GeneralMarkups.startMenuMarkup)
-    context become startMenu
-  }
-
-  def printPortfolios(): Unit = {
+trait Portfolios {
+  this: MainStuff =>
+  /*
+  def becomePortfolioMainMenu(): Unit = {
     userDataStorage.getUserPortfolios(userId).onComplete {
       case Success(results) => results match {
         case Seq() =>
@@ -57,8 +29,9 @@ class UserActor(userId: Long,
           sendInlineMessageToUser(GeneralTexts.PORTFOLIO_LIST, GeneralMarkups.generatePortfolioList(userId, portfolios))
           context become waitForPortfolio
       }
-      case _ =>
-        returnToStartMenu()
+      case Failure(e) =>
+        logger.error("Can't get portfolios", e)
+        sendMessageToUser(GeneralTexts.ERROR)
     }
   }
 
@@ -67,18 +40,18 @@ class UserActor(userId: Long,
       portfolio <- userDataStorage.getPortfolio(userId, portfolioName)
       stockPrices <- getPortfolioStocksPrice(portfolio, cache)
     } {
-      val sum = stockPrices.foldLeft(BigDecimal(0))(_+_._2)
+      val sum = stockPrices.foldLeft(BigDecimal(0))(_ + _._2)
       val portfolioGreeting = GeneralTexts.PORTFOLIO_SHOW(portfolio, sum) +
-      (
-        if (portfolio.stocks.isEmpty)
-          ""
-        else
-          GeneralTexts.PORTFOLIO_SHOW_STOCK +
-            portfolio.stocks.map {
-              case (k, v) =>
-                s"$k ($v) ➔ ${stockPrices(k)}"
-            }.mkString("\n")
-      )
+        (
+          if (portfolio.stocks.isEmpty)
+            ""
+          else
+            GeneralTexts.PORTFOLIO_SHOW_STOCK +
+              portfolio.stocks.map {
+                case (k, v) =>
+                  s"$k ($v) ➔ ${stockPrices(k)}"
+              }.mkString("\n")
+          )
       sendMessageToUser(portfolioGreeting, GeneralMarkups.viewPortfolioMarkup)
       context become portfolioMenu(portfolio)
     }
@@ -87,7 +60,7 @@ class UserActor(userId: Long,
   def printPortfolioTriggers(userId: Long, portfolio: Portfolio): Unit = {
     for {
       price <- getPortfolioCurrentPrice(portfolio, cache)
-      triggers <- userDataStorage.getUserPortfolioTriggerNotification(userId, portfolio.name)
+      triggers <- userDataStorage.getUserTriggerNotification(userId, PortfolioAsset(portfolio.name))
     } {
       val message = GeneralTexts.PORTFOLIO_TRIGGERS(portfolio.name, price) + GeneralTexts.PORTFOLIO_TRIGGERS_LIST(triggers)
       sendMessageToUser(message, GeneralMarkups.portfolioTriggerMenuMarkup)
@@ -95,11 +68,10 @@ class UserActor(userId: Long,
   }
 
   def clearPortfolioNotification(userId: Long, portfolio: Portfolio): Unit = {
-    userDataStorage.getUserPortfolioNotification(userId, portfolio.name).onComplete {
-      case Success(Some(x)) => {
+    userDataStorage.getUserNotification(userId, PortfolioAsset(portfolio.name)).onComplete {
+      case Success(Some(x)) =>
         dailyNotification.deleteDailyNotification(x)
         userDataStorage.deleteDailyNotification(x)
-      }
       case _ =>
     }
   }
@@ -112,14 +84,12 @@ class UserActor(userId: Long,
       clearPortfolioNotification(userId, portfolio)
       dailyNotification.addDailyNotification(notification)
       userDataStorage.addDailyNotification(notification)
-      sendMessageToUser(GeneralTexts.PORTFOLIO_DAILY_NOTIFICATION_SET(time))
+      sendMessageToUser(GeneralTexts.DAILY_NOTIFICATION_SET(time))
     }
     catch {
       case e: Exception => sendMessageToUser(GeneralTexts.TIME_ERROR)
     }
   }
-
-  override def receive: Receive = startMenu
 
   // Telegram callback handlers
   def tgCallback: Receive = {
@@ -127,39 +97,13 @@ class UserActor(userId: Long,
       printPortfolio(userId, data.message)
   }
 
-  // General menu items
-  def common: Receive = tgCallback orElse {
-
-    case IncomingMessage(Buttons.backToMain) =>
-      returnToStartMenu()
-
-    case IncomingMessage(Buttons.stock) =>
-      sendMessageToUser(GeneralTexts.STOCK_INTRO_MESSAGE, GeneralMarkups.stockMarkup)
-      context become waitForStock
-
-    case IncomingMessage(Buttons.portfolio) =>
-      printPortfolios()
-
-    case IncomingMessage(Buttons.currency) | IncomingMessage(Buttons.settings) =>
-      sendMessageToUser(GeneralTexts.UNIMPLEMENTED)
-  }
-
-  def startMenu: Receive = common orElse {
-    case IncomingMessage(Buttons.notifications) =>
-      sendMessageToUser("Notification menu", GeneralMarkups.notificationsMenuMarkup)
-      context become notificationsMenu
-    case IncomingMessage(Buttons.triggers) =>
-      sendMessageToUser("Triggers menu", GeneralMarkups.notificationsMenuMarkup)
-      context become notificationsMenu
-  }
-
-  def waitForPortfolioTrigger(portfolio: Portfolio): Receive = common orElse {
+  def waitForPortfolioTrigger(portfolio: Portfolio): Receive = {
     case IncomingMessage(Buttons.triggerAdd) => {
-      sendInlineMessageToUser(GeneralTexts.PORTFOLIO_TRIGGER_TYPE, GeneralMarkups.generatePortfolioTriggerOptions(userId, portfolio))
+      sendInlineMessageToUser(GeneralTexts.TRIGGER_TYPE, GeneralMarkups.generateTriggerOptions(userId))
       context become waitForPortfolioTriggerAddType(portfolio)
     }
     case IncomingMessage(Buttons.triggerRemove) => {
-      userDataStorage.getUserPortfolioTriggerNotification(userId, portfolio.name) onComplete {
+      userDataStorage.getUserTriggerNotification(userId, PortfolioAsset(portfolio.name)) onComplete {
         case Success(Nil) =>
           sendMessageToUser(GeneralTexts.PORTFOLIO_TRIGGER_EMPTY)
         case Success(x) =>
@@ -185,7 +129,7 @@ class UserActor(userId: Long,
   def waitForPortfolioTriggerAddType(portfolio: Portfolio): Receive = waitForPortfolioTrigger(portfolio) orElse {
     case IncomingCallback(CallbackTypes.triggerSetType, x) => {
       val nType = TriggerNotificationType.define(x.message)
-      sendMessageToUser(GeneralTexts.PORTFOLIO_TRIGGER_BOUND)
+      sendMessageToUser(GeneralTexts.TRIGGER_BOUND)
       context become waitForPortfolioTriggerAddBound(portfolio, nType)
     }
   }
@@ -196,14 +140,13 @@ class UserActor(userId: Long,
       val notification = PortfolioTriggerNotification(userId, portfolio.name, boundPrice, nType)
       userDataStorage.addTriggerNotification(notification).onComplete {
         case Success(_) =>
-          sendMessageToUser(GeneralTexts.PORTFOLIO_TRIGGER_ADDED)
+          sendMessageToUser(GeneralTexts.TRIGGER_ADDED)
           printPortfolio(userId, portfolio.name)
         case _ =>
       }
       context become portfolioMenu(portfolio)
     }
   }
-
 
   def waitForPortfolioNotificationTime(portfolio: Portfolio): Receive = portfolioMenu(portfolio) orElse {
 
@@ -426,30 +369,5 @@ class UserActor(userId: Long,
           returnToStartMenu()
       }
       context become Actor.emptyBehavior
-  }
-
-}
-
-case class IncomingCallbackMessage(userId: String, message: String)
-object CallbackTypes {
-  val portfolio = "PRT"
-  val portfolioSetNotification = "PRN"
-  val portfolioDeleteStock = "PRD"
-  val triggerSetType = "TRG"
-  val portfolioDeleteTrigger = "PDT"
-}
-
-object UserActor {
-  def props(id: Long, messageSender: MessageSender, userDataStorage: UserDataStorage, dailyNotificationHandler: DailyNotificationHandler, cache: PriceCache): Props =
-    Props(new UserActor(id, messageSender, userDataStorage, dailyNotificationHandler, cache))
-
-  case class IncomingMessage(message: String)
-  case class IncomingCallback(handler: String, message: IncomingCallbackMessage)
-
-  val stockName: Regex = "/?([A-Z]+)".r
-  val notificationRegex: Regex = "([A-Z]+) ([<>]) ([^ ]+)".r
-  val portfolioName: Regex = "([a-zA-Z0-9_\\-\\ ]{3,64})".r
-  val currencyName: Regex = "(USD|EUR|RUB)".r
-  val floatAmount: Regex = "([0-9]+[.]?[0-9]*)".r
-
+  }*/
 }
