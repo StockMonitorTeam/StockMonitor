@@ -16,7 +16,7 @@ trait ExchangeRates {
   this: MainStuff =>
 
   def becomeExchangeRatesMainMenu(): Unit = {
-    sendMessageToUser(GeneralTexts.EXCHANGE_RATE_INTRO_MESSAGE, GeneralMarkups.stocksMenuMarkup)
+    sendMessageToUser(GeneralTexts.EXCHANGE_RATE_INTRO_MESSAGE, GeneralMarkups.onlyMainMenu)
     context become waitForExchangePair
   }
 

@@ -58,12 +58,12 @@ object GeneralMarkups {
     Seq(KeyboardButton(Buttons.settings))
   ))
 
-  val stocksMenuMarkup = customKeyboard(Seq(
+  val onlyMainMenu = customKeyboard(Seq(
     Seq(KeyboardButton(Buttons.backToMain))
   ))
 
-  val onlyMainMenu = customKeyboard(Seq(
-    Seq(KeyboardButton(Buttons.backToMain))
+  val onlyBack = customKeyboard(Seq(
+    Seq(KeyboardButton(Buttons.back))
   ))
 
   val settingsMenuMarkup = customKeyboard(Seq(
@@ -99,15 +99,15 @@ object GeneralMarkups {
 
   val portfolioMarkup = customKeyboard(Seq(
     Seq(KeyboardButton(Buttons.portfolioCreate)),
-    Seq(KeyboardButton(Buttons.stock), KeyboardButton(Buttons.currency)),
-    //    Seq(KeyboardButton(Buttons.notifications), KeyboardButton(Buttons.triggers)),
+    //    Seq(KeyboardButton(Buttons.stock), KeyboardButton(Buttons.currency)),
+    //Seq(KeyboardButton(Buttons.notifications), KeyboardButton(Buttons.triggers)),
     Seq(KeyboardButton(Buttons.backToMain))
   ))
 
   val viewPortfolioMarkup = customKeyboard(Seq(
-    Seq(KeyboardButton(Buttons.portfolio)),
     Seq(KeyboardButton(Buttons.portfolioStockAdd), KeyboardButton(Buttons.portfolioStockDelete)),
     Seq(KeyboardButton(Buttons.notifications), KeyboardButton(Buttons.triggers)),
+    Seq(KeyboardButton(Buttons.portfolio)),
     Seq(KeyboardButton(Buttons.backToMain)),
     Seq(KeyboardButton(Buttons.portfolioDelete))
   ))
@@ -128,10 +128,6 @@ object GeneralMarkups {
 
   val basicBackMarkup = customKeyboard(Seq(
     Seq(KeyboardButton(Buttons.back), KeyboardButton(Buttons.portfolio))
-  ))
-
-  val basicBackMarkup2 = customKeyboard(Seq(
-    Seq(KeyboardButton(Buttons.back))
   ))
 
   def notificationToString(notification: TriggerNotification): String = {
@@ -207,7 +203,7 @@ object GeneralMarkups {
 
   def generatePortfolioStockDelete(userId: Long, portfolio: Portfolio): Option[InlineKeyboardMarkup] = Some(InlineKeyboardMarkup(
     portfolio.stocks.map {
-      case (name, quantity) =>
+      case (name, _) =>
         InlineKeyboardButton(text = name, callbackData = Some(Inline.generatePrefix(CallbackTypes.portfolioDeleteStock, userId, name)))
     }.toSeq.grouped(3).toSeq
   ))

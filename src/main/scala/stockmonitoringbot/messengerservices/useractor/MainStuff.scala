@@ -12,14 +12,12 @@ import stockmonitoringbot.datastorage.UserDataStorage
 import stockmonitoringbot.datastorage.models._
 import stockmonitoringbot.messengerservices.MessageSenderComponent.MessageSender
 import stockmonitoringbot.messengerservices.markups.{Buttons, GeneralMarkups, GeneralTexts}
-import stockmonitoringbot.messengerservices.useractor.MainStuff._
 import stockmonitoringbot.messengerservices.useractor.UserActor.{CallbackTypes, IncomingCallback, IncomingMessage, SetBehavior}
 import stockmonitoringbot.notificationhandlers.DailyNotificationHandler
 import stockmonitoringbot.stocksandratescache.PriceCache
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
-import scala.util.matching.Regex
 
 /**
   * Created by amir.
@@ -173,11 +171,6 @@ trait MainStuff {
       context become waitForNewBehavior()
       callBack
   }
-}
-
-object MainStuff {
-
-  val floatAmount: Regex = "([0-9]+[.]?[0-9]*)".r
 }
 
 

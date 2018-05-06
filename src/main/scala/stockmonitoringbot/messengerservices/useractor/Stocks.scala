@@ -6,7 +6,6 @@ import stockmonitoringbot.messengerservices.markups.{Buttons, GeneralMarkups, Ge
 import stockmonitoringbot.messengerservices.useractor.UserActor.{IncomingMessage, SetBehavior}
 import stockmonitoringbot.stockpriceservices.StockInfo
 
-import scala.util.matching.Regex
 import scala.util.{Failure, Success}
 
 /**
@@ -16,7 +15,7 @@ trait Stocks {
   this: MainStuff =>
 
   def becomeStockMainMenu(): Unit = {
-    sendMessageToUser(GeneralTexts.STOCK_INTRO_MESSAGE, GeneralMarkups.stocksMenuMarkup)
+    sendMessageToUser(GeneralTexts.STOCK_INTRO_MESSAGE, GeneralMarkups.onlyMainMenu)
     context become waitForStock
   }
 
@@ -57,5 +56,4 @@ trait Stocks {
     case IncomingMessage(Buttons.backToMain) => becomeMainMenu()
   }
 
-  val stockName: Regex = "/?([A-Z]+)".r
 }

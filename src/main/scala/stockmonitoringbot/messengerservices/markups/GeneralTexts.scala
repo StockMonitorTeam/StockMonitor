@@ -131,15 +131,20 @@ object GeneralTexts {
   val PORTFOLIO_STOCK_ADD_AMOUNT = (ticker: String, portfolioName: String) =>
     s"Для добавления $ticker в портфель «$portfolioName» введите количество акций. Например: 1 или 0.03"
 
-  val DAILY_NOTIFICATION_ADD_INFO = (assetType: AssetType, notification: Option[DailyNotification]) =>
-    //todo
-    s"""Для того, чтобы задать ежедневное оповещение о стоимости $assetType выберите время, либо введите его в формате HH:MM.
+  val DAILY_NOTIFICATION_ADD_INFO = (assetType: AssetType, notification: Option[DailyNotification]) => {
+    val asset = assetType match {
+      case PortfolioAsset(name) => s"стоимости портфеля $name"
+      case StockAsset(name) => s"стоимостиакций $name"
+      case ExchangeRateAsset(from, to) => s"курсе валют $from/$to"
+    }
+    s"""Для того, чтобы задать ежедневное оповещение о $asset выберите время, либо введите его в формате HH:MM.
        |
-      |На текущий момент у вас""".stripMargin +
+      |На текущий момент у вас """.stripMargin +
       (notification match {
-        case Some(x) => s" установлены оповещения на ${x.time.toString}"
-        case None => " не установлены оповещения"
+        case Some(x) => s"установлены оповещения на ${x.time.toString}"
+        case None => "не установлены оповещения"
       })
+  }
 
   val DAILY_NOTIFICATION_SET = (time: String) => s"Оповещение установлено на ${time}"
 

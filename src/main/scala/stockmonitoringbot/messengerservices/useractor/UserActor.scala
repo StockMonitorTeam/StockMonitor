@@ -10,7 +10,6 @@ import stockmonitoringbot.notificationhandlers.DailyNotificationHandler
 import stockmonitoringbot.stocksandratescache.PriceCache
 
 import scala.concurrent.ExecutionContextExecutor
-import scala.util.matching.Regex
 
 /**
   * Created by amir.
@@ -50,8 +49,8 @@ class UserActor(val userId: Long,
     case IncomingMessage(Buttons.currency) =>
       becomeExchangeRatesMainMenu()
     case IncomingMessage(Buttons.portfolio) =>
-      //becomePortfolioMainMenu()
-      sendMessageToUser(GeneralTexts.UNIMPLEMENTED)
+      context become waitForNewBehavior()
+      becomePortfolioMainMenu()
     case IncomingMessage(Buttons.settings) =>
       becomeSettingsMainMenu()
   }
@@ -77,7 +76,4 @@ object UserActor {
     val deleteDailyNot = "DDN"
   }
 
-  val notificationRegex: Regex = "([A-Z]+) ([<>]) ([^ ]+)".r
-  val portfolioName: Regex = "([a-zA-Z0-9_\\-\\ ]{3,64})".r
-  val currencyName: Regex = "(USD|EUR|RUB)".r
 }
