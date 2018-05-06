@@ -74,6 +74,7 @@ object UserActor {
     val portfolioDeleteTrigger = "PDT"
     val deleteTrigger = "DTR"
     val deleteDailyNot = "DDN"
+    val choseCurrency = "CCY"
   }
 
 }

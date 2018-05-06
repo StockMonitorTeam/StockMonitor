@@ -133,6 +133,17 @@ trait Portfolios {
     }
   }
 
+  def createNewPortfolio(name: String, currency: String) = {
+    userDataStorage.addPortfolio(Portfolio(userId, name, Currency.define(currency), Map.empty)).onComplete {
+      case Success(_) =>
+        sendMessageToUser(GeneralTexts.INPUT_PORTFOLIO_CREATED(name, currency))
+        printPortfolios()
+      case _ =>
+        sendMessageToUser(GeneralTexts.PORTFOLIO_CREATE_ERROR)
+        becomePortfolioMainMenu()
+    }
+  }
+
   def waitForPortfolioTrigger(portfolio: Portfolio): Receive = {
     case IncomingMessage(Buttons.triggerAdd) =>
       addTriggerNotification(PortfolioAsset(portfolio.name), {
@@ -197,20 +208,17 @@ trait Portfolios {
   def waitForPortfolioName: Receive = common orElse {
     case IncomingMessage(portfolioName(name)) =>
       sendMessageToUser(GeneralTexts.INPUT_PORTFOLIO_CURRENCY(name))
+      sendInlineMessageToUser(GeneralTexts.INPUT_PORTFOLIO_CURRENCY_LIST, GeneralMarkups.portfolioCurrencySwitch(userId))
       context become waitForPortfolioCurrency(name)
     case _ => sendMessageToUser(GeneralTexts.INPUT_PORTFOLIO_NAME_INVALID)
   }
 
   def waitForPortfolioCurrency(name: String): Receive = {
     case IncomingMessage(currencyName(currency)) =>
-      userDataStorage.addPortfolio(Portfolio(userId, name, Currency.define(currency), Map.empty)).onComplete {
-        case Success(_) =>
-          sendMessageToUser(GeneralTexts.INPUT_PORTFOLIO_CREATED(name, currency))
-          printPortfolios()
-        case _ =>
-          sendMessageToUser(GeneralTexts.PORTFOLIO_CREATE_ERROR)
-          becomePortfolioMainMenu()
-      }
+      createNewPortfolio(name, currency)
+      context become waitForNewBehavior()
+    case IncomingCallback(CallbackTypes.choseCurrency, data) =>
+      createNewPortfolio(name, data.message)
       context become waitForNewBehavior()
     case _ => sendMessageToUser(GeneralTexts.INPUT_PORTFOLIO_CURRENCY_INVALID)
   }
