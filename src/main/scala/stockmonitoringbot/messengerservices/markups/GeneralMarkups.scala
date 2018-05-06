@@ -130,6 +130,14 @@ object GeneralMarkups {
     Seq(KeyboardButton(Buttons.back), KeyboardButton(Buttons.portfolio))
   ))
 
+  def portfolioCurrencySwitch(userId: Long) = Some(InlineKeyboardMarkup(
+    Seq(Seq(
+      InlineKeyboardButton(text="USD", callbackData=Some(Inline.generatePrefix(CallbackTypes.choseCurrency, userId, "USD"))),
+      InlineKeyboardButton(text="RUB", callbackData=Some(Inline.generatePrefix(CallbackTypes.choseCurrency, userId, "RUB"))),
+      InlineKeyboardButton(text="EUR", callbackData=Some(Inline.generatePrefix(CallbackTypes.choseCurrency, userId, "EUR")))
+    ))
+  ))
+
   def notificationToString(notification: TriggerNotification): String = {
     val notificationType = notification.notificationType match {
       case RaiseNotification => ">"
