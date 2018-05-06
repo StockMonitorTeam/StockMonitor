@@ -210,12 +210,14 @@ trait Portfolios {
       userDataStorage.getPortfolio(userId, name) onComplete {
         case Success(_) =>
           sendMessageToUser(GeneralTexts.INPUT_PORTFOLIO_NAME_EXISTS)
+          self ! SetBehavior(waitForPortfolioName)
         case _ => {
           sendMessageToUser(GeneralTexts.INPUT_PORTFOLIO_CURRENCY(name))
           sendInlineMessageToUser(GeneralTexts.INPUT_PORTFOLIO_CURRENCY_LIST, GeneralMarkups.portfolioCurrencySwitch(userId))
-          context become waitForPortfolioCurrency(name)
+          self ! SetBehavior(waitForPortfolioCurrency(name))
         }
       }
+      context become waitForNewBehavior()
     case _ => sendMessageToUser(GeneralTexts.INPUT_PORTFOLIO_NAME_INVALID)
   }
 
