@@ -1,6 +1,6 @@
 package stockmonitoringbot.messengerservices.useractor
 
-import java.time.LocalTime
+import java.time._
 import java.time.format.{DateTimeFormatter, DateTimeParseException}
 
 import akka.actor.Actor.Receive
@@ -93,14 +93,17 @@ trait MainStuff {
   //NEW DAILY NOTIFICATION
   //callback should send SetBehavior message to self to take control back
   def addDailyNotification(assetType: AssetType, callBack: => Unit): Unit = {
-    userDataStorage.getUserNotification(userId, assetType) onComplete {
-      case Success(notification) =>
-        messageHideKeyboard(GeneralTexts.DAILY_NOTIFICATION_ADD_INFO_INTRO(assetType))
+    val notF = userDataStorage.getUserNotification(userId, assetType)
+    val userF = userDataStorage.getUser(userId)
+    val infoF = for (not <- notF; user <- userF) yield (not, user.get)
+    infoF onComplete {
+      case Success((notification, user)) =>
+        messageHideKeyboard(GeneralTexts.DAILY_NOTIFICATION_ADD_INFO_INTRO(assetType, user))
         sendInlineMessageToUser(
-          GeneralTexts.DAILY_NOTIFICATION_ADD_INFO(notification),
+          GeneralTexts.DAILY_NOTIFICATION_ADD_INFO(notification, user),
           GeneralMarkups.generateDailyNotificationOptions(userId)
         )
-        self ! SetBehavior(waitForNotificationTime(assetType, callBack))
+        self ! SetBehavior(waitForNotificationTime(assetType, user, callBack))
       case exception =>
         sendMessageToUser(GeneralTexts.ERROR)
         logger.error(s"Can't get daily notification on $assetType", exception)
@@ -109,12 +112,13 @@ trait MainStuff {
     context become waitForNewBehavior()
   }
 
-  def setNotification(userId: Long, assetType: AssetType, time: String): Future[Unit] = {
+  def setNotification(userId: Long, assetType: AssetType, time: String, user: User): Future[Unit] = {
     val localTime: LocalTime = LocalTime.parse(time, DateTimeFormatter.ofPattern("H:mm"))
+    val utcTime = getTimeInUTC(localTime, user.timeZone)
     val notification = assetType match {
-      case PortfolioAsset(name) => PortfolioDailyNotification(userId, name, localTime)
-      case StockAsset(name) => StockDailyNotification(userId, name, localTime)
-      case ExchangeRateAsset(from, to) => ExchangeRateDailyNotification(userId, (from, to), localTime)
+      case PortfolioAsset(name) => PortfolioDailyNotification(userId, name, utcTime)
+      case StockAsset(name) => StockDailyNotification(userId, name, utcTime)
+      case ExchangeRateAsset(from, to) => ExchangeRateDailyNotification(userId, (from, to), utcTime)
     }
     val task = for {_ <- clearNotification(userId, assetType)
                     _ = dailyNotification.addDailyNotification(notification)
@@ -138,7 +142,7 @@ trait MainStuff {
     } yield ()
   }
 
-  private def waitForNotificationTime(assetType: AssetType, callBack: => Unit): Receive = {
+  private def waitForNotificationTime(assetType: AssetType, user: User, callBack: => Unit): Receive = {
     case IncomingCallback(CallbackTypes.notificationTime, x) => x.message match {
       case Buttons.notificationReject =>
         clearNotification(userId, assetType).onComplete {
@@ -150,7 +154,7 @@ trait MainStuff {
         sendMessageToUser(GeneralTexts.DAILY_NOTIFICATION_UNSET)
         context become waitForNewBehavior()
       case time: String =>
-        setNotification(userId, assetType, time).onComplete {
+        setNotification(userId, assetType, time, user).onComplete {
           case Success(()) => callBack
           case Failure(e) =>
             logger.error("Can't set notification", e)
@@ -159,7 +163,7 @@ trait MainStuff {
         context become waitForNewBehavior()
     }
     case IncomingMessage(time) =>
-      setNotification(userId, assetType, time).onComplete {
+      setNotification(userId, assetType, time, user).onComplete {
         case Success(()) => callBack
         case Failure(e) =>
           logger.error("Can't set notification", e)

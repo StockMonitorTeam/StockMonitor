@@ -1,5 +1,6 @@
 package stockmonitoringbot.messengerservices
 
+import java.time.ZoneId
 import java.util.concurrent.ConcurrentHashMap
 
 import akka.actor.{ActorRef, ActorSystem, PoisonPill}
@@ -10,6 +11,7 @@ import info.mukel.telegrambot4s.api.declarative.{Callbacks, Commands}
 import info.mukel.telegrambot4s.clients.AkkaClient
 import info.mukel.telegrambot4s.methods.SendMessage
 import stockmonitoringbot.datastorage.UserDataStorageComponent
+import stockmonitoringbot.datastorage.models.User
 import stockmonitoringbot.messengerservices.MessageSenderComponent.MessageSender
 import stockmonitoringbot.messengerservices.useractor.UserActor
 import stockmonitoringbot.messengerservices.useractor.UserActor.{IncomingCallback, IncomingCallbackMessage, IncomingMessage}
@@ -52,6 +54,7 @@ trait TelegramMessageReceiverAndSenderComponent extends MessageReceiverComponent
     override val token: String = getKey("StockMonitor.Telegram.apitoken")
     override val port: Int = getKey("StockMonitor.Telegram.port").toInt
     override val webhookUrl: String = getKey("StockMonitor.Telegram.url")
+    val defaultTimeZone: ZoneId = ZoneId.of("+3")
 
     logger.info("starting telegram bot")
 
@@ -59,9 +62,10 @@ trait TelegramMessageReceiverAndSenderComponent extends MessageReceiverComponent
 
     onCommand("/start") {
       implicit msg =>
-        logger.info(s"starting chat with ${
-          msg.chat.firstName.get
-        }")
+        logger.info(s"starting chat with ${msg.chat.firstName.get}")
+        for {user <- userDataStorage.getUser(msg.chat.id) if user.isEmpty
+             _ <- userDataStorage.setUser(User(msg.chat.id, defaultTimeZone))
+        } {}
         val prev = activeUsers.put(msg.chat.id,
           system.actorOf(UserActor.props(msg.chat.id, messageSender, userDataStorage, dailyNotificationHandler, priceCache)))
         Option(prev).foreach(_ ! PoisonPill)

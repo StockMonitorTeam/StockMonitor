@@ -1,7 +1,9 @@
 package stockmonitoringbot.messengerservices.useractor
 
+import java.time.ZoneId
+
 import akka.actor.Actor.Receive
-import stockmonitoringbot.datastorage.models.{DailyNotification, TriggerNotification}
+import stockmonitoringbot.datastorage.models.{DailyNotification, TriggerNotification, User}
 import stockmonitoringbot.messengerservices.markups.{Buttons, GeneralMarkups, GeneralTexts}
 import stockmonitoringbot.messengerservices.useractor.UserActor.{CallbackTypes, IncomingCallback, IncomingMessage, SetBehavior}
 
@@ -20,9 +22,15 @@ trait Settings {
 
   //#5
   def settingsMainMenu: Receive = {
-    case IncomingMessage(Buttons.triggers) => becomeTriggersMenu()
-    case IncomingMessage(Buttons.notifications) => becomeDailyNotificationsMenu()
-    case IncomingMessage(Buttons.timezone) => sendMessageToUser(GeneralTexts.UNIMPLEMENTED)
+    case IncomingMessage(Buttons.triggers) =>
+      becomeTriggersMenu()
+      context become waitForNewBehavior()
+    case IncomingMessage(Buttons.notifications) =>
+      becomeDailyNotificationsMenu()
+      context become waitForNewBehavior()
+    case IncomingMessage(Buttons.timezone) =>
+      becomeTimezoneMenu()
+      context become waitForNewBehavior()
     case IncomingMessage(Buttons.info) => sendMessageToUser(GeneralTexts.INFO_MESSAGE)
     case IncomingMessage(Buttons.backToMain) => becomeMainMenu()
   }
@@ -37,7 +45,6 @@ trait Settings {
         sendMessageToUser(GeneralTexts.ERROR, GeneralMarkups.onlyMainMenu)
         self ! SetBehavior(triggersMenu(Seq()))
     }
-    context become waitForNewBehavior()
   }
 
   //#9
@@ -68,22 +75,24 @@ trait Settings {
         case _ =>
           sendMessageToUser(GeneralTexts.ERROR)
           becomeTriggersMenu()
-
       }
       context become waitForNewBehavior()
   }
 
   def becomeDailyNotificationsMenu(): Unit = {
-    userDataStorage.getUsersDailyNotifications(userId).onComplete {
-      case Success(notifications) =>
-        sendMessageToUser(GeneralTexts.DAILY_NOTIFICATIONS_LIST(notifications), GeneralMarkups.dailyNotificationsMenuMarkup)
+    val dNotsF = userDataStorage.getUsersDailyNotifications(userId)
+    val userF = userDataStorage.getUser(userId)
+    val info = for (dNots <- dNotsF; user <- userF) yield (dNots, user)
+    info.onComplete {
+      case Success((notifications, user)) =>
+        sendMessageToUser(GeneralTexts.DAILY_NOTIFICATIONS_LIST(notifications, user.get),
+          GeneralMarkups.dailyNotificationsMenuMarkup)
         self ! SetBehavior(dailyNotificationsMenu(notifications))
       case Failure(e) =>
         logger.error("Can't get daily notifications", e)
         sendMessageToUser(GeneralTexts.ERROR, GeneralMarkups.onlyMainMenu)
         self ! SetBehavior(dailyNotificationsMenu(Seq()))
     }
-    context become waitForNewBehavior()
   }
 
   //#10
@@ -98,7 +107,9 @@ trait Settings {
   }
 
   def waitForDailyNotificationToDelete(notifications: Seq[DailyNotification]): Receive = {
-    case IncomingMessage(Buttons.back) => becomeDailyNotificationsMenu()
+    case IncomingMessage(Buttons.back) =>
+      becomeDailyNotificationsMenu()
+      context become waitForNewBehavior()
     case IncomingCallback(CallbackTypes.deleteDailyNot, message) =>
       Try(message.message.toInt) match {
         case Success(id) =>
@@ -116,6 +127,57 @@ trait Settings {
           becomeDailyNotificationsMenu()
       }
       context become waitForNewBehavior()
+  }
+
+  def becomeTimezoneMenu(): Unit = {
+    userDataStorage.getUser(userId).onComplete {
+      case Success(Some(user)) =>
+        sendMessageToUser(GeneralTexts.TIME_ZONE_SHOW(user), GeneralMarkups.timezoneMenuMarkup)
+        self ! SetBehavior(timezoneMenu)
+      case Success(None) =>
+        logger.error(s"Can't find user $userId")
+        sendMessageToUser(GeneralTexts.ERROR, GeneralMarkups.onlyMainMenu)
+        self ! SetBehavior(timezoneMenu)
+      case Failure(e) =>
+        logger.error("Can't get timezone", e)
+        sendMessageToUser(GeneralTexts.ERROR, GeneralMarkups.onlyMainMenu)
+        self ! SetBehavior(timezoneMenu)
+    }
+    context become waitForNewBehavior()
+  }
+
+  //#8
+  def timezoneMenu: Receive = {
+    case IncomingMessage(Buttons.timezoneChange) =>
+      sendMessageToUser(GeneralTexts.TIME_ZONE_CHANGE, GeneralMarkups.onlyBack)
+      context become waitForNewTimezone
+    case IncomingMessage(Buttons.settings) => becomeSettingsMainMenu()
+    case IncomingMessage(Buttons.backToMain) => becomeMainMenu()
+  }
+
+  def waitForNewTimezone: Receive = {
+    case IncomingMessage(Buttons.back) =>
+      becomeTimezoneMenu()
+      context become waitForNewBehavior()
+    case IncomingMessage(timezone(zone, _)) =>
+      Try(ZoneId.of(if (zone == "0") "+0" else zone)) match {
+        case Success(zoneId) =>
+          userDataStorage.setUser(User(userId, zoneId)).onComplete {
+            case Success(()) =>
+              sendMessageToUser(GeneralTexts.TIME_ZONE_CHANGED)
+              becomeTimezoneMenu()
+            case Failure(e) =>
+              sendMessageToUser(GeneralTexts.ERROR)
+              logger.error("Can't change time zone", e)
+              becomeTimezoneMenu()
+          }
+        case _ =>
+          sendMessageToUser(GeneralTexts.ERROR)
+          becomeTimezoneMenu()
+      }
+      context become waitForNewBehavior()
+    case IncomingMessage(_) =>
+      sendMessageToUser(GeneralTexts.WRONG_TIMEZONE_FORMAT)
   }
 
 }

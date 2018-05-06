@@ -1,5 +1,7 @@
 package stockmonitoringbot.messengerservices
 
+import java.time._
+
 import stockmonitoringbot.datastorage.models._
 
 /**
@@ -26,4 +28,20 @@ package object markups {
         s"Портфель $name в $time"
     }
   }
+
+  def getTimeInSpecifiedTimezone(localTime: LocalTime, zoneId: ZoneId): LocalTime = {
+    LocalDateTime.of(LocalDate.now(), localTime)
+      .atZone(ZoneOffset.UTC)
+      .withZoneSameInstant(zoneId)
+      .toLocalTime
+  }
+
+  def notificationToUsersTime(not: DailyNotification, zoneId: ZoneId): DailyNotification = {
+    not match {
+      case t: StockDailyNotification => t.copy(time = getTimeInSpecifiedTimezone(t.time, zoneId))
+      case t: PortfolioDailyNotification => t.copy(time = getTimeInSpecifiedTimezone(t.time, zoneId))
+      case t: ExchangeRateDailyNotification => t.copy(time = getTimeInSpecifiedTimezone(t.time, zoneId))
+    }
+  }
+
 }

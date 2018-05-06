@@ -1,10 +1,9 @@
 package stockmonitoringbot.datastorage
 
-import java.time.LocalTime
+import java.time.{LocalTime, ZoneId}
 
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{FlatSpec, Matchers}
-import stockmonitoringbot.ExecutionContextComponent
 import stockmonitoringbot.datastorage.models._
 
 import scala.concurrent.ExecutionContextExecutor
@@ -118,6 +117,23 @@ class InMemoryDataStorageTest extends FlatSpec with Matchers with ScalaFutures {
       _ = dailyNotifications should contain theSameElementsAs Seq(dailyNotification2)
       triggerNotifications <- userDataStorage.getUsersTriggerNotifications(0)
       _ = triggerNotifications should contain theSameElementsAs Seq(triggerNotification2)
+    } yield
+      ()
+    test.futureValue shouldBe (())
+  }
+
+  "InMemoryUserDataStorage" should "store users" in new TestWiring {
+    val user1 = User(0, ZoneId.of("GMT-12"))
+    val user2 = User(0, ZoneId.of("GMT+12"))
+    val test = for {
+      _ <- userDataStorage.setUser(user1)
+      user <- userDataStorage.getUser(0)
+      _ = user shouldBe Some(user1)
+      _ <- userDataStorage.setUser(user2)
+      user <- userDataStorage.getUser(0)
+      _ = user shouldBe Some(user2)
+      user <- userDataStorage.getUser(23)
+      _ = user shouldBe None
     } yield
       ()
     test.futureValue shouldBe (())
