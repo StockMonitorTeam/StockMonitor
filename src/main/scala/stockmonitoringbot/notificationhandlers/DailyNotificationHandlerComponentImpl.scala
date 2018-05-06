@@ -9,6 +9,7 @@ import info.mukel.telegrambot4s.methods.SendMessage
 import stockmonitoringbot.datastorage.UserDataStorageComponent
 import stockmonitoringbot.datastorage.models._
 import stockmonitoringbot.messengerservices.MessageSenderComponent
+import stockmonitoringbot.messengerservices.markups.GeneralTexts
 import stockmonitoringbot.stocksandratescache.PriceCacheComponent
 import stockmonitoringbot.{ActorSystemComponent, ExecutionContextComponent}
 
@@ -37,19 +38,16 @@ trait DailyNotificationHandlerComponentImpl extends DailyNotificationHandlerComp
     private def makeNotificationMessage(notification: DailyNotification): Future[String] = notification match {
       case StockDailyNotification(_, stock, _) =>
         priceCache.getStockInfo(stock).map { stockInfo =>
-          s"${stockInfo.name} price is ${stockInfo.price}(last refresh: ${stockInfo.lastRefreshed})"
+          GeneralTexts.DAILY_NOTIFICATION_STOCK_INFO(stockInfo)
         }
       case ExchangeRateDailyNotification(_, (from, to), _) =>
         priceCache.getExchangeRate(from, to).map { exchangeRateInfo =>
-          s"${exchangeRateInfo.from}/${exchangeRateInfo.to} exchange rate is ${exchangeRateInfo.rate}" +
-            s"(last refresh: ${exchangeRateInfo.lastRefreshed})" +
-            s"\n ${exchangeRateInfo.from} - ${exchangeRateInfo.descriptionFrom}" +
-            s"\n ${exchangeRateInfo.to} - ${exchangeRateInfo.descriptionTo}"
+          GeneralTexts.DAILY_NOTIFICATION_EXCHANGE_RATE_INFO(exchangeRateInfo)
         }
       case PortfolioDailyNotification(userId, portfolioName, _) =>
         for {portfolio <- userDataStorage.getPortfolio(userId, portfolioName)
              portfolioPrice <- getPortfolioCurrentPrice(portfolio, priceCache)
-        } yield s"your portfolio $q${portfolio.name}$q current price is $portfolioPrice"
+        } yield GeneralTexts.DAILY_NOTIFICATION_PORTFOLIO_INFO(portfolio.name, portfolioPrice)
     }
 
     private val secondsInDay: Int = 24 * 60 * 60

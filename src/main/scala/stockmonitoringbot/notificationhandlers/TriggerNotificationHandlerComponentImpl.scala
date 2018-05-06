@@ -6,6 +6,7 @@ import info.mukel.telegrambot4s.methods.SendMessage
 import stockmonitoringbot.datastorage.UserDataStorageComponent
 import stockmonitoringbot.datastorage.models._
 import stockmonitoringbot.messengerservices.MessageSenderComponent
+import stockmonitoringbot.messengerservices.markups.GeneralTexts
 import stockmonitoringbot.stockpriceservices.StockPriceServiceComponent
 import stockmonitoringbot.stocksandratescache.{PriceCache, PriceCacheComponent}
 import stockmonitoringbot.{ActorSystemComponent, ExecutionContextComponent}
@@ -81,27 +82,6 @@ trait TriggerNotificationHandlerComponentImpl extends TriggerNotificationHandler
         }
     }
 
-    private def notificationTypeMessage(x: TriggerNotificationType, bound: BigDecimal): String = x match {
-      case RaiseNotification =>
-        s"is higher than $bound"
-      case FallNotification =>
-        s"is lower than $bound"
-      case BothNotification =>
-        s"just hit the bound: $bound"
-    }
-
-    private def makeTriggerMessage(notification: TriggerNotification, price: BigDecimal): String = notification match {
-      case StockTriggerNotification(_, stock, bound, notificationType) =>
-        val msg = notificationTypeMessage(notificationType, bound)
-        s"Your notification is triggered! $stock $msg. It's current price $price"
-      case ExchangeRateTriggerNotification(_, (from, to), bound, notificationType) =>
-        val msg = notificationTypeMessage(notificationType, bound)
-        s"Your notification is triggered! $from/$to exchange rate $msg. It's $price"
-      case PortfolioTriggerNotification(_, portfolioName, bound, notificationType) =>
-        val msg = notificationTypeMessage(notificationType, bound)
-        s"Your notification is triggered! portfolio $q$portfolioName$q $msg. It's current price $price"
-    }
-
     /**
       *
       * @return number of updated stocks & exchange rates
@@ -124,7 +104,7 @@ trait TriggerNotificationHandlerComponentImpl extends TriggerNotificationHandler
            triggeredNotifications <- Future.traverse(notifications)(isTriggered(oldCache, newCache))
       } yield {
         triggeredNotifications.flatten.foreach { notification =>
-          messageSender(SendMessage(notification._1.ownerId, makeTriggerMessage(notification._1, notification._2)))
+          messageSender(SendMessage(notification._1.ownerId, GeneralTexts.TRIGGER_MESSAGE(notification._1, notification._2)))
           userDataStorage.deleteTriggerNotification(notification._1)
         }
         ()

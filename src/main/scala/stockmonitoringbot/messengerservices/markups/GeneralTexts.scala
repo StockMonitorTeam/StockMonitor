@@ -1,7 +1,7 @@
 package stockmonitoringbot.messengerservices.markups
 
 import stockmonitoringbot.datastorage.models._
-import stockmonitoringbot.stockpriceservices.CurrencyExchangeRateInfo
+import stockmonitoringbot.stockpriceservices.{CurrencyExchangeRateInfo, StockInfo}
 
 object GeneralTexts {
 
@@ -224,5 +224,36 @@ object GeneralTexts {
   val TRIGGER_REMOVED = s"Триггер успешно удалён"
 
   val DAILY_NOTIFICATION_REMOVED = s"Триггер успешно удалён"
+
+  val DAILY_NOTIFICATION_STOCK_INFO = (stockInfo: StockInfo) => s"Цена акции ${stockInfo.name} : ${stockInfo.price}(обновлено: ${stockInfo.lastRefreshed})"
+
+  val DAILY_NOTIFICATION_EXCHANGE_RATE_INFO = (exchangeRateInfo: CurrencyExchangeRateInfo) => s"Цена валютной пары ${exchangeRateInfo.from}/${exchangeRateInfo.to} : ${exchangeRateInfo.rate}" +
+    s"(обновлено: ${exchangeRateInfo.lastRefreshed})" +
+    s"\n ${exchangeRateInfo.from} - ${exchangeRateInfo.descriptionFrom}" +
+    s"\n ${exchangeRateInfo.to} - ${exchangeRateInfo.descriptionTo}"
+
+  val DAILY_NOTIFICATION_PORTFOLIO_INFO = (name: String, price: BigDecimal) => s"Цена вашего портфеля «$name» : $price"
+
+  val TRIGGER_MESSAGE_BOUND = (tp: TriggerNotificationType, bound: BigDecimal) => tp match {
+    case RaiseNotification =>
+      s"поднялась выше $bound"
+    case FallNotification =>
+      s"опустилась ниже $bound"
+    case BothNotification =>
+      s"достигла порога: $bound"
+  }
+
+  val TRIGGER_MESSAGE = (notification: TriggerNotification, price: BigDecimal) => notification match {
+    case StockTriggerNotification(_, stock, bound, notificationType) =>
+      val msg = TRIGGER_MESSAGE_BOUND(notificationType, bound)
+      s"Сработало триггер оповещение! Стоимость $stock $msg. Текущая цена $price"
+    case ExchangeRateTriggerNotification(_, (from, to), bound, notificationType) =>
+      val msg = TRIGGER_MESSAGE_BOUND(notificationType, bound)
+      s"Сработало триггер оповещение! Цена валютной пары $from/$to $msg. Текущая цена: $price"
+    case PortfolioTriggerNotification(_, portfolioName, bound, notificationType) =>
+      val msg = TRIGGER_MESSAGE_BOUND(notificationType, bound)
+      s"Сработало триггер оповещение! Стоимость портеля «$portfolioName» $msg. Текущая цена: $price"
+  }
+
 
 }
