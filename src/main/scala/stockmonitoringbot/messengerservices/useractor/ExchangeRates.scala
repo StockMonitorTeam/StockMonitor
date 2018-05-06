@@ -35,17 +35,19 @@ trait ExchangeRates {
       context become waitForNewBehavior()
     case IncomingMessage(Buttons.backToMain) =>
       becomeMainMenu()
-    case IncomingMessage(msg) =>
+    case IncomingMessage(_) =>
       sendMessageToUser(GeneralTexts.EXCHANGE_RATE_INVALID)
   }
 
   def goToRateMenu(rate: CurrencyExchangeRateInfo): Unit = {
     val dailyNotFut = userDataStorage.getUserNotification(userId, ExchangeRateAsset(rate.from, rate.to))
     val triggerNotFut = userDataStorage.getUserTriggerNotification(userId, ExchangeRateAsset(rate.from, rate.to))
+    val userFut = userDataStorage.getUser(userId)
     for {dailyNot <- dailyNotFut
          triggerNot <- triggerNotFut
+         user <- userFut
     } {
-      sendMessageToUser(GeneralTexts.printExchangeRate(rate, triggerNot, dailyNot),
+      sendMessageToUser(GeneralTexts.printExchangeRate(rate, triggerNot, dailyNot, user.get),
         GeneralMarkups.oneExchangeRateMenuMarkup)
       self ! SetBehavior(exchangePairMenu(rate))
     }

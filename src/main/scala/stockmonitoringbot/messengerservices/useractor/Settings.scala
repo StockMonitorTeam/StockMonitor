@@ -80,9 +80,13 @@ trait Settings {
   }
 
   def becomeDailyNotificationsMenu(): Unit = {
-    userDataStorage.getUsersDailyNotifications(userId).onComplete {
-      case Success(notifications) =>
-        sendMessageToUser(GeneralTexts.DAILY_NOTIFICATIONS_LIST(notifications), GeneralMarkups.dailyNotificationsMenuMarkup)
+    val dNotsF = userDataStorage.getUsersDailyNotifications(userId)
+    val userF = userDataStorage.getUser(userId)
+    val info = for (dNots <- dNotsF; user <- userF) yield (dNots, user)
+    info.onComplete {
+      case Success((notifications, user)) =>
+        sendMessageToUser(GeneralTexts.DAILY_NOTIFICATIONS_LIST(notifications, user.get),
+          GeneralMarkups.dailyNotificationsMenuMarkup)
         self ! SetBehavior(dailyNotificationsMenu(notifications))
       case Failure(e) =>
         logger.error("Can't get daily notifications", e)

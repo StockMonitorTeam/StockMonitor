@@ -132,7 +132,8 @@ trait InMemoryUserDataStorageComponentImpl extends UserDataStorageComponent {
           case x: DailyNotification => x
         }
       }
-    override def deleteUserNotification(userId: Long, assetType: AssetType): Future[Unit] =
+
+    /*override def deleteUserNotification(userId: Long, assetType: AssetType): Future[Unit] =
       Future.successful {
         usersDailyNotifications.getOrDefault(userId, Set()).collectFirst(isOk(assetType)).collect {
           case x: DailyNotification => x
@@ -142,7 +143,7 @@ trait InMemoryUserDataStorageComponentImpl extends UserDataStorageComponent {
       Future.successful {
         deleteUserNotification(userId, assetType)
         addDailyNotification(notification)
-      }
+      }*/
 
     override def getUserTriggerNotification(userId: Long, assetType: AssetType): Future[Seq[TriggerNotification]] =
       Future.successful {

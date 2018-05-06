@@ -47,10 +47,12 @@ object GeneralTexts {
 
   val printStockPrice = (name: String, price: Double,
                          triggerNot: Seq[TriggerNotification],
-                         dailyNot: Option[DailyNotification]) => {
-    val dailyNotStr = dailyNot.fold("Ежедневное оповещение не установлено") { not =>
-      s"Ежедневное оповещение о $name установлено на: ${not.time}"
-    }
+                         dailyNot: Option[DailyNotification],
+                         user: User) => {
+    val dailyNotStr = dailyNot.map(notificationToUsersTime(_, user.timeZone))
+      .fold("Ежедневное оповещение не установлено") { not =>
+        s"Ежедневное оповещение о $name установлено на: ${not.time}"
+      }
     s"""Акции $name
        |Стоимость: $price
        |Подробнее: https://www.marketwatch.com/investing/stock/$name
@@ -64,10 +66,12 @@ object GeneralTexts {
 
   val printExchangeRate = (rate: CurrencyExchangeRateInfo,
                            triggerNot: Seq[TriggerNotification],
-                           dailyNot: Option[DailyNotification]) => {
-    val dailyNotStr = dailyNot.fold("Ежедневное оповещение не установлено") { not =>
-      s"Ежедневное оповещение о курсе ${rate.from}/${rate.to} установлено на: ${not.time}"
-    }
+                           dailyNot: Option[DailyNotification],
+                           user: User) => {
+    val dailyNotStr = dailyNot.map(notificationToUsersTime(_, user.timeZone))
+      .fold("Ежедневное оповещение не установлено") { not =>
+        s"Ежедневное оповещение о курсе ${rate.from}/${rate.to} установлено на: ${not.time}"
+      }
     s"""Курс ${rate.from} к ${rate.to} равен ${rate.rate}
        |
        |Активные оповещения тригеры на курс ${rate.from}/${rate.to}:
@@ -134,19 +138,23 @@ object GeneralTexts {
   val PORTFOLIO_STOCK_ADD_AMOUNT = (ticker: String, portfolioName: String) =>
     s"Для добавления $ticker в портфель «$portfolioName» введите количество акций. Например: 1 или 0.03"
 
-  val DAILY_NOTIFICATION_ADD_INFO_INTRO = (assetType: AssetType) => {
+  val DAILY_NOTIFICATION_ADD_INFO_INTRO = (assetType: AssetType, user: User) => {
     val asset = assetType match {
       case PortfolioAsset(name) => s"стоимости портфеля $name"
       case StockAsset(name) => s"стоимости акций $name"
       case ExchangeRateAsset(from, to) => s"курсе валют $from/$to"
     }
-    s"Для того, чтобы задать ежедневное оповещение о $asset выберите время, либо введите его в формате HH:MM."
+    import stockmonitoringbot.messengerservices.useractor.currentTimeAccordingToTimezone
+    s"""Для того, чтобы задать ежедневное оповещение о $asset выберите время, либо введите его в формате HH:MM.
+       |
+       |Текущая дата на сервере с учетом вашего часового пояса: ${currentTimeAccordingToTimezone(user.timeZone)}
+     """.stripMargin
   }
 
-  val DAILY_NOTIFICATION_ADD_INFO = (notification: Option[DailyNotification]) => {
+  val DAILY_NOTIFICATION_ADD_INFO = (notification: Option[DailyNotification], user: User) => {
     s"""
        |На текущий момент у вас """.stripMargin +
-      (notification match {
+      (notification.map(notificationToUsersTime(_, user.timeZone)) match {
         case Some(x) => s"установлены оповещения на ${x.time.toString}"
         case None => "не установлены оповещения"
       })
@@ -190,11 +198,11 @@ object GeneralTexts {
     case xList => xList.map(tnToStr).mkString("\n")
   })
 
-  val DAILY_NOTIFICATIONS_LIST = (not: Seq[DailyNotification]) => "Ваши ежедневные оповещения: \n" + (not match {
+  val DAILY_NOTIFICATIONS_LIST = (not: Seq[DailyNotification], user: User) => "Ваши ежедневные оповещения: \n" + (not match {
     case Seq() => """
                     |Ни одного.
                   """.stripMargin
-    case xList => xList.map(dnToStr).mkString("\n")
+    case xList => xList.map(n => dnToStr(notificationToUsersTime(n, user.timeZone))).mkString("\n")
   })
 
   val TIME_ZONE_SHOW = (user: User) => {

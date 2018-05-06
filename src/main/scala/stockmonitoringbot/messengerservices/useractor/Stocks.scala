@@ -39,10 +39,12 @@ trait Stocks {
   def goToStockMenu(stock: StockInfo): Unit = {
     val dailyNotFut = userDataStorage.getUserNotification(userId, StockAsset(stock.name))
     val triggerNotFut = userDataStorage.getUserTriggerNotification(userId, StockAsset(stock.name))
+    val userFut = userDataStorage.getUser(userId)
     for {dailyNot <- dailyNotFut
          triggerNot <- triggerNotFut
+         user <- userFut
     } {
-      sendMessageToUser(GeneralTexts.printStockPrice(stock.name, stock.price.toDouble, triggerNot, dailyNot),
+      sendMessageToUser(GeneralTexts.printStockPrice(stock.name, stock.price.toDouble, triggerNot, dailyNot, user.get),
         GeneralMarkups.oneStockMenuMarkup)
       self ! SetBehavior(stockMenu(stock))
     }

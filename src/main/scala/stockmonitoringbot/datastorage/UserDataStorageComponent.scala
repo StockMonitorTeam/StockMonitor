@@ -31,10 +31,10 @@ trait UserDataStorage {
 
   //actions with daily notifications on specified asset
   def getUserNotification(userId: Long, assetType: AssetType): Future[Option[DailyNotification]]
-  def deleteUserNotification(userId: Long, assetType: AssetType): Future[Unit]
-  def setUserNotification(userId: Long, assetType: AssetType, notification: DailyNotification): Future[Unit]
+  //def deleteUserNotification(userId: Long, assetType: AssetType): Future[Unit]
+  //def setUserNotification(userId: Long, assetType: AssetType, notification: DailyNotification): Future[Unit]
 
-  //actions with triger notifications on specified asset
+  //actions with trigger notifications on specified asset
   def getUserTriggerNotification(userId: Long, assetType: AssetType): Future[Seq[TriggerNotification]]
 
   def getUser(userId: Long): Future[Option[User]]
