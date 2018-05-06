@@ -83,23 +83,23 @@ trait TriggerNotificationHandlerComponentImpl extends TriggerNotificationHandler
 
     private def notificationTypeMessage(x: TriggerNotificationType, bound: BigDecimal): String = x match {
       case RaiseNotification =>
-        s"is higher than $bound"
+        s"выше $bound"
       case FallNotification =>
-        s"is lower than $bound"
+        s"ниже $bound"
       case BothNotification =>
-        s"just hit the bound: $bound"
+        s"достиг порога: $bound"
     }
 
     private def makeTriggerMessage(notification: TriggerNotification, price: BigDecimal): String = notification match {
       case StockTriggerNotification(_, stock, bound, notificationType) =>
         val msg = notificationTypeMessage(notificationType, bound)
-        s"Your notification is triggered! $stock $msg. It's current price $price"
+        s"Сработало триггер оповещение! $stock $msg. Текущая цена $price"
       case ExchangeRateTriggerNotification(_, (from, to), bound, notificationType) =>
         val msg = notificationTypeMessage(notificationType, bound)
-        s"Your notification is triggered! $from/$to exchange rate $msg. It's $price"
+        s"Сработало триггер оповещение! $from/$to обменный курс $msg. Цена: $price"
       case PortfolioTriggerNotification(_, portfolioName, bound, notificationType) =>
         val msg = notificationTypeMessage(notificationType, bound)
-        s"Your notification is triggered! portfolio $q$portfolioName$q $msg. It's current price $price"
+        s"Сработало триггер оповещение! Портель «$portfolioName» $msg. Текущая цена: $price"
     }
 
     /**
