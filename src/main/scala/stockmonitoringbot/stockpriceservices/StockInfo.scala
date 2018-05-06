@@ -16,12 +16,12 @@ case class DetailedStockInfo(name: String,
                              high: BigDecimal,
                              low: BigDecimal,
                              close: BigDecimal,
-                             volume: Int,
+                             volume: Option[Long],
                              lastRefreshed: ZonedDateTime) extends StockInfo {
   val price: BigDecimal = close
 }
 
 case class BaseStockInfo(name: String,
                          price: BigDecimal,
-                         volume: Int,
+                         volume: Option[Long],
                          lastRefreshed: ZonedDateTime) extends StockInfo

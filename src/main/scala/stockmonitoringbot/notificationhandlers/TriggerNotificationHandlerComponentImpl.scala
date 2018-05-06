@@ -7,7 +7,7 @@ import stockmonitoringbot.datastorage.UserDataStorageComponent
 import stockmonitoringbot.datastorage.models._
 import stockmonitoringbot.messengerservices.MessageSenderComponent
 import stockmonitoringbot.stockpriceservices.StockPriceServiceComponent
-import stockmonitoringbot.stocksandratescache.PriceCacheComponent
+import stockmonitoringbot.stocksandratescache.{PriceCache, PriceCacheComponent}
 import stockmonitoringbot.{ActorSystemComponent, ExecutionContextComponent}
 
 import scala.concurrent.Future
@@ -33,12 +33,16 @@ trait TriggerNotificationHandlerComponentImpl extends TriggerNotificationHandler
     private val logger = Logger(getClass)
     private var mainTask: Cancellable = _
 
-    private def isTriggeredWithPrice(notification: TriggerNotification, price: BigDecimal): Option[(TriggerNotification, BigDecimal)] = {
+    private def isTriggeredWithPrice(notification: TriggerNotification,
+                                     lastPrice: BigDecimal,
+                                     currentPrice: BigDecimal): Option[(TriggerNotification, BigDecimal)] = {
       notification.notificationType match {
-        case RaiseNotification if price >= notification.boundPrice =>
-          Some((notification, price))
-        case FallNotification if price <= notification.boundPrice =>
-          Some((notification, price))
+        case RaiseNotification if currentPrice >= notification.boundPrice =>
+          Some((notification, currentPrice))
+        case FallNotification if currentPrice <= notification.boundPrice =>
+          Some((notification, currentPrice))
+        case BothNotification if currentPrice <= notification.boundPrice ^ lastPrice <= notification.boundPrice =>
+          Some((notification, currentPrice))
         case _ => None
       }
     }
@@ -47,50 +51,55 @@ trait TriggerNotificationHandlerComponentImpl extends TriggerNotificationHandler
       *
       * @return None, if notification is not triggered, Some((notification, price)), if notification is triggered, price - current price
       */
-    private def isTriggered(notification: TriggerNotification): Future[Option[(TriggerNotification, BigDecimal)]] = notification match {
+    private def isTriggered(oldCache: PriceCache, newCache: PriceCache)(notification: TriggerNotification): Future[Option[(TriggerNotification, BigDecimal)]] = notification match {
       case StockTriggerNotification(_, stock, _, _) =>
-        priceCache.getStockInfo(stock).map { stockInfo =>
-          isTriggeredWithPrice(notification, stockInfo.price)
-        }
+        val oldPriceFuture = oldCache.getStockInfo(stock)
+        val newPriceFuture = newCache.getStockInfo(stock)
+        for {oldPrice <- oldPriceFuture
+             newPrice <- newPriceFuture}
+          yield isTriggeredWithPrice(notification, oldPrice.price, newPrice.price)
       case ExchangeRateTriggerNotification(_, (from, to), _, _) =>
-        priceCache.getExchangeRate(from, to).map { exchangeRateInfo =>
-          isTriggeredWithPrice(notification, exchangeRateInfo.rate)
-        }
+        val oldRateFuture = oldCache.getExchangeRate(from, to)
+        val newRateFuture = newCache.getExchangeRate(from, to)
+        for {oldRate <- oldRateFuture
+             newRate <- newRateFuture}
+          yield isTriggeredWithPrice(notification, oldRate.rate, newRate.rate)
       case PortfolioTriggerNotification(userId, portfolioName, _, _) =>
-        (for {portfolio <- userDataStorage.getPortfolio(userId, portfolioName)
-              portfolioPrice <- getPortfolioCurrentPrice(portfolio, priceCache)
-        } yield isTriggeredWithPrice(notification, portfolioPrice)).recover {
+        val portfolioFuture = userDataStorage.getPortfolio(userId, portfolioName)
+        val oldPriceFuture = for {portfolio <- portfolioFuture
+                                  portfolioPrice <- getPortfolioCurrentPrice(portfolio, oldCache)}
+          yield portfolioPrice
+        val newPriceFuture = for {portfolio <- portfolioFuture
+                                  portfolioPrice <- getPortfolioCurrentPrice(portfolio, newCache)}
+          yield portfolioPrice
+        (for {oldPrice <- oldPriceFuture
+              newPrice <- newPriceFuture
+        } yield isTriggeredWithPrice(notification, oldPrice, newPrice)).recover {
           case _: NoSuchElementException =>
             logger.warn(s"notification $notification exists, but portfolio doesn't")
             None
         }
     }
 
+    private def notificationTypeMessage(x: TriggerNotificationType, bound: BigDecimal): String = x match {
+      case RaiseNotification =>
+        s"is higher than $bound"
+      case FallNotification =>
+        s"is lower than $bound"
+      case BothNotification =>
+        s"just hit the bound: $bound"
+    }
+
     private def makeTriggerMessage(notification: TriggerNotification, price: BigDecimal): String = notification match {
       case StockTriggerNotification(_, stock, bound, notificationType) =>
-        val x = notificationType match {
-          case RaiseNotification =>
-            "higher"
-          case FallNotification =>
-            "lower"
-        }
-        s"Your notification is triggered! $stock is $x than $bound. It's current price $price"
+        val msg = notificationTypeMessage(notificationType, bound)
+        s"Your notification is triggered! $stock $msg. It's current price $price"
       case ExchangeRateTriggerNotification(_, (from, to), bound, notificationType) =>
-        val x = notificationType match {
-          case RaiseNotification =>
-            "higher"
-          case FallNotification =>
-            "lower"
-        }
-        s"Your notification is triggered! $from/$to exchange rate is $x than $bound. It's $price"
+        val msg = notificationTypeMessage(notificationType, bound)
+        s"Your notification is triggered! $from/$to exchange rate $msg. It's $price"
       case PortfolioTriggerNotification(_, portfolioName, bound, notificationType) =>
-        val x = notificationType match {
-          case RaiseNotification =>
-            "higher"
-          case FallNotification =>
-            "lower"
-        }
-        s"Your notification is triggered! portfolio $q$portfolioName$q is $x than $bound. It's current price $price"
+        val msg = notificationTypeMessage(notificationType, bound)
+        s"Your notification is triggered! portfolio $q$portfolioName$q $msg. It's current price $price"
     }
 
     /**
@@ -110,9 +119,9 @@ trait TriggerNotificationHandlerComponentImpl extends TriggerNotificationHandler
       } yield (numOfUpdatedStocks, numOfUpdatedRates)
     }
 
-    def checkTriggers(): Future[Unit] = {
+    def checkTriggers(newCache: PriceCache, oldCache: PriceCache): Future[Unit] = {
       for {notifications <- userDataStorage.getAllTriggerNotifications
-           triggeredNotifications <- Future.traverse(notifications)(isTriggered)
+           triggeredNotifications <- Future.traverse(notifications)(isTriggered(oldCache, newCache))
       } yield {
         triggeredNotifications.flatten.foreach { notification =>
           messageSender(SendMessage(notification._1.ownerId, makeTriggerMessage(notification._1, notification._2)))
@@ -123,11 +132,12 @@ trait TriggerNotificationHandlerComponentImpl extends TriggerNotificationHandler
     }
 
     private def updateCacheAndCheckTriggers(): Unit = {
+      val oldCache = priceCache.copy()
       logger.info("Starting cache update...")
       updateCache().onComplete {
         case Success((numOfStocks, numOfRates)) =>
           logger.info(s"Cache successfully updated. Updated $numOfStocks stocks & $numOfRates exchange rates.")
-          checkTriggers()
+          checkTriggers(priceCache, oldCache)
         case Failure(exception) => logger.error(s"Can't update cache", exception)
       }
     }

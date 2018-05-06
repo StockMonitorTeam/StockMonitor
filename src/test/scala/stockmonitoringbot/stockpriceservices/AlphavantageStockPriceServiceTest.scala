@@ -80,7 +80,7 @@ class AlphavantageStockPriceServiceTest extends FlatSpec with Matchers with Scal
     val result: Future[StockInfo] = stockPriceService.getStockPriceInfo(stock)
     result.futureValue shouldBe
       DetailedStockInfo(stock, BigDecimal("94.9200"), BigDecimal("94.9300"), BigDecimal("94.8350"),
-        BigDecimal("94.8500"), 29033, parseZonedDateTime("2018-04-20 15:05:00", "US/Eastern"))
+        BigDecimal("94.8500"), Some(29033), parseZonedDateTime("2018-04-20 15:05:00", "US/Eastern"))
   }
 
   "AlphavantageStockPriceService" should "return close price for the last segment" in new TestWiring {
@@ -133,9 +133,9 @@ class AlphavantageStockPriceServiceTest extends FlatSpec with Matchers with Scal
         HttpResponse(entity = HttpEntity.apply(batchResponse).withContentType(ContentTypes.`application/json`))))
     val result = stockPriceService.getBatchPrices(batch)
     result.futureValue should contain theSameElementsAs
-      Seq(BaseStockInfo("MSFT", BigDecimal("95.8200"), 8412698, parseZonedDateTime("2018-04-23 12:16:03", "US/Eastern")),
-        BaseStockInfo("YNDX", BigDecimal("34.2900"), 3540531, parseZonedDateTime("2018-04-23 12:15:46", "US/Eastern")),
-        BaseStockInfo("BAC", BigDecimal("30.3700"), 21796573, parseZonedDateTime("2018-04-23 12:16:03", "US/Eastern"))
+      Seq(BaseStockInfo("MSFT", BigDecimal("95.8200"), Some(8412698), parseZonedDateTime("2018-04-23 12:16:03", "US/Eastern")),
+        BaseStockInfo("YNDX", BigDecimal("34.2900"), Some(3540531), parseZonedDateTime("2018-04-23 12:15:46", "US/Eastern")),
+        BaseStockInfo("BAC", BigDecimal("30.3700"), Some(21796573), parseZonedDateTime("2018-04-23 12:16:03", "US/Eastern"))
       )
   }
 

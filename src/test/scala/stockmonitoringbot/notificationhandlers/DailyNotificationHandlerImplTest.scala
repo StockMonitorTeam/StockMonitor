@@ -39,7 +39,7 @@ class DailyNotificationHandlerImplTest extends FlatSpec with Matchers with Scala
   "DailyNotificationHandler" should "notify users on StockDailyNotification" in new TestWiring {
     val stock = "MSFT"
     val notification = StockDailyNotification(0, stock, LocalTime.of(0, 0))
-    priceCache.getStockInfo _ expects stock returning Future.successful(BaseStockInfo(stock, 23, 0, time))
+    priceCache.getStockInfo _ expects stock returning Future.successful(BaseStockInfo(stock, 23, Some(0), time))
     messageSender expects *
     dailyNotificationHandler.notifyUser(notification).futureValue shouldBe (())
   }
@@ -57,8 +57,8 @@ class DailyNotificationHandlerImplTest extends FlatSpec with Matchers with Scala
     val notification = PortfolioDailyNotification(0, "portfolio", LocalTime.of(0, 0))
     userDataStorage.getPortfolio _ expects(0, "portfolio") returning Future.successful(portfolio)
     inAnyOrder {
-      priceCache.getStockInfo _ expects "MSFT" returning Future.successful(BaseStockInfo("MSFT", 23, 0, time))
-      priceCache.getStockInfo _ expects "AAPL" returning Future.successful(BaseStockInfo("AAPL", 32, 0, time))
+      priceCache.getStockInfo _ expects "MSFT" returning Future.successful(BaseStockInfo("MSFT", 23, Some(0), time))
+      priceCache.getStockInfo _ expects "AAPL" returning Future.successful(BaseStockInfo("AAPL", 32, Some(0), time))
     }
     messageSender expects *
     dailyNotificationHandler.notifyUser(notification).futureValue shouldBe (())
