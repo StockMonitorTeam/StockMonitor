@@ -134,7 +134,7 @@ object GeneralTexts {
   val DAILY_NOTIFICATION_ADD_INFO = (assetType: AssetType, notification: Option[DailyNotification]) => {
     val asset = assetType match {
       case PortfolioAsset(name) => s"стоимости портфеля $name"
-      case StockAsset(name) => s"стоимостиакций $name"
+      case StockAsset(name) => s"стоимости акций $name"
       case ExchangeRateAsset(from, to) => s"курсе валют $from/$to"
     }
     s"""Для того, чтобы задать ежедневное оповещение о $asset выберите время, либо введите его в формате HH:MM.
