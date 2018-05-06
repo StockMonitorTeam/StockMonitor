@@ -207,9 +207,15 @@ trait Portfolios {
 
   def waitForPortfolioName: Receive = common orElse {
     case IncomingMessage(portfolioName(name)) =>
-      sendMessageToUser(GeneralTexts.INPUT_PORTFOLIO_CURRENCY(name))
-      sendInlineMessageToUser(GeneralTexts.INPUT_PORTFOLIO_CURRENCY_LIST, GeneralMarkups.portfolioCurrencySwitch(userId))
-      context become waitForPortfolioCurrency(name)
+      userDataStorage.getPortfolio(userId, name) onComplete {
+        case Success(_) =>
+          sendMessageToUser(GeneralTexts.INPURT_PORTFOLIO_NAME_EXISTS)
+        case _ => {
+          sendMessageToUser(GeneralTexts.INPUT_PORTFOLIO_CURRENCY(name))
+          sendInlineMessageToUser(GeneralTexts.INPUT_PORTFOLIO_CURRENCY_LIST, GeneralMarkups.portfolioCurrencySwitch(userId))
+          context become waitForPortfolioCurrency(name)
+        }
+      }
     case _ => sendMessageToUser(GeneralTexts.INPUT_PORTFOLIO_NAME_INVALID)
   }
 

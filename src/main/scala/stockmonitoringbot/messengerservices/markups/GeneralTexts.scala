@@ -105,6 +105,7 @@ object GeneralTexts {
   val INPUT_PORTFOLIO_NAME = "Введите название нового портфеля (Латинские буквы, цифры, пробелы)"
   val INPUT_PORTFOLIO_NAME_INVALID = "Введите пожалуйста название, содержащее только латинские буквы," +
     " цифры или знаки тире, подчеркивания, пробел. Не менее 3 символов."
+  val INPURT_PORTFOLIO_NAME_EXISTS = "У вас уже существует портфель с таким названием. Выберите другое."
   val INPUT_PORTFOLIO_CURRENCY = (name: String) =>
     s"Введите валюту для портфеля «$name»."
   val INPUT_PORTFOLIO_CURRENCY_LIST = "Вы можете выбрать валюту из списка"
