@@ -233,4 +233,27 @@ object GeneralTexts {
     s"\n ${exchangeRateInfo.to} - ${exchangeRateInfo.descriptionTo}"
 
   val DAILY_NOTIFICATION_PORTFOLIO_INFO = (name: String, price: BigDecimal) => s"Цена вашего портфеля «$name» : $price"
+
+  val TRIGGER_MESSAGE_BOUND = (tp: TriggerNotificationType, bound: BigDecimal) => tp match {
+    case RaiseNotification =>
+      s"поднялась выше $bound"
+    case FallNotification =>
+      s"опустилась ниже $bound"
+    case BothNotification =>
+      s"достигла порога: $bound"
+  }
+
+  val TRIGGER_MESSAGE = (notification: TriggerNotification, price: BigDecimal) => notification match {
+    case StockTriggerNotification(_, stock, bound, notificationType) =>
+      val msg = TRIGGER_MESSAGE_BOUND(notificationType, bound)
+      s"Сработало триггер оповещение! Стоимость $stock $msg. Текущая цена $price"
+    case ExchangeRateTriggerNotification(_, (from, to), bound, notificationType) =>
+      val msg = TRIGGER_MESSAGE_BOUND(notificationType, bound)
+      s"Сработало триггер оповещение! Цена валютной пары $from/$to $msg. Текущая цена: $price"
+    case PortfolioTriggerNotification(_, portfolioName, bound, notificationType) =>
+      val msg = TRIGGER_MESSAGE_BOUND(notificationType, bound)
+      s"Сработало триггер оповещение! Стоимость портеля «$portfolioName» $msg. Текущая цена: $price"
+  }
+
+
 }
