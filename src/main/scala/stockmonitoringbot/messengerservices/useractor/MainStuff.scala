@@ -95,9 +95,9 @@ trait MainStuff {
   def addDailyNotification(assetType: AssetType, callBack: => Unit): Unit = {
     userDataStorage.getUserNotification(userId, assetType) onComplete {
       case Success(notification) =>
-        messageHideKeyboard(GeneralTexts.DAILY_NOTIFICATION_ADD_INFO_INTRO)
+        messageHideKeyboard(GeneralTexts.DAILY_NOTIFICATION_ADD_INFO_INTRO(assetType))
         sendInlineMessageToUser(
-          GeneralTexts.DAILY_NOTIFICATION_ADD_INFO(assetType, notification),
+          GeneralTexts.DAILY_NOTIFICATION_ADD_INFO(notification),
           GeneralMarkups.generateDailyNotificationOptions(userId)
         )
         self ! SetBehavior(waitForNotificationTime(assetType, callBack))
