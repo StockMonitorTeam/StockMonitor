@@ -36,4 +36,7 @@ trait UserDataStorage {
 
   //actions with triger notifications on specified asset
   def getUserTriggerNotification(userId: Long, assetType: AssetType): Future[Seq[TriggerNotification]]
+
+  def getUser(userId: Long): Future[Option[User]]
+  def setUser(user: User): Future[Unit]
 }

@@ -20,6 +20,9 @@ trait InMemoryUserDataStorageComponentImpl extends UserDataStorageComponent {
     private val usersDailyNotifications = new ConcurrentHashMap[Long, Set[DailyNotification]]()
     private val usersTriggerNotifications = new ConcurrentHashMap[Long, Set[TriggerNotification]]()
     private val usersPortfolios = new ConcurrentHashMap[Long, Set[Portfolio]]()
+    private val users = new ConcurrentHashMap[Long, User]()
+
+    import InMemoryUserDataStorage._
 
     override def getUsersDailyNotifications(userId: Long): Future[Seq[DailyNotification]] =
       Future.successful(usersDailyNotifications.getOrDefault(userId, Set()).toSeq)
@@ -148,9 +151,18 @@ trait InMemoryUserDataStorageComponentImpl extends UserDataStorageComponent {
         }.toSeq
       }
 
-    def setOrEmptySet[A](set: Set[A]): Set[A] = if (set == null) Set() else set
+    override def getUser(userId: Long): Future[Option[User]] = Future.successful {
+      Option(users.get(userId))
+    }
+    override def setUser(user: User): Future[Unit] = Future.successful {
+      users.put(user.id, user)
+    }
+  }
 
-    def isOk(assetType: AssetType): PartialFunction[Notification, Notification] = assetType match {
+  object InMemoryUserDataStorage {
+    private def setOrEmptySet[A](set: Set[A]): Set[A] = if (set == null) Set() else set
+
+    private def isOk(assetType: AssetType): PartialFunction[Notification, Notification] = assetType match {
       case PortfolioAsset(name) => {
         case x: PortfolioNotification if x.portfolioName == name => x
       }
@@ -161,6 +173,6 @@ trait InMemoryUserDataStorageComponentImpl extends UserDataStorageComponent {
         case x: ExchangeRateNotification if x.exchangePair == ((from, to)) => x
       }
     }
-
   }
 }
+
