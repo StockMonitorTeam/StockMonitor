@@ -35,6 +35,8 @@ trait ExchangeRates {
       context become waitForNewBehavior()
     case IncomingMessage(Buttons.backToMain) =>
       becomeMainMenu()
+    case IncomingMessage(msg) =>
+      sendMessageToUser(GeneralTexts.EXCHANGE_RATE_INVALID)
   }
 
   def goToRateMenu(rate: CurrencyExchangeRateInfo): Unit = {
