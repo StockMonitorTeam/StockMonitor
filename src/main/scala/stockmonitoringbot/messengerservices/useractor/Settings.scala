@@ -43,8 +43,8 @@ trait Settings {
   //#9
   def triggersMenu(triggers: Seq[TriggerNotification]): Receive = {
     case IncomingMessage(Buttons.triggerRemove) =>
-      sendMessageToUser("23", GeneralMarkups.onlyBack)
-      sendInlineMessageToUser(GeneralTexts.TRIGGER_REMOVE,
+      sendMessageToUser(GeneralTexts.TRIGGER_REMOVE, GeneralMarkups.onlyBack)
+      sendInlineMessageToUser(GeneralTexts.TRIGGER_TEXT_ACTIVE,
         GeneralMarkups.generateTriggersDelete(userId, triggers))
       context become waitForTriggerToDelete(triggers)
     case IncomingMessage(Buttons.settings) => becomeSettingsMainMenu()
@@ -89,8 +89,8 @@ trait Settings {
   //#10
   def dailyNotificationsMenu(notifications: Seq[DailyNotification]): Receive = {
     case IncomingMessage(Buttons.notificationDel) =>
-      sendMessageToUser("23", GeneralMarkups.onlyBack)
-      sendInlineMessageToUser(GeneralTexts.DAILY_NOTIFICATION_REMOVE,
+      sendMessageToUser(GeneralTexts.DAILY_NOTIFICATION_REMOVE, GeneralMarkups.onlyBack)
+      sendInlineMessageToUser(GeneralTexts.DAILY_NOTIFICATION_TEXT_ACTIVE,
         GeneralMarkups.generateDailyNotificationsDelete(userId, notifications))
       context become waitForDailyNotificationToDelete(notifications)
     case IncomingMessage(Buttons.settings) => becomeSettingsMainMenu()

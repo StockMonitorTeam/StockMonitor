@@ -212,6 +212,7 @@ trait Portfolios {
           becomePortfolioMainMenu()
       }
       context become waitForNewBehavior()
+    case IncomingMessage(Buttons.backToMain) => becomeMainMenu()
     case _ => sendMessageToUser(GeneralTexts.INPUT_PORTFOLIO_CURRENCY_INVALID)
   }
 
