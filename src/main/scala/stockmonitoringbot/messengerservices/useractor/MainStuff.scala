@@ -36,8 +36,8 @@ trait MainStuff {
   def sendMessageToUser(message: String, markup: Option[ReplyKeyboardMarkup] = None): Unit =
     messageSender(SendMessage(userId, message, disableWebPagePreview = Some(true), replyMarkup = markup))
 
-  def messageHideKeyboard(): Unit =
-    messageSender(SendMessage(userId, "23", disableWebPagePreview = Some(true), replyMarkup = Some(ReplyKeyboardRemove())))
+  def messageHideKeyboard(msg: String): Unit =
+    messageSender(SendMessage(userId, msg, disableWebPagePreview = Some(true), replyMarkup = Some(ReplyKeyboardRemove())))
 
   def sendInlineMessageToUser(message: String, markup: Option[InlineKeyboardMarkup]): Unit =
     messageSender(SendMessage(userId, message, replyMarkup = markup))
@@ -55,8 +55,8 @@ trait MainStuff {
   //NEW TRIGGER
   //callback should send SetBehavior message to self to take control back
   def addTriggerNotification(assetType: AssetType, callBack: => Unit): Unit = {
-    messageHideKeyboard()
-    sendInlineMessageToUser(GeneralTexts.TRIGGER_TYPE, GeneralMarkups.generateTriggerOptions(userId))
+    messageHideKeyboard(GeneralTexts.TRIGGER_TYPE)
+    sendInlineMessageToUser(GeneralTexts.TRIGGER_TYPE_MORE, GeneralMarkups.generateTriggerOptions(userId))
     context become waitForTriggerType(assetType, callBack)
   }
 
@@ -95,9 +95,9 @@ trait MainStuff {
   def addDailyNotification(assetType: AssetType, callBack: => Unit): Unit = {
     userDataStorage.getUserNotification(userId, assetType) onComplete {
       case Success(notification) =>
-        messageHideKeyboard()
+        messageHideKeyboard(GeneralTexts.DAILY_NOTIFICATION_ADD_INFO_INTRO(assetType))
         sendInlineMessageToUser(
-          GeneralTexts.DAILY_NOTIFICATION_ADD_INFO(assetType, notification),
+          GeneralTexts.DAILY_NOTIFICATION_ADD_INFO(notification),
           GeneralMarkups.generateDailyNotificationOptions(userId)
         )
         self ! SetBehavior(waitForNotificationTime(assetType, callBack))
