@@ -145,7 +145,7 @@ object GeneralTexts {
 
   val DAILY_NOTIFICATION_ADD_INFO = (notification: Option[DailyNotification]) => {
     s"""
-      |На текущий момент у вас """.stripMargin +
+       |На текущий момент у вас """.stripMargin +
       (notification match {
         case Some(x) => s"установлены оповещения на ${x.time.toString}"
         case None => "не установлены оповещения"
@@ -196,6 +196,25 @@ object GeneralTexts {
                   """.stripMargin
     case xList => xList.map(dnToStr).mkString("\n")
   })
+
+  val TIME_ZONE_SHOW = (user: User) => {
+    import stockmonitoringbot.messengerservices.useractor.currentTimeAccordingToTimezone
+    val zone = if (user.timeZone.toString == "Z") "UTC" else s"UTC${user.timeZone.toString}"
+    s"""Ваш текущий часовой пояс: $zone
+       |Дата на сервере соответствующая вашему часовому поясу: ${currentTimeAccordingToTimezone(user.timeZone)}
+       |Чтобы его изменить выберите соответсвующий пункт в меню
+       |
+     """.stripMargin
+  }
+
+  val TIME_ZONE_CHANGE =
+    s"""Для смены часового пояса введите новый часовой пояс от -12 до +12
+       | Например для "+3", для пояса GMT+3.
+     """.stripMargin
+
+  val TIME_ZONE_CHANGED = "Новый часовой пояс установлен"
+
+  val WRONG_TIMEZONE_FORMAT = "Некорретный часовой пояс"
 
   val TRIGGER_TEXT_ACTIVE = "Ваши активные тригеры:"
 

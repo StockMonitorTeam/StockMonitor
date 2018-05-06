@@ -23,7 +23,7 @@ object Buttons {
   val portfolioCreate = "➕ Создать новый портфель"
   val portfolioDelete = "❌ Удалить портфель"
 
-  val timezone = "Редактировать часовой пояс"
+  val timezone = "⏲ Редактировать часовой пояс"
 
   val portfolioStockAdd = "➕ Добавить акцию"
   val portfolioStockDelete = "🗑 Удалить акцию"
@@ -32,6 +32,8 @@ object Buttons {
 
   val triggerAdd = "🚨 Установить триггер"
   val triggerRemove = "🗑 Удалить триггер"
+
+  val timezoneChange = "⏲ Изменить часовой пояс"
 
 }
 
@@ -85,6 +87,12 @@ object GeneralMarkups {
     Seq(KeyboardButton(Buttons.backToMain))
   ))
 
+  val timezoneMenuMarkup = customKeyboard(Seq(
+    Seq(KeyboardButton(Buttons.timezoneChange)),
+    Seq(KeyboardButton(Buttons.settings)),
+    Seq(KeyboardButton(Buttons.backToMain))
+  ))
+
   val oneStockMenuMarkup = customKeyboard(Seq(
     Seq(KeyboardButton(Buttons.notificationAdd), KeyboardButton(Buttons.triggerAdd)),
     Seq(KeyboardButton(Buttons.stock)),
@@ -132,9 +140,9 @@ object GeneralMarkups {
 
   def portfolioCurrencySwitch(userId: Long) = Some(InlineKeyboardMarkup(
     Seq(Seq(
-      InlineKeyboardButton(text="USD", callbackData=Some(Inline.generatePrefix(CallbackTypes.choseCurrency, userId, "USD"))),
-      InlineKeyboardButton(text="RUB", callbackData=Some(Inline.generatePrefix(CallbackTypes.choseCurrency, userId, "RUB"))),
-      InlineKeyboardButton(text="EUR", callbackData=Some(Inline.generatePrefix(CallbackTypes.choseCurrency, userId, "EUR")))
+      InlineKeyboardButton(text = "USD", callbackData = Some(Inline.generatePrefix(CallbackTypes.choseCurrency, userId, "USD"))),
+      InlineKeyboardButton(text = "RUB", callbackData = Some(Inline.generatePrefix(CallbackTypes.choseCurrency, userId, "RUB"))),
+      InlineKeyboardButton(text = "EUR", callbackData = Some(Inline.generatePrefix(CallbackTypes.choseCurrency, userId, "EUR")))
     ))
   ))
 

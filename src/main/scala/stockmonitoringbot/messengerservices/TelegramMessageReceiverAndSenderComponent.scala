@@ -54,7 +54,7 @@ trait TelegramMessageReceiverAndSenderComponent extends MessageReceiverComponent
     override val token: String = getKey("StockMonitor.Telegram.apitoken")
     override val port: Int = getKey("StockMonitor.Telegram.port").toInt
     override val webhookUrl: String = getKey("StockMonitor.Telegram.url")
-    val defaultTimeZone: ZoneId = ZoneId.of("GMT+3")
+    val defaultTimeZone: ZoneId = ZoneId.of("+3")
 
     logger.info("starting telegram bot")
 
