@@ -209,7 +209,7 @@ trait Portfolios {
     case IncomingMessage(portfolioName(name)) =>
       userDataStorage.getPortfolio(userId, name) onComplete {
         case Success(_) =>
-          sendMessageToUser(GeneralTexts.INPURT_PORTFOLIO_NAME_EXISTS)
+          sendMessageToUser(GeneralTexts.INPUT_PORTFOLIO_NAME_EXISTS)
         case _ => {
           sendMessageToUser(GeneralTexts.INPUT_PORTFOLIO_CURRENCY(name))
           sendInlineMessageToUser(GeneralTexts.INPUT_PORTFOLIO_CURRENCY_LIST, GeneralMarkups.portfolioCurrencySwitch(userId))
