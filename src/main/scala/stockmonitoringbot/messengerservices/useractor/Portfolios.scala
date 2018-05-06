@@ -220,6 +220,7 @@ trait Portfolios {
     case IncomingCallback(CallbackTypes.choseCurrency, data) =>
       createNewPortfolio(name, data.message)
       context become waitForNewBehavior()
+    case IncomingMessage(Buttons.backToMain) => becomeMainMenu()
     case _ => sendMessageToUser(GeneralTexts.INPUT_PORTFOLIO_CURRENCY_INVALID)
   }
 
