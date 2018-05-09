@@ -53,14 +53,17 @@ object GeneralTexts {
       .fold("Ежедневное оповещение не установлено") { not =>
         s"Ежедневное оповещение о $name установлено на: ${not.time}"
       }
+    val triggerNotStr = if (triggerNot.isEmpty)
+      "Нет оповещений триггеров"
+    else
+      s"Активные оповещения тригеры на $name:\n${triggerNot.map(tnToStr).mkString("\n")}"
     s"""Акции $name
        |Стоимость: $price
        |Подробнее: https://www.marketwatch.com/investing/stock/$name
        |
-       |Активные оповещения тригеры на $name:
-       |${triggerNot.map(tnToStr).mkString("\n")}
+       |🚨 $triggerNotStr
        |
-       |$dailyNotStr
+       |⏱ $dailyNotStr
     """.stripMargin
   }
 
@@ -72,12 +75,15 @@ object GeneralTexts {
       .fold("Ежедневное оповещение не установлено") { not =>
         s"Ежедневное оповещение о курсе ${rate.from}/${rate.to} установлено на: ${not.time}"
       }
+    val triggerNotStr = if (triggerNot.isEmpty)
+      "Нет оповещений триггеров"
+    else
+      s"Активные оповещения тригеры на курс ${rate.from}/${rate.to}:\n${triggerNot.map(tnToStr).mkString("\n")}"
     s"""Курс ${rate.from} к ${rate.to} равен ${rate.rate}
        |
-       |Активные оповещения тригеры на курс ${rate.from}/${rate.to}:
-       |${triggerNot.map(tnToStr).mkString("\n")}
+       |🚨 $triggerNotStr
        |
-       |$dailyNotStr
+       |⏱ $dailyNotStr
      """.stripMargin
   }
 
@@ -192,19 +198,16 @@ object GeneralTexts {
     case xList => xList map (x => s"🔈 на ${x.boundPrice} (${x.notificationType})") mkString "\n"
   }
 
-  val TRIGGERS_LIST = (triggers: Seq[TriggerNotification]) => "Ваши активные тригеры: \n" + (triggers match {
-    case Seq() => """
-                    |Ни одного.
-                  """.stripMargin
-    case xList => xList.map(tnToStr).mkString("\n")
-  })
+  val TRIGGERS_LIST = (triggers: Seq[TriggerNotification]) => triggers match {
+    case Seq() => "У вас не установлено ни одного оповещения триггера"
+    case xList => "Ваши активные тригеры: \n" + xList.map(tnToStr).mkString("\n")
+  }
 
-  val DAILY_NOTIFICATIONS_LIST = (not: Seq[DailyNotification], user: User) => "Ваши ежедневные оповещения: \n" + (not match {
-    case Seq() => """
-                    |Ни одного.
-                  """.stripMargin
-    case xList => xList.map(n => dnToStr(notificationToUsersTime(n, user.timeZone))).mkString("\n")
-  })
+  val DAILY_NOTIFICATIONS_LIST = (not: Seq[DailyNotification], user: User) => not match {
+    case Seq() => "У вас не установлено ни одного ежедневного оповещения"
+    case xList => "Ваши ежедневные оповещения: \n" +
+      xList.map(n => dnToStr(notificationToUsersTime(n, user.timeZone))).mkString("\n")
+  }
 
   val TIME_ZONE_SHOW = (user: User) => {
     import stockmonitoringbot.messengerservices.useractor.currentTimeAccordingToTimezone
