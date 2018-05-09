@@ -5,7 +5,7 @@ import org.scalamock.scalatest.MockFactory
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{FlatSpec, Matchers}
 import stockmonitoringbot.datastorage.models._
-import stockmonitoringbot.{ActorSystemComponentImpl, ExecutionContextImpl}
+import stockmonitoringbot.{ActorSystemComponentImpl, AppConfig, ExecutionContextImpl}
 import stockmonitoringbot.datastorage.{UserDataStorage, UserDataStorageComponent}
 import stockmonitoringbot.messengerservices.MessageSenderComponent
 import stockmonitoringbot.stockpriceservices._
@@ -33,12 +33,14 @@ class TriggerNotificationHandlerImplTest extends FlatSpec with Matchers with Sca
     with PriceCacheComponent
     with StockPriceServiceComponent
     with ActorSystemComponentImpl
-    with ExecutionContextImpl {
+    with ExecutionContextImpl
+    with AppConfig {
     implicit val patienceConfig: PatienceConfig = PatienceConfig(500 millis, 20 millis)
     override val messageSender = mockFunction[SendMessage, Unit]
     override val priceCache = mock[PriceCache]
     override val userDataStorage = mock[UserDataStorage]
     override val stockPriceService = mock[StockPriceService]
+    override def getKey(s: String) = ""
   }
 
   val time = parseZonedDateTime("2018-04-20 15:05:00", "US/Eastern")

@@ -7,4 +7,6 @@ StockMonitor {
     port = "1337"
     url = ""
   }
+  cacheUpdateFrequency = "1 minute"
+  defaultTimezone = "UTC+3"
 }

@@ -20,7 +20,7 @@ object Main extends App {
     with TelegramMessageReceiverAndSenderComponent
     with ExecutionContextImpl
     with ActorSystemComponentImpl
-    with ApiKeysImpl
+    with AppConfigImpl
   bot.messageReceiver.startReceiving()
   bot.triggerNotificationHandler.start()
 
