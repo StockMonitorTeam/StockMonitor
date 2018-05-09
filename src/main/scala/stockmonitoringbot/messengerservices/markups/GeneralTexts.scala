@@ -1,7 +1,7 @@
 package stockmonitoringbot.messengerservices.markups
 
 import stockmonitoringbot.datastorage.models._
-import stockmonitoringbot.stockpriceservices.{CurrencyExchangeRateInfo, StockInfo}
+import stockmonitoringbot.stockpriceservices.models.{CurrencyExchangeRateInfo, StockInfo}
 
 object GeneralTexts {
 
@@ -282,6 +282,5 @@ object GeneralTexts {
       val msg = TRIGGER_MESSAGE_BOUND(notificationType, bound)
       s"Сработало триггер оповещение! Стоимость портеля «$portfolioName» $msg. Текущая цена: $price"
   }
-
 
 }

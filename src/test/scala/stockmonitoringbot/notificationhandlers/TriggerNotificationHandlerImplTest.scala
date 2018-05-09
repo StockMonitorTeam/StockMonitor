@@ -9,6 +9,7 @@ import stockmonitoringbot.{ActorSystemComponentImpl, AppConfig, ExecutionContext
 import stockmonitoringbot.datastorage.{UserDataStorage, UserDataStorageComponent}
 import stockmonitoringbot.messengerservices.MessageSenderComponent
 import stockmonitoringbot.stockpriceservices._
+import stockmonitoringbot.stockpriceservices.models.{BaseStockInfo, CurrencyExchangeRateInfo}
 import stockmonitoringbot.stocksandratescache.{PriceCache, PriceCacheComponent}
 
 import scala.concurrent.Future

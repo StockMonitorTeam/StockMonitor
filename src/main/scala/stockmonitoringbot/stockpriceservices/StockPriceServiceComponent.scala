@@ -1,5 +1,7 @@
 package stockmonitoringbot.stockpriceservices
 
+import stockmonitoringbot.stockpriceservices.models.{CurrencyExchangeRateInfo, StockInfo}
+
 import scala.concurrent.Future
 
 /**

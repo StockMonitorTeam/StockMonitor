@@ -1,4 +1,4 @@
-package stockmonitoringbot.stockpriceservices
+package stockmonitoringbot.stockpriceservices.models
 
 import java.time.ZonedDateTime
 

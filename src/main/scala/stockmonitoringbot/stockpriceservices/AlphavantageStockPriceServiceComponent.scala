@@ -5,6 +5,7 @@ import akka.http.scaladsl.model._
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import spray.json.JsValue
 import stockmonitoringbot.stockpriceservices.exceptions.{JsonParseException, ServerResponseException}
+import stockmonitoringbot.stockpriceservices.models.{BaseStockInfo, CurrencyExchangeRateInfo, DetailedStockInfo}
 import stockmonitoringbot.{ActorSystemComponent, AppConfig, ExecutionContextComponent}
 
 import scala.concurrent.Future

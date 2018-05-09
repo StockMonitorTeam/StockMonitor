@@ -5,6 +5,7 @@ import org.scalamock.scalatest.MockFactory
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{FlatSpec, Matchers}
 import stockmonitoringbot.stockpriceservices.exceptions.ServerResponseException
+import stockmonitoringbot.stockpriceservices.models.{BaseStockInfo, CurrencyExchangeRateInfo, DetailedStockInfo, StockInfo}
 import stockmonitoringbot.{ActorSystemComponentImpl, AppConfig, ExecutionContextImpl}
 
 import scala.concurrent.Future

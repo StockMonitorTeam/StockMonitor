@@ -4,7 +4,7 @@ import akka.actor.Actor.Receive
 import stockmonitoringbot.datastorage.models.ExchangeRateAsset
 import stockmonitoringbot.messengerservices.markups.{Buttons, GeneralMarkups, GeneralTexts}
 import stockmonitoringbot.messengerservices.useractor.UserActor.{IncomingMessage, SetBehavior}
-import stockmonitoringbot.stockpriceservices.CurrencyExchangeRateInfo
+import stockmonitoringbot.stockpriceservices.models.CurrencyExchangeRateInfo
 
 import scala.util.matching.Regex
 import scala.util.{Failure, Success}

@@ -4,7 +4,7 @@ import akka.actor.Actor.Receive
 import stockmonitoringbot.datastorage.models.StockAsset
 import stockmonitoringbot.messengerservices.markups.{Buttons, GeneralMarkups, GeneralTexts}
 import stockmonitoringbot.messengerservices.useractor.UserActor.{IncomingMessage, SetBehavior}
-import stockmonitoringbot.stockpriceservices.StockInfo
+import stockmonitoringbot.stockpriceservices.models.StockInfo
 
 import scala.util.{Failure, Success}
 
