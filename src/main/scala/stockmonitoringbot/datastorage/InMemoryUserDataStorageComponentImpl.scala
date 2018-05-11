@@ -145,6 +145,7 @@ trait InMemoryUserDataStorageComponentImpl extends UserDataStorageComponent {
     }
     override def setUser(user: User): Future[Unit] = Future.successful {
       users.put(user.id, user)
+      ()
     }
   }
 

@@ -87,7 +87,7 @@ trait MainStuff {
           callBack
       }
       context become waitForNewBehavior()
-    case IncomingMessage(_) =>
+    case IncomingMessage(Buttons.back) =>
       context become waitForNewBehavior()
       callBack
     case IncomingMessage(_) =>
@@ -141,11 +141,12 @@ trait MainStuff {
   }
 
   def clearNotification(userId: Long, assetType: AssetType): Future[Unit] = {
-    for {userNotOpt <- userDataStorage.getUserNotification(userId, assetType)
-    } yield for {userNot <- userNotOpt
-                 _ = dailyNotification.deleteDailyNotification(userNot)
-    } yield for {_ <- userDataStorage.deleteDailyNotification(userNot)
-    } yield ()
+    userDataStorage.getUserNotification(userId, assetType).flatMap { userNotOpt =>
+      userNotOpt.fold(Future.successful(())) { not =>
+        dailyNotification.deleteDailyNotification(not)
+        userDataStorage.deleteDailyNotification(not)
+      }
+    }
   }
 
   private def waitForNotificationTime(assetType: AssetType, user: User, callBack: => Unit): Receive = {

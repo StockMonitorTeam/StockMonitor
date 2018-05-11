@@ -70,7 +70,10 @@ trait DailyNotificationHandlerComponentImpl extends DailyNotificationHandlerComp
 
     def addDailyNotification(notification: DailyNotification): Unit = {
       val prev = notifications.put(notification,
-        system.scheduler.schedule(untilTime(notification.time), 24 hours)(notifyUser(notification)))
+        system.scheduler.schedule(untilTime(notification.time), 24 hours) {
+          notifyUser(notification)
+          ()
+        })
       Option(prev).foreach(_.cancel())
     }
 

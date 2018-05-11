@@ -97,12 +97,13 @@ trait TelegramMessageReceiverAndSenderComponent extends MessageReceiverComponent
           user <- Option(activeUsers.get(message.chat.id))
           messageData <- msg.data
         } messageData.split("_", 3) match {
-          case Array(callbackType, userId, message) =>
-            user ! IncomingCallback(callbackType, IncomingCallbackMessage(userId, message))
+          case Array(callbackType, userId, text) =>
+            user ! IncomingCallback(callbackType, IncomingCallbackMessage(userId, text))
           case _ =>
             logger.warn(s"Callback not matched. $messageData")
         }
         ackCallback()(msg)
+        ()
     }
 
     override def apply(message: SendMessage): Unit =

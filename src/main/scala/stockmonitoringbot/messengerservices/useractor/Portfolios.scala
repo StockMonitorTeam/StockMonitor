@@ -186,6 +186,9 @@ trait Portfolios {
       userDataStorage.deletePortfolio(userId, portfolio.name).onComplete {
         case Success(_) =>
           printPortfolios()
+        case Failure(e) =>
+          logger.error("Can't delete portfolio", e)
+          printPortfolios()
       }
       context become waitForPortfolioName
     case IncomingMessage(Buttons.notifications) =>
