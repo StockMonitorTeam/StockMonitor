@@ -40,8 +40,8 @@ class InMemoryDataStorageTest extends FlatSpec with Matchers with ScalaFutures {
   }
 
   "InMemoryUserDataStorage" should "store trigger notifications" in new TestWiring {
-    val triggerNotification1 = PortfolioTriggerNotification(0, "newPortfolio", 40, RaiseNotification)
-    val triggerNotification2 = PortfolioTriggerNotification(0, "newPortfolio2", 40, RaiseNotification)
+    val triggerNotification1 = PortfolioTriggerNotification(0, "newPortfolio", 40, Raise)
+    val triggerNotification2 = PortfolioTriggerNotification(0, "newPortfolio2", 40, Raise)
     val test = for {
       _ <- userDataStorage.addTriggerNotification(triggerNotification1)
       _ <- userDataStorage.addTriggerNotification(triggerNotification2)
@@ -56,8 +56,8 @@ class InMemoryDataStorageTest extends FlatSpec with Matchers with ScalaFutures {
   }
 
   "InMemoryUserDataStorage" should "be able to return all trigger notifications" in new TestWiring {
-    val triggerNotification1 = PortfolioTriggerNotification(0, "newPortfolio", 40, RaiseNotification)
-    val triggerNotification2 = PortfolioTriggerNotification(1, "newPortfolio2", 40, RaiseNotification)
+    val triggerNotification1 = PortfolioTriggerNotification(0, "newPortfolio", 40, Raise)
+    val triggerNotification2 = PortfolioTriggerNotification(1, "newPortfolio2", 40, Raise)
     val test = for {
       _ <- userDataStorage.addTriggerNotification(triggerNotification1)
       _ <- userDataStorage.addTriggerNotification(triggerNotification2)
@@ -102,8 +102,8 @@ class InMemoryDataStorageTest extends FlatSpec with Matchers with ScalaFutures {
 
   "InMemoryUserDataStorage" should "delete notifications when deleting portfolio" in new TestWiring {
     val portfolio1 = Portfolio(0, "newPortfolio", USD, Map("MSFT" -> 23, "AAPL" -> 42))
-    val triggerNotification1 = PortfolioTriggerNotification(0, "newPortfolio", 40, RaiseNotification)
-    val triggerNotification2 = PortfolioTriggerNotification(0, "newPortfolio1", 40, RaiseNotification)
+    val triggerNotification1 = PortfolioTriggerNotification(0, "newPortfolio", 40, Raise)
+    val triggerNotification2 = PortfolioTriggerNotification(0, "newPortfolio1", 40, Raise)
     val dailyNotification1 = PortfolioDailyNotification(0, "newPortfolio", LocalTime.of(0, 0))
     val dailyNotification2 = PortfolioDailyNotification(0, "newPortfolio1", LocalTime.of(0, 0))
     val test = for {

@@ -15,4 +15,3 @@ object Currency {
     case _ => throw new IllegalStateException()
   }
 }
-

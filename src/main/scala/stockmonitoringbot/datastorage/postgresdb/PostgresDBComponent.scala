@@ -1,18 +1,14 @@
 package stockmonitoringbot.datastorage.postgresdb
 
-import java.time.LocalTime
-
 import com.typesafe.scalalogging.Logger
+import slick.jdbc.PostgresProfile.api._
 import stockmonitoringbot.ExecutionContextComponent
-import stockmonitoringbot.datastorage.postgresdb.Schema.{Both, BoundType, ExchangeRate, Fall, Portfolio, Raise, Stock}
-import stockmonitoringbot.datastorage.postgresdb.exceptions.{ElementAlreadyExistsException, NoSuchPortfolioException}
 import stockmonitoringbot.datastorage.models._
-import stockmonitoringbot.datastorage.models
-import stockmonitoringbot.datastorage.{UserDataStorage, UserDataStorageComponent}
+import stockmonitoringbot.datastorage.postgresdb.Schema.{ExchangeRate, Portfolio, Stock}
+import stockmonitoringbot.datastorage.postgresdb.exceptions.{ElementAlreadyExistsException, NoSuchPortfolioException}
+import stockmonitoringbot.datastorage.{UserDataStorage, UserDataStorageComponent, models}
 
 import scala.concurrent.Future
-import slick.jdbc.PostgresProfile.api._
-
 import scala.util.{Failure, Success}
 
 /**
@@ -26,8 +22,8 @@ trait PostgresDBComponent extends UserDataStorageComponent {
 
   class PostgresDB extends UserDataStorage {
 
-    import Queries._
     import PostgresDB._
+    import Queries._
 
     val logger: Logger = Logger(getClass)
 
@@ -43,18 +39,17 @@ trait PostgresDBComponent extends UserDataStorageComponent {
     }
 
     override def getUsersDailyNotifications(userId: Long): Future[Seq[DailyNotification]] =
-      DBConnection.run(getUsersDailyNotificationsSQL(userId)).map(_.map(mapRawToDailyNotification))
+      DBConnection.run(getUsersDailyNotificationsSQL(userId))
 
     override def addDailyNotification(n: DailyNotification): Future[Unit] = {
-      val (name, assetType) = getNameAndAssetType(n)
-      DBConnection.run(addDailyNotificationSQL(n.ownerId, assetType, name, n.time)).flatMap {
+      DBConnection.run(addDailyNotificationSQL(n)).flatMap {
         case 0 => Future.failed(new ElementAlreadyExistsException)
         case 1 => Future.successful(())
         case _ => Future.failed(new IllegalStateException())
       }
     }
     override def deleteDailyNotification(n: DailyNotification): Future[Unit] = {
-      val (name, assetType) = getNameAndAssetType(n)
+      val (name, assetType) = Schema.getNameAndAssetType(n)
       DBConnection.run(deleteDailyNotificationSQL(n.ownerId, assetType, name)).flatMap {
         case 0 => Future.failed(new NoSuchElementException)
         case 1 => Future.successful(())
@@ -63,21 +58,19 @@ trait PostgresDBComponent extends UserDataStorageComponent {
     }
 
     override def getUsersTriggerNotifications(userId: Long): Future[Seq[TriggerNotification]] =
-      DBConnection.run(getUsersTriggerNotificationsSQL(userId)).map(_.map(mapRawToTriggerNotification))
+      DBConnection.run(getUsersTriggerNotificationsSQL(userId))
 
     override def addTriggerNotification(n: TriggerNotification): Future[Unit] = {
-      val (name, assetType) = getNameAndAssetType(n)
-      DBConnection.run(addTriggerNotificationSQL(n.ownerId, assetType, name, n.boundPrice,
-        triggerTypeToBoundType(n.notificationType))).flatMap {
+      DBConnection.run(addTriggerNotificationSQL(n)).flatMap {
         case 0 => Future.failed(new ElementAlreadyExistsException)
         case 1 => Future.successful(())
         case _ => Future.failed(new IllegalStateException())
       }
     }
     override def deleteTriggerNotification(n: TriggerNotification): Future[Unit] = {
-      val (name, assetType) = getNameAndAssetType(n)
+      val (name, assetType) = Schema.getNameAndAssetType(n)
       DBConnection.run(deleteTriggerNotificationSQL(n.ownerId, assetType, name, n.boundPrice,
-        triggerTypeToBoundType(n.notificationType))).flatMap {
+        n.notificationType)).flatMap {
         case 0 => Future.failed(new NoSuchElementException)
         case 1 => Future.successful(())
         case _ => Future.failed(new IllegalStateException())
@@ -85,9 +78,10 @@ trait PostgresDBComponent extends UserDataStorageComponent {
     }
 
     override def getAllTriggerNotifications: Future[Iterable[TriggerNotification]] =
-      DBConnection.run(getAllTriggerNotificationsSQL).map(_.map(mapRawToTriggerNotification))
+      DBConnection.run(getAllTriggerNotificationsSQL)
+
     override def addPortfolio(p: Portfolio): Future[Unit] =
-      DBConnection.run(addPortfolioSQL(p.userId, p.name, currencyToCurrency(p.currency))).flatMap {
+      DBConnection.run(addPortfolioSQL(p.userId, p.name, p.currency)).flatMap {
         case 0 => Future.failed(new ElementAlreadyExistsException)
         case 1 => Future.successful(())
         case _ => Future.failed(new IllegalStateException())
@@ -101,18 +95,18 @@ trait PostgresDBComponent extends UserDataStorageComponent {
       }
     override def getUserPortfolios(userId: Long): Future[Seq[Portfolio]] = {
       val request = getUserPortfoliosSQL(userId).flatMap { portfolios =>
-        DBIO.sequence(portfolios.map { raw =>
-          getPortfolioStocksSQL(raw._1).map(stocks =>
-            models.Portfolio(raw._2, raw._3, currencyToCurrency(raw._4), stocks.map(x => (x._2, x._3)).toMap))
+        DBIO.sequence(portfolios.map { row =>
+          getPortfolioStocksSQL(row._1).map(stocks =>
+            models.Portfolio(row._2, row._3, row._4, stocks.map(x => (x._2, x._3)).toMap))
         })
       }
       DBConnection.run(request)
     }
     override def getPortfolio(userId: Long, portfolioName: String): Future[Portfolio] = {
       val request = getPortfolioSQL(userId, portfolioName).flatMap { x =>
-        DBIO.sequenceOption(x.headOption.map { raw =>
-          getPortfolioStocksSQL(raw._1).map(stocks =>
-            models.Portfolio(raw._2, raw._3, currencyToCurrency(raw._4), stocks.map(x => (x._2, x._3)).toMap))
+        DBIO.sequenceOption(x.headOption.map { row =>
+          getPortfolioStocksSQL(row._1).map(stocks =>
+            models.Portfolio(row._2, row._3, row._4, stocks.map(x => (x._2, x._3)).toMap))
         })
       }
       DBConnection.run(request).map(_.get)
@@ -120,7 +114,7 @@ trait PostgresDBComponent extends UserDataStorageComponent {
 
     override def addStockToPortfolio(userId: Long, portfolioName: String, stock: String, count: Double): Future[Unit] = {
       val request = getPortfolioSQL(userId, portfolioName).flatMap { x =>
-        DBIO.sequenceOption(x.headOption.map(raw => addStockToPortfolioSQL(raw._1, stock, count)))
+        DBIO.sequenceOption(x.headOption.map(row => addStockToPortfolioSQL(row._1, stock, count)))
       }
       DBConnection.run(request).flatMap {
         case None => Future.failed(new NoSuchPortfolioException)
@@ -132,7 +126,7 @@ trait PostgresDBComponent extends UserDataStorageComponent {
 
     override def deleteStockFromPortfolio(userId: Long, portfolioName: String, stock: String): Future[Unit] = {
       val request = getPortfolioSQL(userId, portfolioName).flatMap { x =>
-        DBIO.sequenceOption(x.headOption.map(raw => deleteStockFromPortfolioSQL(raw._1, stock)))
+        DBIO.sequenceOption(x.headOption.map(row => deleteStockFromPortfolioSQL(row._1, stock)))
       }
       DBConnection.run(request).flatMap {
         case None => Future.failed(new NoSuchPortfolioException)
@@ -143,17 +137,17 @@ trait PostgresDBComponent extends UserDataStorageComponent {
     }
     override def getUserNotificationOnAsset(userId: Long, assetType: models.AssetType): Future[Option[DailyNotification]] = {
       val (t, name) = parseAssetType(assetType)
-      DBConnection.run(getUserDailyNotificationOnAssetSQL(userId, t, name)).map(_.headOption.map(mapRawToDailyNotification))
+      DBConnection.run(getUserDailyNotificationOnAssetSQL(userId, t, name)).map(_.headOption)
     }
     override def getUserTriggerNotificationOnAsset(userId: Long, assetType: models.AssetType): Future[Seq[TriggerNotification]] = {
       val (t, name) = parseAssetType(assetType)
-      DBConnection.run(getUserTriggerNotificationsOnAssetSQL(userId, t, name)).map(seq => seq.map(mapRawToTriggerNotification))
+      DBConnection.run(getUserTriggerNotificationsOnAssetSQL(userId, t, name)).map(seq => seq)
     }
 
     override def getUser(userId: Long): Future[Option[User]] =
-      DBConnection.run(getUserSQL(userId)).map(_.headOption.map(row => User(row._1, row._2)))
+      DBConnection.run(getUserSQL(userId)).map(_.headOption)
     override def setUser(user: User): Future[Unit] =
-      DBConnection.run(setUserSQL(user.id, user.timeZone)).flatMap {
+      DBConnection.run(setUserSQL(user)).flatMap {
         case 0 => Future.failed(new NoSuchElementException)
         case 1 => Future.successful(())
         case _ => Future.failed(new IllegalStateException())
@@ -162,59 +156,12 @@ trait PostgresDBComponent extends UserDataStorageComponent {
   }
 
   object PostgresDB {
-    private def getNameAndAssetType(n: Notification) = n match {
-      case x: StockNotification => (x.stock, Stock)
-      case x: ExchangeRateNotification => (s"${x.exchangePair._1}/${x.exchangePair._2}", ExchangeRate)
-      case x: PortfolioNotification => (x.portfolioName, Portfolio)
-    }
-
-    private def boundTypeToTriggerType(bt: BoundType) = bt match {
-      case Raise => RaiseNotification
-      case Fall => FallNotification
-      case Both => BothNotification
-    }
-
-    private def triggerTypeToBoundType(bt: TriggerNotificationType) = bt match {
-      case RaiseNotification => Raise
-      case FallNotification => Fall
-      case BothNotification => Both
-    }
-
-    private def currencyToCurrency(c: Currency) = c match {
-      case USD => Schema.USD
-      case EUR => Schema.EUR
-      case RUB => Schema.RUB
-    }
-
-    private def currencyToCurrency(c: Schema.Currency) = c match {
-      case Schema.USD => USD
-      case Schema.EUR => EUR
-      case Schema.RUB => RUB
-    }
 
     private def parseAssetType(at: AssetType) = at match {
       case StockAsset(name) => (Stock, name)
       case ExchangeRateAsset(from, to) => (ExchangeRate, s"$from/$to")
       case PortfolioAsset(name) => (Portfolio, name)
     }
-
-    private def mapRawToTriggerNotification(row: (Long, Schema.AssetType, String, BigDecimal, BoundType)) =
-      row._2 match {
-        case Stock => StockTriggerNotification(row._1, row._3, row._4, boundTypeToTriggerType(row._5))
-        case ExchangeRate =>
-          val curr = row._3.split("/")
-          ExchangeRateTriggerNotification(row._1, (curr(0), curr(1)), row._4, boundTypeToTriggerType(row._5))
-        case Portfolio => PortfolioTriggerNotification(row._1, row._3, row._4, boundTypeToTriggerType(row._5))
-      }
-
-    private def mapRawToDailyNotification(row: (Long, Schema.AssetType, String, LocalTime)) =
-      row._2 match {
-        case Stock => StockDailyNotification(row._1, row._3, row._4)
-        case ExchangeRate =>
-          val curr = row._3.split("/")
-          ExchangeRateDailyNotification(row._1, (curr(0), curr(1)), row._4)
-        case Portfolio => PortfolioDailyNotification(row._1, row._3, row._4)
-      }
 
   }
 

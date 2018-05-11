@@ -148,8 +148,8 @@ object GeneralMarkups {
 
   def notificationToString(notification: TriggerNotification): String = {
     val notificationType = notification.notificationType match {
-      case RaiseNotification => ">"
-      case FallNotification => "<"
+      case Raise => ">"
+      case Fall => "<"
     }
     //todo pattern match on stock/exchange rate/portfolio
     s"??? $notificationType ${notification.boundPrice}"
@@ -227,11 +227,11 @@ object GeneralMarkups {
   def generateTriggerOptions(userId: Long): Option[InlineKeyboardMarkup] = Some(InlineKeyboardMarkup(
     Seq(
       Seq(
-        InlineKeyboardButton(text = "Выше порога 📈", callbackData = Some(Inline.generatePrefix(CallbackTypes.triggerSetType, userId, RaiseNotification.toString))),
-        InlineKeyboardButton(text = "Ниже порога 📉", callbackData = Some(Inline.generatePrefix(CallbackTypes.triggerSetType, userId, FallNotification.toString))),
+        InlineKeyboardButton(text = "Выше порога 📈", callbackData = Some(Inline.generatePrefix(CallbackTypes.triggerSetType, userId, Raise.toString))),
+        InlineKeyboardButton(text = "Ниже порога 📉", callbackData = Some(Inline.generatePrefix(CallbackTypes.triggerSetType, userId, Fall.toString))),
       ),
       Seq(
-        InlineKeyboardButton(text = "Обе стороны 📈➕📉", callbackData = Some(Inline.generatePrefix(CallbackTypes.triggerSetType, userId, BothNotification.toString)))
+        InlineKeyboardButton(text = "Обе стороны 📈➕📉", callbackData = Some(Inline.generatePrefix(CallbackTypes.triggerSetType, userId, Both.toString)))
       )
     )
   ))

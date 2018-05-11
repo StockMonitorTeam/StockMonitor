@@ -2,8 +2,11 @@ package stockmonitoringbot.datastorage.postgresdb
 
 import java.time.{LocalTime, ZoneId}
 
-import slick.lifted.{TableQuery, Tag}
+import slick.ast.BaseTypedType
+import slick.jdbc.JdbcType
+
 import slick.jdbc.PostgresProfile.api._
+import stockmonitoringbot.datastorage.models._
 
 /**
   * Created by amir.
@@ -18,32 +21,34 @@ trait Schema {
 
   import Schema._
 
-  class Users(tag: Tag) extends Table[(Long, ZoneId)](tag, "USERS") {
+  class Users(tag: Tag) extends Table[User](tag, "USERS") {
     def id = column[Long]("USER_ID", O.PrimaryKey)
     def zoneId = column[ZoneId]("TIME_ZONE")
 
-    def * = (id, zoneId)
+    def * = (id, zoneId) <> (User.tupled, User.unapply)
   }
 
-  class DailyNotifications(tag: Tag) extends Table[(Long, AssetType, String, LocalTime)](tag, "DAILY_NOTIFICATIONS") {
+  class DailyNotifications(tag: Tag) extends Table[DailyNotification](tag, "DAILY_NOTIFICATIONS") {
     def userId = column[Long]("USER_ID")
     def assetType = column[AssetType]("TYPE")
     def assetName = column[String]("ASSET_NAME")
     def time = column[LocalTime]("ALERT_TIME")
 
-    def * = (userId, assetType, assetName, time)
+    def * = (userId, assetType, assetName, time) <>
+      (mapRowToDailyNotification, unapplyDailyNotification)
     def userFK = foreignKey("USER_FK", userId, users)(_.id, onDelete = ForeignKeyAction.Cascade)
     def PK = primaryKey("PK", (userId, assetType, assetName))
   }
 
-  class TriggerNotifications(tag: Tag) extends Table[(Long, AssetType, String, BigDecimal, BoundType)](tag, "TRIGGER_NOTIFICATIONS") {
+  class TriggerNotifications(tag: Tag) extends Table[TriggerNotification](tag, "TRIGGER_NOTIFICATIONS") {
     def userId = column[Long]("USER_ID")
     def assetType = column[AssetType]("TYPE")
     def assetName = column[String]("ASSET_NAME")
     def bound = column[BigDecimal]("BOUND")
-    def boundType = column[BoundType]("BOUND_TYPE")
+    def boundType = column[TriggerNotificationType]("BOUND_TYPE")
 
-    def * = (userId, assetType, assetName, bound, boundType)
+    def * = (userId, assetType, assetName, bound, boundType) <>
+      (mapRowToTriggerNotification, unapplyTriggerNotification)
     def userFK = foreignKey("USER_FK", userId, users)(_.id, onDelete = ForeignKeyAction.Cascade)
     def PK = primaryKey("PK", (userId, assetType, assetName, bound, boundType))
   }
@@ -76,17 +81,7 @@ object Schema {
   case object ExchangeRate extends AssetType
   case object Portfolio extends AssetType
 
-  sealed trait Currency
-  case object USD extends Currency
-  case object EUR extends Currency
-  case object RUB extends Currency
-
-  sealed trait BoundType
-  case object Raise extends BoundType
-  case object Fall extends BoundType
-  case object Both extends BoundType
-
-  implicit val assetTypeColumnType = MappedColumnType.base[AssetType, Int]({
+  implicit val assetTypeColumnType: JdbcType[AssetType] with BaseTypedType[AssetType] = MappedColumnType.base[AssetType, Int]({
     case Stock => 0
     case ExchangeRate => 1
     case Portfolio => 2
@@ -95,7 +90,7 @@ object Schema {
     case 1 => ExchangeRate
     case 2 => Portfolio
   })
-  implicit val boundTypeColumnType = MappedColumnType.base[BoundType, Int]({
+  implicit val boundTypeColumnType: JdbcType[TriggerNotificationType] with BaseTypedType[TriggerNotificationType] = MappedColumnType.base[TriggerNotificationType, Int]({
     case Raise => 0
     case Fall => 1
     case Both => 2
@@ -104,7 +99,7 @@ object Schema {
     case 1 => Fall
     case 2 => Both
   })
-  implicit val currencyColumnType = MappedColumnType.base[Currency, Int]({
+  implicit val currencyColumnType: JdbcType[Currency] with BaseTypedType[Currency] = MappedColumnType.base[Currency, Int]({
     case USD => 0
     case EUR => 1
     case RUB => 2
@@ -113,8 +108,42 @@ object Schema {
     case 1 => EUR
     case 2 => RUB
   })
-  implicit val localTimeColumnType = MappedColumnType.base[LocalTime, String](_.toString, LocalTime.parse)
-  implicit val bigDecimalColumnType = MappedColumnType.base[BigDecimal, String](_.toString, BigDecimal.apply)
-  implicit val timeZoneColumnType = MappedColumnType.base[ZoneId, String](_.toString, ZoneId.of)
 
+  implicit val localTimeColumnType: JdbcType[LocalTime] with BaseTypedType[LocalTime] = MappedColumnType.base[LocalTime, String](_.toString, LocalTime.parse)
+  implicit val bigDecimalColumnType: JdbcType[BigDecimal] with BaseTypedType[BigDecimal] = MappedColumnType.base[BigDecimal, String](_.toString, BigDecimal.apply)
+  implicit val timeZoneColumnType: JdbcType[ZoneId] with BaseTypedType[ZoneId] = MappedColumnType.base[ZoneId, String](_.toString, ZoneId.of)
+
+  def getNameAndAssetType(n: Notification): (String, AssetType) = n match {
+    case x: StockNotification => (x.stock, Stock)
+    case x: ExchangeRateNotification => (s"${x.exchangePair._1}/${x.exchangePair._2}", ExchangeRate)
+    case x: PortfolioNotification => (x.portfolioName, Portfolio)
+  }
+
+  private def mapRowToTriggerNotification(row: (Long, Schema.AssetType, String, BigDecimal, TriggerNotificationType)): TriggerNotification =
+    row._2 match {
+      case Stock => StockTriggerNotification(row._1, row._3, row._4, row._5)
+      case ExchangeRate =>
+        val curr = row._3.split("/")
+        ExchangeRateTriggerNotification(row._1, (curr(0), curr(1)), row._4, row._5)
+      case Portfolio => PortfolioTriggerNotification(row._1, row._3, row._4, row._5)
+    }
+
+  private def unapplyTriggerNotification(n: TriggerNotification) = {
+    val (name, t) = getNameAndAssetType(n)
+    Some((n.ownerId, t, name, n.boundPrice, n.notificationType))
+  }
+
+  private def mapRowToDailyNotification(row: (Long, Schema.AssetType, String, LocalTime)): DailyNotification =
+    row._2 match {
+      case Stock => StockDailyNotification(row._1, row._3, row._4)
+      case ExchangeRate =>
+        val curr = row._3.split("/")
+        ExchangeRateDailyNotification(row._1, (curr(0), curr(1)), row._4)
+      case Portfolio => PortfolioDailyNotification(row._1, row._3, row._4)
+    }
+
+  private def unapplyDailyNotification(n: DailyNotification) = {
+    val (name, t) = getNameAndAssetType(n)
+    Some((n.ownerId, t, name, n.time))
+  }
 }

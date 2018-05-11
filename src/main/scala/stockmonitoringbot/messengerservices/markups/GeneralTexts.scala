@@ -266,11 +266,11 @@ object GeneralTexts {
   val DAILY_NOTIFICATION_PORTFOLIO_INFO = (name: String, price: BigDecimal) => s"Цена вашего портфеля «$name» : $price"
 
   val TRIGGER_MESSAGE_BOUND = (tp: TriggerNotificationType, bound: BigDecimal) => tp match {
-    case RaiseNotification =>
+    case Raise =>
       s"поднялась выше $bound"
-    case FallNotification =>
+    case Fall =>
       s"опустилась ниже $bound"
-    case BothNotification =>
+    case Both =>
       s"достигла порога: $bound"
   }
 

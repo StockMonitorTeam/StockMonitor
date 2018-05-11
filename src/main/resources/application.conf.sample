@@ -11,14 +11,14 @@ StockMonitor {
   cacheUpdateFrequency = "1 minute"
   defaultTimezone = "UTC+3"
 
-  database {
-      dataSourceClass = org.postgresql.ds.PGSimpleDataSource
-      properties = {
-        url = "jdbc:postgresql://some_url/some_db"
-        user = "local"
-        password = "local"
-      }
-      numThreads = 10
+  postgresDB {
+    dataSourceClass = "slick.jdbc.DatabaseUrlDataSource"
+    properties = {
+      driver = "org.postgresql.Driver"
+      url = "jdbc:postgresql://localhost:5432/stockmondb"
+      user = "stockmon"
+      password = "123"
     }
-
+    numThreads = 10
+  }
 }

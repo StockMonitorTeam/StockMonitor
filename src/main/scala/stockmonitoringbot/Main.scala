@@ -6,6 +6,8 @@ import stockmonitoringbot.notificationhandlers.{DailyNotificationHandlerComponen
 import stockmonitoringbot.stockpriceservices.{AlphavantageHttpRequestExecutor, AlphavantageStockPriceServiceComponent}
 import stockmonitoringbot.stocksandratescache.PriceCacheComponentImpl
 
+import scala.concurrent.Future
+
 /**
   * Created by amir.
   */
@@ -22,7 +24,7 @@ object Main extends App {
     with ExecutionContextImpl
     with ActorSystemComponentImpl
     with AppConfigImpl {
-    def start() =
+    def start(): Future[Unit] =
       userDataStorage.initDB().map { _ =>
         messageReceiver.startReceiving()
         triggerNotificationHandler.start()

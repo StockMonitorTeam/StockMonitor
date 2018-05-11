@@ -65,8 +65,8 @@ class TriggerNotificationHandlerImplTest extends FlatSpec with Matchers with Sca
   }
 
   "TriggerNotificationHandler" should "send messages if stockTriggerNotification triggers" in new TestWiring {
-    val notR = StockTriggerNotification(0, si1.name, 22, RaiseNotification)
-    val notF = StockTriggerNotification(0, si1.name, 24, FallNotification)
+    val notR = StockTriggerNotification(0, si1.name, 22, Raise)
+    val notF = StockTriggerNotification(0, si1.name, 24, Fall)
     userDataStorage.getAllTriggerNotifications _ expects() returning Future.successful(Seq(notR, notF))
     userDataStorage.deleteTriggerNotification _ expects notR returning Future.unit
     userDataStorage.deleteTriggerNotification _ expects notF returning Future.unit
@@ -76,8 +76,8 @@ class TriggerNotificationHandlerImplTest extends FlatSpec with Matchers with Sca
   }
 
   "TriggerNotificationHandler" should "send messages if exchangeRateTriggerNotification triggers" in new TestWiring {
-    val notR = ExchangeRateTriggerNotification(0, (eri.from, eri.to), 22, RaiseNotification)
-    val notF = ExchangeRateTriggerNotification(0, (eri.from, eri.to), 24, FallNotification)
+    val notR = ExchangeRateTriggerNotification(0, (eri.from, eri.to), 22, Raise)
+    val notF = ExchangeRateTriggerNotification(0, (eri.from, eri.to), 24, Fall)
     userDataStorage.getAllTriggerNotifications _ expects() returning Future.successful(Seq(notR, notF))
     userDataStorage.deleteTriggerNotification _ expects notR returning Future.unit
     userDataStorage.deleteTriggerNotification _ expects notF returning Future.unit
@@ -88,8 +88,8 @@ class TriggerNotificationHandlerImplTest extends FlatSpec with Matchers with Sca
 
   "TriggerNotificationHandler" should "send messages if PortfolioTriggerNotification triggers" in new TestWiring {
     val portfolio = Portfolio(0, "p", USD, Map(si1.name -> 1))
-    val notR = PortfolioTriggerNotification(0, "p", 22, RaiseNotification)
-    val notF = PortfolioTriggerNotification(0, "p", 24, FallNotification)
+    val notR = PortfolioTriggerNotification(0, "p", 22, Raise)
+    val notF = PortfolioTriggerNotification(0, "p", 24, Fall)
     userDataStorage.getAllTriggerNotifications _ expects() returning Future.successful(Seq(notR, notF))
     userDataStorage.deleteTriggerNotification _ expects notR returning Future.unit
     userDataStorage.deleteTriggerNotification _ expects notF returning Future.unit
@@ -100,7 +100,7 @@ class TriggerNotificationHandlerImplTest extends FlatSpec with Matchers with Sca
   }
 
   "TriggerNotificationHandler" should "shouldn't crush if there is no portfolio in data base" in new TestWiring {
-    val not = PortfolioTriggerNotification(0, "p", 22, RaiseNotification)
+    val not = PortfolioTriggerNotification(0, "p", 22, Raise)
     userDataStorage.getAllTriggerNotifications _ expects() returning Future.successful(Seq(not))
     userDataStorage.getPortfolio _ expects(0, "p") returning Future.failed(new NoSuchElementException)
     triggerNotificationHandler.checkTriggers(priceCache, priceCache).futureValue shouldBe (())
@@ -108,8 +108,8 @@ class TriggerNotificationHandlerImplTest extends FlatSpec with Matchers with Sca
 
   "TriggerNotificationHandler" should "send messages if stockTriggerNotification with BothNotification type triggers" in
     new TestWiring {
-      val notB1 = StockTriggerNotification(0, si1.name, 22, BothNotification)
-      val notB2 = StockTriggerNotification(0, si1.name, 24, BothNotification)
+      val notB1 = StockTriggerNotification(0, si1.name, 22, Both)
+      val notB2 = StockTriggerNotification(0, si1.name, 24, Both)
       userDataStorage.getAllTriggerNotifications _ expects() returning Future.successful(Seq(notB1, notB2)) twice()
       userDataStorage.deleteTriggerNotification _ expects notB1 returning Future.unit
       userDataStorage.deleteTriggerNotification _ expects notB2 returning Future.unit

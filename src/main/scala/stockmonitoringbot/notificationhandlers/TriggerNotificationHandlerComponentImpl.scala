@@ -40,11 +40,11 @@ trait TriggerNotificationHandlerComponentImpl extends TriggerNotificationHandler
                                      lastPrice: BigDecimal,
                                      currentPrice: BigDecimal): Option[(TriggerNotification, BigDecimal)] = {
       notification.notificationType match {
-        case RaiseNotification if currentPrice >= notification.boundPrice =>
+        case Raise if currentPrice >= notification.boundPrice =>
           Some((notification, currentPrice))
-        case FallNotification if currentPrice <= notification.boundPrice =>
+        case Fall if currentPrice <= notification.boundPrice =>
           Some((notification, currentPrice))
-        case BothNotification if currentPrice <= notification.boundPrice ^ lastPrice <= notification.boundPrice =>
+        case Both if currentPrice <= notification.boundPrice ^ lastPrice <= notification.boundPrice =>
           Some((notification, currentPrice))
         case _ => None
       }

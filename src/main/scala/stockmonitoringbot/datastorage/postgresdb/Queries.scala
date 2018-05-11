@@ -1,9 +1,8 @@
 package stockmonitoringbot.datastorage.postgresdb
 
-import java.time.{LocalTime, ZoneId}
-
 import slick.jdbc.PostgresProfile.api._
 import slick.jdbc.meta.MTable
+import stockmonitoringbot.datastorage.models._
 
 import scala.concurrent.ExecutionContext
 
@@ -23,25 +22,24 @@ object Queries extends Schema {
 
   import Schema._
 
-  def getUsersDailyNotificationsSQL(userId: Long): DBIO[Seq[(Long, AssetType, String, LocalTime)]] =
+  def getUsersDailyNotificationsSQL(userId: Long): DBIO[Seq[DailyNotification]] =
     dailyNotifications.filter(_.userId === userId).result
-  def addDailyNotificationSQL(userId: Long, assetType: Schema.AssetType, assetName: String, time: LocalTime): DBIO[Int] =
-    dailyNotifications += ((userId, assetType, assetName, time))
+  def addDailyNotificationSQL(notification: DailyNotification): DBIO[Int] =
+    dailyNotifications += notification
   def deleteDailyNotificationSQL(userId: Long, assetType: AssetType, assetName: String): DBIO[Int] =
     dailyNotifications.filter(x => x.userId === userId &&
       x.assetType === assetType && x.assetName === assetName).delete
 
-  def getUsersTriggerNotificationsSQL(userId: Long): DBIO[Seq[(Long, AssetType, String, BigDecimal, BoundType)]] =
+  def getUsersTriggerNotificationsSQL(userId: Long): DBIO[Seq[TriggerNotification]] =
     triggerNotifications.filter(_.userId === userId).result
-  def addTriggerNotificationSQL(userId: Long, assetType: AssetType, assetName: String,
-                                bound: BigDecimal, boundType: BoundType): DBIO[Int] =
-    triggerNotifications += ((userId, assetType, assetName, bound, boundType))
+  def addTriggerNotificationSQL(notification: TriggerNotification): DBIO[Int] =
+    triggerNotifications += notification
   def deleteTriggerNotificationSQL(userId: Long, assetType: AssetType, assetName: String,
-                                   bound: BigDecimal, boundType: BoundType): DBIO[Int] =
+                                   bound: BigDecimal, boundType: TriggerNotificationType): DBIO[Int] =
     triggerNotifications.filter(x => x.userId === userId && x.assetType === assetType
       && x.assetName === assetName && x.bound === bound && x.boundType === boundType).delete
 
-  def getAllTriggerNotificationsSQL: DBIO[Seq[(Long, AssetType, String, BigDecimal, BoundType)]] = triggerNotifications.result
+  def getAllTriggerNotificationsSQL: DBIO[Seq[TriggerNotification]] = triggerNotifications.result
 
   def addPortfolioSQL(userId: Long, name: String, currency: Currency): DBIO[Int] =
     portfolios += ((0, userId, name, currency))
@@ -60,12 +58,12 @@ object Queries extends Schema {
   def deleteStockFromPortfolioSQL(portfolioId: Long, stock: String): DBIO[Int] =
     stocksInPortfolios.filter(x => x.portfolioId === portfolioId && x.stockName === stock).delete
 
-  def getUserDailyNotificationOnAssetSQL(userId: Long, assetType: AssetType, name: String): DBIO[Seq[(Long, AssetType, String, LocalTime)]] =
+  def getUserDailyNotificationOnAssetSQL(userId: Long, assetType: AssetType, name: String): DBIO[Seq[DailyNotification]] =
     dailyNotifications.filter(x => x.userId === userId && x.assetType === assetType && x.assetName === name).result
-  def getUserTriggerNotificationsOnAssetSQL(userId: Long, assetType: AssetType, name: String): DBIO[Seq[(Long, AssetType, String, BigDecimal, BoundType)]] =
+  def getUserTriggerNotificationsOnAssetSQL(userId: Long, assetType: AssetType, name: String): DBIO[Seq[TriggerNotification]] =
     triggerNotifications.filter(x => x.userId === userId && x.assetType === assetType && x.assetName === name).result
 
-  def getUserSQL(userId: Long): DBIO[Seq[(Long, ZoneId)]] = users.filter(_.id === userId).result
-  def setUserSQL(userId: Long, zoneId: ZoneId): DBIO[Int] = users.insertOrUpdate((userId, zoneId))
+  def getUserSQL(userId: Long): DBIO[Seq[User]] = users.filter(_.id === userId).result
+  def setUserSQL(user: User): DBIO[Int] = users.insertOrUpdate(user)
 
 }
