@@ -30,11 +30,13 @@ trait UserDataStorage {
   def deleteStockFromPortfolio(userId: Long, portfolioName: String, stock: String): Future[Unit]
 
   //actions with daily notifications on specified asset
-  def getUserNotification(userId: Long, assetType: AssetType): Future[Option[DailyNotification]]
+  def getUserNotificationOnAsset(userId: Long, assetType: AssetType): Future[Option[DailyNotification]]
 
   //actions with trigger notifications on specified asset
-  def getUserTriggerNotification(userId: Long, assetType: AssetType): Future[Seq[TriggerNotification]]
+  def getUserTriggerNotificationOnAsset(userId: Long, assetType: AssetType): Future[Seq[TriggerNotification]]
 
   def getUser(userId: Long): Future[Option[User]]
   def setUser(user: User): Future[Unit]
+
+  def initDB(): Future[Unit]
 }

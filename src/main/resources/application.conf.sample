@@ -7,6 +7,18 @@ StockMonitor {
     port = "1337"
     url = ""
   }
+
   cacheUpdateFrequency = "1 minute"
   defaultTimezone = "UTC+3"
+
+  database {
+      dataSourceClass = org.postgresql.ds.PGSimpleDataSource
+      properties = {
+        url = "jdbc:postgresql://some_url/some_db"
+        user = "local"
+        password = "local"
+      }
+      numThreads = 10
+    }
+
 }

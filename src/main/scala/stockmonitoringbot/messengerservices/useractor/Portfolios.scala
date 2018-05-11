@@ -101,7 +101,7 @@ trait Portfolios {
   def printPortfolioTriggers(userId: Long, portfolio: Portfolio): Unit = {
     for {
       price <- getPortfolioCurrentPrice(portfolio, cache)
-      triggers <- userDataStorage.getUserTriggerNotification(userId, PortfolioAsset(portfolio.name))
+      triggers <- userDataStorage.getUserTriggerNotificationOnAsset(userId, PortfolioAsset(portfolio.name))
     } {
       val message = GeneralTexts.PORTFOLIO_TRIGGERS(portfolio.name, price) + GeneralTexts.PORTFOLIO_TRIGGERS_LIST(triggers)
       sendMessageToUser(message, GeneralMarkups.portfolioTriggerMenuMarkup)
@@ -109,7 +109,7 @@ trait Portfolios {
   }
 
   def clearPortfolioNotification(userId: Long, portfolio: Portfolio): Unit = {
-    userDataStorage.getUserNotification(userId, PortfolioAsset(portfolio.name)).onComplete {
+    userDataStorage.getUserNotificationOnAsset(userId, PortfolioAsset(portfolio.name)).onComplete {
       case Success(Some(x)) =>
         dailyNotification.deleteDailyNotification(x)
         userDataStorage.deleteDailyNotification(x)
@@ -149,7 +149,7 @@ trait Portfolios {
         printPortfolio(portfolio.name)
       })
     case IncomingMessage(Buttons.triggerRemove) =>
-      userDataStorage.getUserTriggerNotification(userId, PortfolioAsset(portfolio.name)) onComplete {
+      userDataStorage.getUserTriggerNotificationOnAsset(userId, PortfolioAsset(portfolio.name)) onComplete {
         case Success(Nil) =>
           sendMessageToUser(GeneralTexts.PORTFOLIO_TRIGGER_EMPTY)
         case Success(x) =>
@@ -189,7 +189,7 @@ trait Portfolios {
       }
       context become waitForPortfolioName
     case IncomingMessage(Buttons.notifications) =>
-      userDataStorage.getUserNotification(userId, PortfolioAsset(portfolio.name)) onComplete {
+      userDataStorage.getUserNotificationOnAsset(userId, PortfolioAsset(portfolio.name)) onComplete {
         case Success(_) =>
           addDailyNotification(PortfolioAsset(portfolio.name), {
             printPortfolio(portfolio.name)

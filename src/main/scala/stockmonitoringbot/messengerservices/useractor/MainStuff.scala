@@ -99,7 +99,7 @@ trait MainStuff {
   //NEW DAILY NOTIFICATION
   //callback should send SetBehavior message to self to take control back
   def addDailyNotification(assetType: AssetType, callBack: => Unit): Unit = {
-    val notF = userDataStorage.getUserNotification(userId, assetType)
+    val notF = userDataStorage.getUserNotificationOnAsset(userId, assetType)
     val userF = userDataStorage.getUser(userId)
     val infoF = for (not <- notF; user <- userF) yield (not, user.get)
     infoF onComplete {
@@ -141,7 +141,7 @@ trait MainStuff {
   }
 
   def clearNotification(userId: Long, assetType: AssetType): Future[Unit] = {
-    for {userNotOpt <- userDataStorage.getUserNotification(userId, assetType)
+    for {userNotOpt <- userDataStorage.getUserNotificationOnAsset(userId, assetType)
     } yield for {userNot <- userNotOpt
                  _ = dailyNotification.deleteDailyNotification(userNot)
     } yield for {_ <- userDataStorage.deleteDailyNotification(userNot)
