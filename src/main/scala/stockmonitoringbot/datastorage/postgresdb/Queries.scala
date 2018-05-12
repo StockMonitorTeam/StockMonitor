@@ -3,6 +3,7 @@ package stockmonitoringbot.datastorage.postgresdb
 import slick.jdbc.PostgresProfile.api._
 import slick.jdbc.meta.MTable
 import stockmonitoringbot.datastorage.models._
+import stockmonitoringbot.datastorage.postgresdb.Queries._
 
 import scala.concurrent.ExecutionContext
 
@@ -21,49 +22,102 @@ object Queries extends Schema {
   }
 
   import Schema._
+  import CompiledQueries._
 
   def getUsersDailyNotificationsSQL(userId: Long): DBIO[Seq[DailyNotification]] =
-    dailyNotifications.filter(_.userId === userId).result
+    getUsersDailyNotificationsCompiledSQL(userId).result
   def addDailyNotificationSQL(notification: DailyNotification): DBIO[Int] =
     dailyNotifications += notification
   def deleteDailyNotificationSQL(userId: Long, assetType: AssetType, assetName: String): DBIO[Int] =
-    dailyNotifications.filter(x => x.userId === userId &&
-      x.assetType === assetType && x.assetName === assetName).delete
+    deleteDailyNotificationCompiledSQL((userId, assetType, assetName)).delete
 
   def getUsersTriggerNotificationsSQL(userId: Long): DBIO[Seq[TriggerNotification]] =
-    triggerNotifications.filter(_.userId === userId).result
+    getUsersTriggerNotificationsCompiledSQL(userId).result
   def addTriggerNotificationSQL(notification: TriggerNotification): DBIO[Int] =
     triggerNotifications += notification
   def deleteTriggerNotificationSQL(userId: Long, assetType: AssetType, assetName: String,
                                    bound: BigDecimal, boundType: TriggerNotificationType): DBIO[Int] =
-    triggerNotifications.filter(x => x.userId === userId && x.assetType === assetType
-      && x.assetName === assetName && x.bound === bound && x.boundType === boundType).delete
+    deleteTriggerNotificationCompiledSQL((userId, assetType, assetName, bound, boundType)).delete
 
   def getAllTriggerNotificationsSQL: DBIO[Seq[TriggerNotification]] = triggerNotifications.result
 
   def addPortfolioSQL(portfolio: Portfolio): DBIO[Int] =
     portfolios += portfolio
   def deletePortfolioSQL(userId: Long, name: String): DBIO[Int] =
-    portfolios.filter(x => x.userId === userId && x.name === name).delete
+    deletePortfolioCompiledSQL((userId, name)).delete
   def getUserPortfoliosSQL(userId: Long): DBIO[Seq[Portfolio]] =
-    portfolios.filter(_.userId === userId).result
+    getUserPortfoliosCompiledSQL(userId).result
 
   def getPortfolioSQL(userId: Long, name: String): DBIO[Seq[Portfolio]] =
-    portfolios.filter(x => x.userId === userId && x.name === name).result
+    getPortfolioCompiledSQL((userId, name)).result
   def getPortfolioStocksSQL(portfolioId: Long): DBIO[Seq[(Long, String, Double)]] =
-    stocksInPortfolios.filter(_.portfolioId === portfolioId).result
+    getPortfolioStocksCompiledSQL(portfolioId).result
 
   def addStockToPortfolioSQL(portfolioId: Long, stock: String, count: Double): DBIO[Int] =
     stocksInPortfolios += ((portfolioId, stock, count))
   def deleteStockFromPortfolioSQL(portfolioId: Long, stock: String): DBIO[Int] =
-    stocksInPortfolios.filter(x => x.portfolioId === portfolioId && x.stockName === stock).delete
+    deleteStockFromPortfolioCompiledSQL((portfolioId, stock)).delete
 
   def getUserDailyNotificationOnAssetSQL(userId: Long, assetType: AssetType, name: String): DBIO[Seq[DailyNotification]] =
-    dailyNotifications.filter(x => x.userId === userId && x.assetType === assetType && x.assetName === name).result
+    getUserDailyNotificationOnAssetCompiledSQL((userId, assetType, name)).result
   def getUserTriggerNotificationsOnAssetSQL(userId: Long, assetType: AssetType, name: String): DBIO[Seq[TriggerNotification]] =
-    triggerNotifications.filter(x => x.userId === userId && x.assetType === assetType && x.assetName === name).result
+    getUserTriggerNotificationsOnAssetCompiledSQL((userId, assetType, name)).result
 
-  def getUserSQL(userId: Long): DBIO[Seq[User]] = users.filter(_.id === userId).result
+  def getUserSQL(userId: Long): DBIO[Seq[User]] = getUserCompiledSQL(userId).result
   def setUserSQL(user: User): DBIO[Int] = users.insertOrUpdate(user)
 
+}
+
+object CompiledQueries {
+
+  import Schema._
+
+  val getUsersDailyNotificationsCompiledSQL = Compiled {
+    userId: Rep[Long] => dailyNotifications.filter(_.userId === userId)
+  }
+  val deleteDailyNotificationCompiledSQL = Compiled {
+    (userId: Rep[Long], assetType: Rep[AssetType], assetName: Rep[String]) =>
+      dailyNotifications.filter(x => x.userId === userId &&
+        x.assetType === assetType && x.assetName === assetName)
+  }
+  val getUsersTriggerNotificationsCompiledSQL = Compiled {
+    userId: Rep[Long] => triggerNotifications.filter(_.userId === userId)
+  }
+  val deleteTriggerNotificationCompiledSQL = Compiled {
+    (userId: Rep[Long], assetType: Rep[AssetType], assetName: Rep[String],
+     bound: Rep[BigDecimal], boundType: Rep[TriggerNotificationType]) =>
+      triggerNotifications.filter(x => x.userId === userId && x.assetType === assetType
+        && x.assetName === assetName && x.bound === bound && x.boundType === boundType)
+  }
+
+  val deletePortfolioCompiledSQL = Compiled {
+    (userId: Rep[Long], name: Rep[String]) => portfolios.filter(x => x.userId === userId && x.name === name)
+  }
+  val getUserPortfoliosCompiledSQL = Compiled {
+    userId: Rep[Long] => portfolios.filter(_.userId === userId)
+  }
+  val getPortfolioCompiledSQL = Compiled {
+    (userId: Rep[Long], name: Rep[String]) => portfolios.filter(x => x.userId === userId && x.name === name)
+  }
+  val getPortfolioStocksCompiledSQL = Compiled {
+    (portfolioId: Rep[Long]) => stocksInPortfolios.filter(_.portfolioId === portfolioId)
+  }
+
+  val deleteStockFromPortfolioCompiledSQL = Compiled {
+    (portfolioId: Rep[Long], stock: Rep[String]) =>
+      stocksInPortfolios.filter(x => x.portfolioId === portfolioId && x.stockName === stock)
+  }
+
+  val getUserDailyNotificationOnAssetCompiledSQL = Compiled {
+    (userId: Rep[Long], assetType: Rep[AssetType], name: Rep[String]) =>
+      dailyNotifications.filter(x => x.userId === userId && x.assetType === assetType && x.assetName === name)
+  }
+  val getUserTriggerNotificationsOnAssetCompiledSQL = Compiled {
+    (userId: Rep[Long], assetType: Rep[AssetType], name: Rep[String]) =>
+      triggerNotifications.filter(x => x.userId === userId && x.assetType === assetType && x.assetName === name)
+  }
+
+  val getUserCompiledSQL = Compiled {
+    (userId: Rep[Long]) => users.filter(_.id === userId)
+  }
 }
