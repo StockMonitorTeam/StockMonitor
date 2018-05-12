@@ -120,28 +120,32 @@ object Schema {
     case x: PortfolioNotification => (x.portfolioName, Portfolio)
   }
 
-  private def mapRowToTriggerNotification(row: (Long, Schema.AssetType, String, BigDecimal, TriggerNotificationType)): TriggerNotification =
-    row._2 match {
-      case Stock => StockTriggerNotification(row._1, row._3, row._4, row._5)
+  private def mapRowToTriggerNotification(row: (Long, Schema.AssetType, String, BigDecimal, TriggerNotificationType)): TriggerNotification = {
+    val (userId, assetType, assetName, bound, boundType) = row
+    assetType match {
+      case Stock => StockTriggerNotification(userId, assetName, bound, boundType)
       case ExchangeRate =>
-        val curr = row._3.split("/")
-        ExchangeRateTriggerNotification(row._1, (curr(0), curr(1)), row._4, row._5)
-      case Portfolio => PortfolioTriggerNotification(row._1, row._3, row._4, row._5)
+        val curr = assetName.split("/")
+        ExchangeRateTriggerNotification(userId, (curr(0), curr(1)), bound, boundType)
+      case Portfolio => PortfolioTriggerNotification(userId, assetName, bound, boundType)
     }
+  }
 
   private def unapplyTriggerNotification(n: TriggerNotification) = {
     val (name, t) = getNameAndAssetType(n)
     Some((n.ownerId, t, name, n.boundPrice, n.notificationType))
   }
 
-  private def mapRowToDailyNotification(row: (Long, Schema.AssetType, String, LocalTime)): DailyNotification =
-    row._2 match {
-      case Stock => StockDailyNotification(row._1, row._3, row._4)
+  private def mapRowToDailyNotification(row: (Long, Schema.AssetType, String, LocalTime)): DailyNotification = {
+    val (userId, assetType, assetName, time) = row
+    assetType match {
+      case Stock => StockDailyNotification(userId, assetName, time)
       case ExchangeRate =>
-        val curr = row._3.split("/")
-        ExchangeRateDailyNotification(row._1, (curr(0), curr(1)), row._4)
-      case Portfolio => PortfolioDailyNotification(row._1, row._3, row._4)
+        val curr = assetName.split("/")
+        ExchangeRateDailyNotification(userId, (curr(0), curr(1)), time)
+      case Portfolio => PortfolioDailyNotification(userId, assetName, time)
     }
+  }
 
   private def unapplyDailyNotification(n: DailyNotification) = {
     val (name, t) = getNameAndAssetType(n)
