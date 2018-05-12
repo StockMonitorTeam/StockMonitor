@@ -82,32 +82,34 @@ object Schema {
   case object ExchangeRate extends AssetType
   case object Portfolio extends AssetType
 
-  implicit val assetTypeColumnType: JdbcType[AssetType] with BaseTypedType[AssetType] = MappedColumnType.base[AssetType, Int]({
-    case Stock => 0
-    case ExchangeRate => 1
-    case Portfolio => 2
+  implicit val assetTypeColumnType: JdbcType[AssetType] with BaseTypedType[AssetType] = MappedColumnType.base[AssetType, String](
+    {
+      case Stock => "Stock"
+      case ExchangeRate => "ExchangeRate"
+      case Portfolio => "Portfolio"
+    }, {
+      case "Stock" => Stock
+      case "ExchangeRate" => ExchangeRate
+      case "Portfolio" => Portfolio
+    })
+  implicit val boundTypeColumnType: JdbcType[TriggerNotificationType] with BaseTypedType[TriggerNotificationType] =
+    MappedColumnType.base[TriggerNotificationType, String]({
+      case Raise => "Raise"
+      case Fall => "Fall"
+      case Both => "Both"
+    }, {
+      case "Raise" => Raise
+      case "Fall" => Fall
+      case "Both" => Both
+    })
+  implicit val currencyColumnType: JdbcType[Currency] with BaseTypedType[Currency] = MappedColumnType.base[Currency, String]({
+    case USD => "USD"
+    case EUR => "EUR"
+    case RUB => "RUB"
   }, {
-    case 0 => Stock
-    case 1 => ExchangeRate
-    case 2 => Portfolio
-  })
-  implicit val boundTypeColumnType: JdbcType[TriggerNotificationType] with BaseTypedType[TriggerNotificationType] = MappedColumnType.base[TriggerNotificationType, Int]({
-    case Raise => 0
-    case Fall => 1
-    case Both => 2
-  }, {
-    case 0 => Raise
-    case 1 => Fall
-    case 2 => Both
-  })
-  implicit val currencyColumnType: JdbcType[Currency] with BaseTypedType[Currency] = MappedColumnType.base[Currency, Int]({
-    case USD => 0
-    case EUR => 1
-    case RUB => 2
-  }, {
-    case 0 => USD
-    case 1 => EUR
-    case 2 => RUB
+    case "USD" => USD
+    case "EUR" => EUR
+    case "RUB" => RUB
   })
 
   implicit val localTimeColumnType: JdbcType[LocalTime] with BaseTypedType[LocalTime] = MappedColumnType.base[LocalTime, String](_.toString, LocalTime.parse)
