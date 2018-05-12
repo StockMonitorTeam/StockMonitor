@@ -54,9 +54,9 @@ object GeneralTexts {
         s"Ежедневное оповещение о $name установлено на: ${not.time}"
       }
     val triggerNotStr = if (triggerNot.isEmpty)
-      "Нет оповещений триггеров"
+      "Триггеры не установлены"
     else
-      s"Активные оповещения тригеры на $name:\n${triggerNot.map(tnToStr).mkString("\n")}"
+      s"Активные триггеры на $name:\n${triggerNot.map(tnToStr).mkString("\n")}"
     s"""Акции $name
        |Стоимость: $price
        |Подробнее: https://www.marketwatch.com/investing/stock/$name
@@ -76,9 +76,9 @@ object GeneralTexts {
         s"Ежедневное оповещение о курсе ${rate.from}/${rate.to} установлено на: ${not.time}"
       }
     val triggerNotStr = if (triggerNot.isEmpty)
-      "Нет оповещений триггеров"
+      "Триггеры не установлены"
     else
-      s"Активные оповещения тригеры на курс ${rate.from}/${rate.to}:\n${triggerNot.map(tnToStr).mkString("\n")}"
+      s"Активные триггеры на курс ${rate.from}/${rate.to}:\n${triggerNot.map(tnToStr).mkString("\n")}"
     s"""Курс ${rate.from} к ${rate.to} равен ${rate.rate}
        |
        |🚨 $triggerNotStr
