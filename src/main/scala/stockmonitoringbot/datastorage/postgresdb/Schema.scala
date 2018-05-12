@@ -7,6 +7,7 @@ import slick.jdbc.JdbcType
 
 import slick.jdbc.PostgresProfile.api._
 import stockmonitoringbot.datastorage.models._
+import stockmonitoringbot.datastorage.models
 
 /**
   * Created by amir.
@@ -53,13 +54,13 @@ trait Schema {
     def PK = primaryKey("PK", (userId, assetType, assetName, bound, boundType))
   }
 
-  class Portfolios(tag: Tag) extends Table[(Long, Long, String, Currency)](tag, "PORTFOLIOS") {
+  class Portfolios(tag: Tag) extends Table[Portfolio](tag, "PORTFOLIOS") {
     def portfolioId = column[Long]("PORTFOLIO_ID", O.PrimaryKey, O.AutoInc)
     def userId = column[Long]("USER_ID")
     def name = column[String]("NAME")
     def currency = column[Currency]("CURRENCY")
 
-    def * = (portfolioId, userId, name, currency)
+    def * = (portfolioId, userId, name, currency) <> (mapRowToPortfolio, unapplyPortfolio)
     def userFK = foreignKey("USER_FK", userId, users)(_.id, onDelete = ForeignKeyAction.Cascade)
   }
 
@@ -146,4 +147,14 @@ object Schema {
     val (name, t) = getNameAndAssetType(n)
     Some((n.ownerId, t, name, n.time))
   }
+
+  private def mapRowToPortfolio(row: (Long, Long, String, Currency)): Portfolio = {
+    val (portfolioId, userId, name, currency) = row
+    models.Portfolio(portfolioId, userId, name, currency, Map.empty)
+  }
+
+  private def unapplyPortfolio(p: Portfolio) = {
+    Some((p.portfolioId, p.userId, p.name, p.currency))
+  }
+
 }

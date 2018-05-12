@@ -54,7 +54,7 @@ class DailyNotificationHandlerImplTest extends FlatSpec with Matchers with Scala
   }
 
   "DailyNotificationHandler" should "notify users on PortfolioDailyNotification" in new TestWiring {
-    val portfolio = Portfolio(0, "portfolio", USD, Map("MSFT" -> 1, "AAPL" -> 1))
+    val portfolio = Portfolio(0, 0, "portfolio", USD, Map("MSFT" -> 1, "AAPL" -> 1))
     val notification = PortfolioDailyNotification(0, "portfolio", LocalTime.of(0, 0))
     userDataStorage.getPortfolio _ expects(0, "portfolio") returning Future.successful(portfolio)
     inAnyOrder {

@@ -24,7 +24,7 @@ class PortfolioPriceCalculationTest extends FlatSpec with Matchers with ScalaFut
     override val priceCache = mock[PriceCache]
   }
 
-  val portfolio = Portfolio(0, "portfolio", USD, Map("MSFT" -> 3, "AAPL" -> 5))
+  val portfolio = Portfolio(0, 0, "portfolio", USD, Map("MSFT" -> 3, "AAPL" -> 5))
 
   "getPortfolioCurrentPrice" should "calculate portfolio price" in new TestWiring {
     inAnyOrder {

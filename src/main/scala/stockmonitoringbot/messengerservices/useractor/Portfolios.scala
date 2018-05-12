@@ -133,7 +133,7 @@ trait Portfolios {
   }
 
   def createNewPortfolio(name: String, currency: String): Unit = {
-    userDataStorage.addPortfolio(Portfolio(userId, name, Currency.define(currency), Map.empty)).onComplete {
+    userDataStorage.addPortfolio(Portfolio(0, userId, name, Currency.define(currency), Map.empty)).onComplete {
       case Success(_) =>
         sendMessageToUser(GeneralTexts.INPUT_PORTFOLIO_CREATED(name, currency))
         printPortfolios()

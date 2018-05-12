@@ -69,8 +69,8 @@ class InMemoryDataStorageTest extends FlatSpec with Matchers with ScalaFutures {
   }
 
   "InMemoryUserDataStorage" should "store users portfolios" in new TestWiring {
-    val portfolio1 = Portfolio(0, "newPortfolio", USD, Map("MSFT" -> 23, "AAPL" -> 42))
-    val portfolio2 = Portfolio(0, "newPortfolio2", USD, Map("MSFT" -> 23))
+    val portfolio1 = Portfolio(0, 0, "newPortfolio", USD, Map("MSFT" -> 23, "AAPL" -> 42))
+    val portfolio2 = Portfolio(0, 0, "newPortfolio2", USD, Map("MSFT" -> 23))
     val test = for {
       _ <- userDataStorage.addPortfolio(portfolio1)
       _ <- userDataStorage.addPortfolio(portfolio2)
@@ -85,8 +85,8 @@ class InMemoryDataStorageTest extends FlatSpec with Matchers with ScalaFutures {
   }
 
   "InMemoryUserDataStorage" should "add/delete stocks from portfolios" in new TestWiring {
-    val portfolio1 = Portfolio(0, "newPortfolio", USD, Map("MSFT" -> 23, "AAPL" -> 42))
-    val portfolio2 = Portfolio(0, "newPortfolio", USD, Map("MSFT" -> 23, "AAPL" -> 42, "YNDX" -> 1))
+    val portfolio1 = Portfolio(0, 0, "newPortfolio", USD, Map("MSFT" -> 23, "AAPL" -> 42))
+    val portfolio2 = Portfolio(0, 0, "newPortfolio", USD, Map("MSFT" -> 23, "AAPL" -> 42, "YNDX" -> 1))
     val test = for {
       _ <- userDataStorage.addPortfolio(portfolio1)
       _ <- userDataStorage.addStockToPortfolio(0, "newPortfolio", "YNDX", 1)
@@ -101,7 +101,7 @@ class InMemoryDataStorageTest extends FlatSpec with Matchers with ScalaFutures {
   }
 
   "InMemoryUserDataStorage" should "delete notifications when deleting portfolio" in new TestWiring {
-    val portfolio1 = Portfolio(0, "newPortfolio", USD, Map("MSFT" -> 23, "AAPL" -> 42))
+    val portfolio1 = Portfolio(0, 0, "newPortfolio", USD, Map("MSFT" -> 23, "AAPL" -> 42))
     val triggerNotification1 = PortfolioTriggerNotification(0, "newPortfolio", 40, Raise)
     val triggerNotification2 = PortfolioTriggerNotification(0, "newPortfolio1", 40, Raise)
     val dailyNotification1 = PortfolioDailyNotification(0, "newPortfolio", LocalTime.of(0, 0))

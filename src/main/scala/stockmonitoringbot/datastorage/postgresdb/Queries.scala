@@ -41,14 +41,14 @@ object Queries extends Schema {
 
   def getAllTriggerNotificationsSQL: DBIO[Seq[TriggerNotification]] = triggerNotifications.result
 
-  def addPortfolioSQL(userId: Long, name: String, currency: Currency): DBIO[Int] =
-    portfolios += ((0, userId, name, currency))
+  def addPortfolioSQL(portfolio: Portfolio): DBIO[Int] =
+    portfolios += portfolio
   def deletePortfolioSQL(userId: Long, name: String): DBIO[Int] =
     portfolios.filter(x => x.userId === userId && x.name === name).delete
-  def getUserPortfoliosSQL(userId: Long): DBIO[Seq[(Long, Long, String, Currency)]] =
+  def getUserPortfoliosSQL(userId: Long): DBIO[Seq[Portfolio]] =
     portfolios.filter(_.userId === userId).result
 
-  def getPortfolioSQL(userId: Long, name: String): DBIO[Seq[(Long, Long, String, Currency)]] =
+  def getPortfolioSQL(userId: Long, name: String): DBIO[Seq[Portfolio]] =
     portfolios.filter(x => x.userId === userId && x.name === name).result
   def getPortfolioStocksSQL(portfolioId: Long): DBIO[Seq[(Long, String, Double)]] =
     stocksInPortfolios.filter(_.portfolioId === portfolioId).result

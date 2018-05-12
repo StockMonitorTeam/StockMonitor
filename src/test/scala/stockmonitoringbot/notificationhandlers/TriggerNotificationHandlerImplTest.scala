@@ -87,7 +87,7 @@ class TriggerNotificationHandlerImplTest extends FlatSpec with Matchers with Sca
   }
 
   "TriggerNotificationHandler" should "send messages if PortfolioTriggerNotification triggers" in new TestWiring {
-    val portfolio = Portfolio(0, "p", USD, Map(si1.name -> 1))
+    val portfolio = Portfolio(0, 0, "p", USD, Map(si1.name -> 1))
     val notR = PortfolioTriggerNotification(0, "p", 22, Raise)
     val notF = PortfolioTriggerNotification(0, "p", 24, Fall)
     userDataStorage.getAllTriggerNotifications _ expects() returning Future.successful(Seq(notR, notF))

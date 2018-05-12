@@ -89,7 +89,7 @@ trait PostgresDBComponent extends UserDataStorageComponent {
 
     override def addPortfolio(p: Portfolio): Future[Unit] =
       dbConnection.run {
-        addPortfolioSQL(p.userId, p.name, p.currency).map {
+        addPortfolioSQL(p).map {
           case 0 => throw new ElementAlreadyExistsException
           case 1 => ()
           case _ => throw new IllegalStateException()
@@ -106,18 +106,18 @@ trait PostgresDBComponent extends UserDataStorageComponent {
       }
     override def getUserPortfolios(userId: Long): Future[Seq[Portfolio]] = {
       val request = getUserPortfoliosSQL(userId).flatMap { portfolios =>
-        DBIO.sequence(portfolios.map { row =>
-          getPortfolioStocksSQL(row._1).map(stocks =>
-            models.Portfolio(row._2, row._3, row._4, stocks.map(x => (x._2, x._3)).toMap))
+        DBIO.sequence(portfolios.map { p =>
+          getPortfolioStocksSQL(p.portfolioId).map(stocks =>
+            p.copy(stocks = stocks.map(x => (x._2, x._3)).toMap))
         })
       }
       dbConnection.run(request)
     }
     override def getPortfolio(userId: Long, portfolioName: String): Future[Portfolio] = {
       val request = getPortfolioSQL(userId, portfolioName).flatMap { x =>
-        DBIO.sequenceOption(x.headOption.map { row =>
-          getPortfolioStocksSQL(row._1).map(stocks =>
-            models.Portfolio(row._2, row._3, row._4, stocks.map(x => (x._2, x._3)).toMap))
+        DBIO.sequenceOption(x.headOption.map { p =>
+          getPortfolioStocksSQL(p.portfolioId).map(stocks =>
+            p.copy(stocks = stocks.map(x => (x._2, x._3)).toMap))
         })
       }
       dbConnection.run(request).map(_.get)
@@ -125,7 +125,7 @@ trait PostgresDBComponent extends UserDataStorageComponent {
 
     override def addStockToPortfolio(userId: Long, portfolioName: String, stock: String, count: Double): Future[Unit] = {
       val request = getPortfolioSQL(userId, portfolioName).flatMap { x =>
-        DBIO.sequenceOption(x.headOption.map(row => addStockToPortfolioSQL(row._1, stock, count)))
+        DBIO.sequenceOption(x.headOption.map(p => addStockToPortfolioSQL(p.portfolioId, stock, count)))
       }
       dbConnection.run {
         request.map {
@@ -139,7 +139,7 @@ trait PostgresDBComponent extends UserDataStorageComponent {
 
     override def deleteStockFromPortfolio(userId: Long, portfolioName: String, stock: String): Future[Unit] = {
       val request = getPortfolioSQL(userId, portfolioName).flatMap { x =>
-        DBIO.sequenceOption(x.headOption.map(row => deleteStockFromPortfolioSQL(row._1, stock)))
+        DBIO.sequenceOption(x.headOption.map(p => deleteStockFromPortfolioSQL(p.portfolioId, stock)))
       }
       dbConnection.run {
         request.map {
