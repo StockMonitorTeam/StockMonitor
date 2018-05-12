@@ -5,7 +5,8 @@ import akka.http.scaladsl.model._
 import akka.http.scaladsl.unmarshalling.Unmarshal
 import spray.json.JsValue
 import stockmonitoringbot.stockpriceservices.exceptions.{JsonParseException, ServerResponseException}
-import stockmonitoringbot.{ActorSystemComponent, ApiKeys, ExecutionContextComponent}
+import stockmonitoringbot.stockpriceservices.models.{BaseStockInfo, CurrencyExchangeRateInfo, DetailedStockInfo}
+import stockmonitoringbot.{ActorSystemComponent, AppConfig, ExecutionContextComponent}
 
 import scala.concurrent.Future
 import scala.util.{Failure, Try}
@@ -17,7 +18,7 @@ trait AlphavantageStockPriceServiceComponent extends StockPriceServiceComponent 
   this: ActorSystemComponent
     with ExecutionContextComponent
     with HttpRequestExecutor
-    with ApiKeys =>
+    with AppConfig =>
 
   val stockPriceService = new AlphavantageStockPriceService()
 

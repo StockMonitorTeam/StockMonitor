@@ -9,12 +9,12 @@ import stockmonitoringbot.messengerservices.MessageSenderComponent
 import stockmonitoringbot.messengerservices.markups.GeneralTexts
 import stockmonitoringbot.stockpriceservices.StockPriceServiceComponent
 import stockmonitoringbot.stocksandratescache.{PriceCache, PriceCacheComponent}
-import stockmonitoringbot.{ActorSystemComponent, ExecutionContextComponent}
+import stockmonitoringbot.{ActorSystemComponent, AppConfig, ExecutionContextComponent}
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.language.postfixOps
-import scala.util.{Failure, Success}
+import scala.util.{Failure, Success, Try}
 
 /**
   * Created by amir.
@@ -25,7 +25,8 @@ trait TriggerNotificationHandlerComponentImpl extends TriggerNotificationHandler
     with PriceCacheComponent
     with MessageSenderComponent
     with ExecutionContextComponent
-    with ActorSystemComponent =>
+    with ActorSystemComponent
+    with AppConfig =>
 
   val triggerNotificationHandler = new TriggerNotificationHandlerImpl
 
@@ -33,6 +34,7 @@ trait TriggerNotificationHandlerComponentImpl extends TriggerNotificationHandler
 
     private val logger = Logger(getClass)
     private var mainTask: Cancellable = _
+    private val updateFrequency = getKey("StockMonitor.cacheUpdateFrequency")
 
     private def isTriggeredWithPrice(notification: TriggerNotification,
                                      lastPrice: BigDecimal,
@@ -123,10 +125,16 @@ trait TriggerNotificationHandlerComponentImpl extends TriggerNotificationHandler
     }
 
     override def start(): Unit = {
+      val freq = Try(Duration(updateFrequency).asInstanceOf[FiniteDuration]).fold({ _ =>
+        logger.warn("Can't get update frequency from configuration, starting cache update with frequency 1 minute")
+        1 minute
+      }, { f =>
+        logger.info(s"starting cache update with frequency $f")
+        f
+      })
       // update every minute StocksAndExchangeRatesCache
       // and check all trigger notifications
-      //todo load "updateFrequency" from config
-      mainTask = system.scheduler.schedule(1 second, 1 minute)(updateCacheAndCheckTriggers())
+      mainTask = system.scheduler.schedule(freq, 1 minute)(updateCacheAndCheckTriggers())
     }
 
     override def stop(): Boolean = mainTask.cancel()

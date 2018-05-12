@@ -4,7 +4,7 @@ import org.scalamock.scalatest.MockFactory
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{FlatSpec, Matchers}
 import stockmonitoringbot.datastorage.models.{Portfolio, USD}
-import stockmonitoringbot.stockpriceservices.BaseStockInfo
+import stockmonitoringbot.stockpriceservices.models.BaseStockInfo
 import stockmonitoringbot.stocksandratescache.{PriceCache, PriceCacheComponent}
 import stockmonitoringbot.{ActorSystemComponentImpl, ExecutionContextImpl}
 

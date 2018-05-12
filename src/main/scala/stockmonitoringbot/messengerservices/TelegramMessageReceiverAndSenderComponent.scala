@@ -17,7 +17,7 @@ import stockmonitoringbot.messengerservices.useractor.UserActor
 import stockmonitoringbot.messengerservices.useractor.UserActor.{IncomingCallback, IncomingCallbackMessage, IncomingMessage}
 import stockmonitoringbot.notificationhandlers.DailyNotificationHandlerComponent
 import stockmonitoringbot.stocksandratescache.PriceCacheComponent
-import stockmonitoringbot.{ActorSystemComponent, ApiKeys, ExecutionContextComponent}
+import stockmonitoringbot.{ActorSystemComponent, AppConfig, ExecutionContextComponent}
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
@@ -32,7 +32,7 @@ trait TelegramMessageReceiverAndSenderComponent extends MessageReceiverComponent
     with UserDataStorageComponent
     with DailyNotificationHandlerComponent
     with PriceCacheComponent
-    with ApiKeys =>
+    with AppConfig =>
 
   val tg = new TelegramMessageReceiverAndSender
   val messageReceiver: MessageReceiver = tg
@@ -54,11 +54,11 @@ trait TelegramMessageReceiverAndSenderComponent extends MessageReceiverComponent
     override val token: String = getKey("StockMonitor.Telegram.apitoken")
     override val port: Int = getKey("StockMonitor.Telegram.port").toInt
     override val webhookUrl: String = getKey("StockMonitor.Telegram.url")
-    val defaultTimeZone: ZoneId = ZoneId.of("+3")
-
-    logger.info("starting telegram bot")
+    private val defaultTimeZone: ZoneId = ZoneId.of(getKey("StockMonitor.defaultTimezone"))
 
     private val activeUsers = new ConcurrentHashMap[Long, ActorRef]()
+
+    logger.info("starting telegram bot")
 
     onCommand("/start") {
       implicit msg =>
@@ -97,12 +97,13 @@ trait TelegramMessageReceiverAndSenderComponent extends MessageReceiverComponent
           user <- Option(activeUsers.get(message.chat.id))
           messageData <- msg.data
         } messageData.split("_", 3) match {
-          case Array(callbackType, userId, message) =>
-            user ! IncomingCallback(callbackType, IncomingCallbackMessage(userId, message))
+          case Array(callbackType, userId, text) =>
+            user ! IncomingCallback(callbackType, IncomingCallbackMessage(userId, text))
           case _ =>
             logger.warn(s"Callback not matched. $messageData")
         }
         ackCallback()(msg)
+        ()
     }
 
     override def apply(message: SendMessage): Unit =

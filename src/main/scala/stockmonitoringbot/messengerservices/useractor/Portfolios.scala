@@ -3,7 +3,6 @@ package stockmonitoringbot.messengerservices.useractor
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 
-import akka.actor.Actor
 import akka.actor.Actor.Receive
 import stockmonitoringbot.datastorage.models._
 import stockmonitoringbot.messengerservices.markups.{Buttons, GeneralMarkups, GeneralTexts}
@@ -133,7 +132,7 @@ trait Portfolios {
     }
   }
 
-  def createNewPortfolio(name: String, currency: String) = {
+  def createNewPortfolio(name: String, currency: String): Unit = {
     userDataStorage.addPortfolio(Portfolio(userId, name, Currency.define(currency), Map.empty)).onComplete {
       case Success(_) =>
         sendMessageToUser(GeneralTexts.INPUT_PORTFOLIO_CREATED(name, currency))
@@ -187,6 +186,9 @@ trait Portfolios {
       userDataStorage.deletePortfolio(userId, portfolio.name).onComplete {
         case Success(_) =>
           printPortfolios()
+        case Failure(e) =>
+          logger.error("Can't delete portfolio", e)
+          printPortfolios()
       }
       context become waitForPortfolioName
     case IncomingMessage(Buttons.notifications) =>
@@ -211,11 +213,10 @@ trait Portfolios {
         case Success(_) =>
           sendMessageToUser(GeneralTexts.INPUT_PORTFOLIO_NAME_EXISTS)
           self ! SetBehavior(waitForPortfolioName)
-        case _ => {
+        case _ =>
           sendMessageToUser(GeneralTexts.INPUT_PORTFOLIO_CURRENCY(name))
           sendInlineMessageToUser(GeneralTexts.INPUT_PORTFOLIO_CURRENCY_LIST, GeneralMarkups.portfolioCurrencySwitch(userId))
           self ! SetBehavior(waitForPortfolioCurrency(name))
-        }
       }
       context become waitForNewBehavior()
     case _ => sendMessageToUser(GeneralTexts.INPUT_PORTFOLIO_NAME_INVALID)

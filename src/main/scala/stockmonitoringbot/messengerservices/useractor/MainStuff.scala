@@ -55,7 +55,7 @@ trait MainStuff {
   //NEW TRIGGER
   //callback should send SetBehavior message to self to take control back
   def addTriggerNotification(assetType: AssetType, callBack: => Unit): Unit = {
-    messageHideKeyboard(GeneralTexts.TRIGGER_TYPE)
+    sendMessageToUser(GeneralTexts.TRIGGER_TYPE, GeneralMarkups.onlyBack)
     sendInlineMessageToUser(GeneralTexts.TRIGGER_TYPE_MORE, GeneralMarkups.generateTriggerOptions(userId))
     context become waitForTriggerType(assetType, callBack)
   }
@@ -63,8 +63,11 @@ trait MainStuff {
   private def waitForTriggerType(assetType: AssetType, callBack: => Unit): Receive = {
     case IncomingCallback(CallbackTypes.triggerSetType, x) =>
       val nType = TriggerNotificationType.define(x.message)
-      sendMessageToUser(GeneralTexts.TRIGGER_BOUND)
+      sendMessageToUser(GeneralTexts.TRIGGER_BOUND, GeneralMarkups.onlyBack)
       context become waitForTriggerBound(assetType, nType, callBack)
+    case IncomingMessage(Buttons.back) =>
+      context become waitForNewBehavior()
+      callBack
   }
 
   private def waitForTriggerBound(assetType: AssetType, nType: TriggerNotificationType, callBack: => Unit): Receive = {
@@ -84,6 +87,9 @@ trait MainStuff {
           callBack
       }
       context become waitForNewBehavior()
+    case IncomingMessage(Buttons.back) =>
+      context become waitForNewBehavior()
+      callBack
     case IncomingMessage(_) =>
       sendMessageToUser(GeneralTexts.TRIGGER_ADD_ERROR)
       context become waitForNewBehavior()
@@ -98,7 +104,7 @@ trait MainStuff {
     val infoF = for (not <- notF; user <- userF) yield (not, user.get)
     infoF onComplete {
       case Success((notification, user)) =>
-        messageHideKeyboard(GeneralTexts.DAILY_NOTIFICATION_ADD_INFO_INTRO(assetType, user))
+        sendMessageToUser(GeneralTexts.DAILY_NOTIFICATION_ADD_INFO_INTRO(assetType, user), GeneralMarkups.onlyBack)
         sendInlineMessageToUser(
           GeneralTexts.DAILY_NOTIFICATION_ADD_INFO(notification, user),
           GeneralMarkups.generateDailyNotificationOptions(userId)
@@ -135,11 +141,12 @@ trait MainStuff {
   }
 
   def clearNotification(userId: Long, assetType: AssetType): Future[Unit] = {
-    for {userNotOpt <- userDataStorage.getUserNotification(userId, assetType)
-    } yield for {userNot <- userNotOpt
-                 _ = dailyNotification.deleteDailyNotification(userNot)
-    } yield for {_ <- userDataStorage.deleteDailyNotification(userNot)
-    } yield ()
+    userDataStorage.getUserNotification(userId, assetType).flatMap { userNotOpt =>
+      userNotOpt.fold(Future.successful(())) { not =>
+        dailyNotification.deleteDailyNotification(not)
+        userDataStorage.deleteDailyNotification(not)
+      }
+    }
   }
 
   private def waitForNotificationTime(assetType: AssetType, user: User, callBack: => Unit): Receive = {
@@ -162,6 +169,9 @@ trait MainStuff {
         }
         context become waitForNewBehavior()
     }
+    case IncomingMessage(Buttons.back) =>
+      context become waitForNewBehavior()
+      callBack
     case IncomingMessage(time) =>
       setNotification(userId, assetType, time, user).onComplete {
         case Success(()) => callBack

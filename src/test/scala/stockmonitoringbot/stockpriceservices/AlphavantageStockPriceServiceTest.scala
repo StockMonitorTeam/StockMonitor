@@ -5,7 +5,8 @@ import org.scalamock.scalatest.MockFactory
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.{FlatSpec, Matchers}
 import stockmonitoringbot.stockpriceservices.exceptions.ServerResponseException
-import stockmonitoringbot.{ActorSystemComponentImpl, ApiKeys, ExecutionContextImpl}
+import stockmonitoringbot.stockpriceservices.models.{BaseStockInfo, CurrencyExchangeRateInfo, DetailedStockInfo, StockInfo}
+import stockmonitoringbot.{ActorSystemComponentImpl, AppConfig, ExecutionContextImpl}
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
@@ -19,7 +20,7 @@ class AlphavantageStockPriceServiceTest extends FlatSpec with Matchers with Scal
 
   val apiKey = "123"
 
-  trait ApiKeysMock extends ApiKeys {
+  trait AppConfigMock extends AppConfig {
     override def getKey(keyPath: String): String = apiKey
   }
 
@@ -27,7 +28,7 @@ class AlphavantageStockPriceServiceTest extends FlatSpec with Matchers with Scal
     with ActorSystemComponentImpl
     with ExecutionContextImpl
     with HttpRequestExecutor
-    with ApiKeysMock {
+    with AppConfigMock {
     implicit val patienceConfig: PatienceConfig = PatienceConfig(1 second, 20 millis)
     override val executeRequest = mockFunction[HttpRequest, Future[HttpResponse]]
   }

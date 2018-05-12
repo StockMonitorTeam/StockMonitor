@@ -5,6 +5,7 @@ import org.scalatest.{FlatSpec, Matchers}
 import org.scalatest.concurrent.ScalaFutures
 import stockmonitoringbot.{ActorSystemComponentImpl, ExecutionContextImpl}
 import stockmonitoringbot.stockpriceservices._
+import stockmonitoringbot.stockpriceservices.models.{BaseStockInfo, CurrencyExchangeRateInfo}
 
 import scala.concurrent.Future
 import scala.concurrent.duration._

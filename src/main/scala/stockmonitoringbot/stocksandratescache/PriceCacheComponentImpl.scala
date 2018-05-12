@@ -3,7 +3,8 @@ package stockmonitoringbot.stocksandratescache
 import java.util.concurrent.ConcurrentHashMap
 
 import stockmonitoringbot.ExecutionContextComponent
-import stockmonitoringbot.stockpriceservices.{CurrencyExchangeRateInfo, StockInfo, StockPriceServiceComponent}
+import stockmonitoringbot.stockpriceservices.StockPriceServiceComponent
+import stockmonitoringbot.stockpriceservices.models.{CurrencyExchangeRateInfo, StockInfo}
 
 import scala.collection.JavaConverters._
 import scala.concurrent.Future

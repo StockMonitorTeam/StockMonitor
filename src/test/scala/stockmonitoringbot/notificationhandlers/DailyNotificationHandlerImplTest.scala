@@ -9,7 +9,8 @@ import org.scalatest.{FlatSpec, Matchers}
 import stockmonitoringbot.datastorage.models._
 import stockmonitoringbot.datastorage.{UserDataStorage, UserDataStorageComponent}
 import stockmonitoringbot.messengerservices.MessageSenderComponent
-import stockmonitoringbot.stockpriceservices.{BaseStockInfo, CurrencyExchangeRateInfo, parseZonedDateTime}
+import stockmonitoringbot.stockpriceservices.models.{BaseStockInfo, CurrencyExchangeRateInfo}
+import stockmonitoringbot.stockpriceservices.parseZonedDateTime
 import stockmonitoringbot.stocksandratescache.{PriceCache, PriceCacheComponent}
 import stockmonitoringbot.{ActorSystemComponentImpl, ExecutionContextImpl}
 

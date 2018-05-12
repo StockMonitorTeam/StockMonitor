@@ -28,11 +28,11 @@ package object stockmonitoringbot {
     override implicit lazy val executionContext: ExecutionContext = system.dispatcher
   }
 
-  trait ApiKeys {
+  trait AppConfig {
     def getKey(keyPath: String): String
   }
 
-  trait ApiKeysImpl extends ApiKeys {
+  trait AppConfigImpl extends AppConfig {
     private lazy val config = ConfigFactory.load()
 
     def getKey(keyPath: String): String = config.getString(keyPath)
