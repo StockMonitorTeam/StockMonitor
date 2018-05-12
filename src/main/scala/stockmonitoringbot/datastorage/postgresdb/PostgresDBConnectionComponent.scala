@@ -7,9 +7,9 @@ import slick.jdbc.PostgresProfile.api._
   * Created by amir.
   */
 trait PostgresDBConnectionComponent {
-  val DBConnection: PostgresProfile.backend.Database
+  val dbConnection: PostgresProfile.backend.Database
 }
 
 trait PostgresDBConnectionComponentImpl extends PostgresDBConnectionComponent {
-  override lazy val DBConnection = Database.forConfig("StockMonitor.postgresDB")
+  override lazy val dbConnection = Database.forConfig("StockMonitor.postgresDB")
 }
