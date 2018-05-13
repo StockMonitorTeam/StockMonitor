@@ -12,6 +12,8 @@ trait UserDataStorageComponent {
 }
 
 trait UserDataStorage {
+
+  def getAllDailyNotifications: Future[Seq[DailyNotification]]
   def getUsersDailyNotifications(userId: Long): Future[Seq[DailyNotification]]
   def addDailyNotification(notification: DailyNotification): Future[Unit]
   def deleteDailyNotification(notificationId: Long): Future[Unit]
@@ -35,6 +37,7 @@ trait UserDataStorage {
   //actions with trigger notifications on specified asset
   def getUserTriggerNotificationOnAsset(userId: Long, assetType: AssetType): Future[Seq[TriggerNotification]]
 
+  def getAllUsers: Future[Seq[User]]
   def getUser(userId: Long): Future[Option[User]]
   def setUser(user: User): Future[Unit]
 

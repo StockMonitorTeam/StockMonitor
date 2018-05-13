@@ -24,11 +24,11 @@ object Main extends App {
     with ExecutionContextImpl
     with ActorSystemComponentImpl
     with AppConfigImpl {
-    def start(): Future[Unit] =
-      userDataStorage.initDB().map { _ =>
-        messageReceiver.startReceiving()
-        triggerNotificationHandler.start()
-      }
+    def start(): Future[Unit] = for {
+      _ <- userDataStorage.initDB()
+      _ <- dailyNotificationHandler.init().zip(messageReceiver.startReceiving())
+      _ = triggerNotificationHandler.start()
+    } yield ()
   }
   bot.start()
 }

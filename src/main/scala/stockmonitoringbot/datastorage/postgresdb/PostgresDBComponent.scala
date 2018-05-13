@@ -38,6 +38,9 @@ trait PostgresDBComponent extends UserDataStorageComponent {
       initFut.map(_ => ())
     }
 
+    override def getAllDailyNotifications: Future[Seq[DailyNotification]] =
+      dbConnection.run(getAllDailyNotificationsSQL)
+
     override def getUsersDailyNotifications(userId: Long): Future[Seq[DailyNotification]] =
       dbConnection.run(getUsersDailyNotificationsSQL(userId))
 
@@ -157,6 +160,8 @@ trait PostgresDBComponent extends UserDataStorageComponent {
       dbConnection.run(getUserTriggerNotificationsOnAssetSQL(userId, t, name)).map(seq => seq)
     }
 
+    override def getAllUsers: Future[Seq[User]] =
+      dbConnection.run(getUsersSQL)
     override def getUser(userId: Long): Future[Option[User]] =
       dbConnection.run(getUserSQL(userId)).map(_.headOption)
     override def setUser(user: User): Future[Unit] =

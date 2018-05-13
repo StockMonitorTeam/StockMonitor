@@ -16,6 +16,7 @@ import stockmonitoringbot.{ActorSystemComponent, ExecutionContextComponent}
 import scala.concurrent.Future
 import scala.concurrent.duration._
 import scala.language.postfixOps
+import scala.util.{Failure, Success}
 
 /**
   * Created by amir.
@@ -76,6 +77,20 @@ trait DailyNotificationHandlerComponentImpl extends DailyNotificationHandlerComp
 
     def deleteDailyNotification(id: Long): Unit = {
       Option(notifications.remove(id)).foreach(_.cancel())
+    }
+
+    def init(): Future[Unit] = {
+      val initFuture = userDataStorage.getAllDailyNotifications.map { notifications =>
+        notifications.foreach(notification => addDailyNotification(notification))
+        notifications.size
+      }
+      initFuture.onComplete {
+        case Success(n) =>
+          logger.info(s"loaded $n daily notifications into scheduler")
+        case Failure(e) =>
+          logger.error("Can't init DailyNotificationHandler", e)
+      }
+      initFuture.map(_ => ())
     }
 
   }

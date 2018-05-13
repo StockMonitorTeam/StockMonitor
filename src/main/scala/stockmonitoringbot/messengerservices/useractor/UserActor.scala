@@ -6,6 +6,7 @@ import com.typesafe.scalalogging.Logger
 import stockmonitoringbot.datastorage._
 import stockmonitoringbot.messengerservices.MessageSenderComponent.MessageSender
 import stockmonitoringbot.messengerservices.markups.{Buttons, GeneralMarkups, GeneralTexts}
+import stockmonitoringbot.messengerservices.useractor.UserActor.{NewUser, RestartingUser, UserType}
 import stockmonitoringbot.notificationhandlers.DailyNotificationHandler
 import stockmonitoringbot.stocksandratescache.PriceCache
 
@@ -15,6 +16,7 @@ import scala.concurrent.ExecutionContextExecutor
   * Created by amir.
   */
 class UserActor(val userId: Long,
+                val userType: UserType,
                 val messageSender: MessageSender,
                 val userDataStorage: UserDataStorage,
                 val dailyNotification: DailyNotificationHandler,
@@ -32,10 +34,16 @@ class UserActor(val userId: Long,
   import UserActor._
 
   override def preStart(): Unit = {
-    sendMessageToUser(GeneralTexts.INTRO_MESSAGE, GeneralMarkups.startMenuMarkup)
+    userType match {
+      case NewUser => sendMessageToUser(GeneralTexts.INTRO_MESSAGE, GeneralMarkups.startMenuMarkup)
+      case RestartingUser => ()
+    }
   }
 
-  override def receive: Receive = mainMenu
+  override def receive: Receive = userType match {
+    case NewUser => mainMenu
+    case RestartingUser => waitForAnyMessage
+  }
 
   override def becomeMainMenu(): Unit = {
     sendMessageToUser(GeneralTexts.MAIN_MENU_GREETING, GeneralMarkups.startMenuMarkup)
@@ -55,11 +63,16 @@ class UserActor(val userId: Long,
       becomeSettingsMainMenu()
   }
 
+  def waitForAnyMessage: Receive = {
+    case _ =>
+      becomeMainMenu()
+  }
+
 }
 
 object UserActor {
-  def props(id: Long, messageSender: MessageSender, userDataStorage: UserDataStorage, dailyNotificationHandler: DailyNotificationHandler, cache: PriceCache): Props =
-    Props(new UserActor(id, messageSender, userDataStorage, dailyNotificationHandler, cache))
+  def props(id: Long, userType: UserType, messageSender: MessageSender, userDataStorage: UserDataStorage, dailyNotificationHandler: DailyNotificationHandler, cache: PriceCache): Props =
+    Props(new UserActor(id, userType, messageSender, userDataStorage, dailyNotificationHandler, cache))
 
   case class IncomingMessage(message: String)
   case class IncomingCallback(handler: String, message: IncomingCallbackMessage)
@@ -76,5 +89,9 @@ object UserActor {
     val deleteDailyNot = "DDN"
     val choseCurrency = "CCY"
   }
+
+  sealed trait UserType
+  case object NewUser extends UserType
+  case object RestartingUser extends UserType
 
 }

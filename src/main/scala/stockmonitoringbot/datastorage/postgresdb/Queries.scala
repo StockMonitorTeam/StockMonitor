@@ -24,6 +24,8 @@ object Queries extends Schema {
   import Schema._
   import CompiledQueries._
 
+  def getAllDailyNotificationsSQL: DBIO[Seq[DailyNotification]] =
+    dailyNotifications.result
   def getUsersDailyNotificationsSQL(userId: Long): DBIO[Seq[DailyNotification]] =
     getUsersDailyNotificationsCompiledSQL(userId).result
   def addDailyNotificationSQL(notification: DailyNotification): DBIO[Int] =
@@ -62,6 +64,7 @@ object Queries extends Schema {
   def getUserTriggerNotificationsOnAssetSQL(userId: Long, assetType: AssetType, name: String): DBIO[Seq[TriggerNotification]] =
     getUserTriggerNotificationsOnAssetCompiledSQL((userId, assetType, name)).result
 
+  def getUsersSQL: DBIO[Seq[User]] = users.result
   def getUserSQL(userId: Long): DBIO[Seq[User]] = getUserCompiledSQL(userId).result
   def setUserSQL(user: User): DBIO[Int] = users.insertOrUpdate(user)
 
