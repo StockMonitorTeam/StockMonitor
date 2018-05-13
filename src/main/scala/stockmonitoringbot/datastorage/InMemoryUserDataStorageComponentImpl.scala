@@ -33,11 +33,13 @@ trait InMemoryUserDataStorageComponentImpl extends UserDataStorageComponent {
         )
         ()
       }
-    override def deleteDailyNotification(notification: DailyNotification): Future[Unit] =
+    override def deleteDailyNotification(id: Long): Future[Unit] =
       Future.successful {
-        usersDailyNotifications.compute(notification.ownerId,
-          (_, notifications) => setOrEmptySet(notifications) - notification
-        )
+        usersDailyNotifications.forEachKey(10, { userId =>
+          usersDailyNotifications.compute(userId, (_, notifications) =>
+            setOrEmptySet(notifications).filterNot(_.id == id))
+          ()
+        })
         ()
       }
 
@@ -50,11 +52,13 @@ trait InMemoryUserDataStorageComponentImpl extends UserDataStorageComponent {
         )
         ()
       }
-    override def deleteTriggerNotification(notification: TriggerNotification): Future[Unit] =
+    override def deleteTriggerNotification(id: Long): Future[Unit] =
       Future.successful {
-        usersTriggerNotifications.compute(notification.ownerId,
-          (_, notifications) => setOrEmptySet(notifications) - notification
-        )
+        usersTriggerNotifications.forEachKey(10, { userId =>
+          usersTriggerNotifications.compute(userId, (_, notifications) =>
+            setOrEmptySet(notifications).filterNot(_.id == id))
+          ()
+        })
         ()
       }
 

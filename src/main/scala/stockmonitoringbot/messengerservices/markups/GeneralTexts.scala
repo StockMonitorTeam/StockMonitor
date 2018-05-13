@@ -250,8 +250,6 @@ object GeneralTexts {
 
   val TRIGGER_ADD_ERROR = "Триггер успешно установлен"
 
-  val PORTFOLIO_TRIGGER_REMOVED = (name: String) => s"Триггер ${name} успешно удалён"
-
   val TRIGGER_REMOVED = s"Триггер успешно удалён"
 
   val DAILY_NOTIFICATION_REMOVED = s"Триггер успешно удалён"
@@ -275,13 +273,13 @@ object GeneralTexts {
   }
 
   val TRIGGER_MESSAGE = (notification: TriggerNotification, price: BigDecimal) => notification match {
-    case StockTriggerNotification(_, stock, bound, notificationType) =>
+    case StockTriggerNotification(_, _, stock, bound, notificationType) =>
       val msg = TRIGGER_MESSAGE_BOUND(notificationType, bound)
       s"Сработало триггер оповещение! Стоимость $stock $msg. Текущая цена $price"
-    case ExchangeRateTriggerNotification(_, (from, to), bound, notificationType) =>
+    case ExchangeRateTriggerNotification(_, _, (from, to), bound, notificationType) =>
       val msg = TRIGGER_MESSAGE_BOUND(notificationType, bound)
       s"Сработало триггер оповещение! Цена валютной пары $from/$to $msg. Текущая цена: $price"
-    case PortfolioTriggerNotification(_, portfolioName, bound, notificationType) =>
+    case PortfolioTriggerNotification(_, _, portfolioName, bound, notificationType) =>
       val msg = TRIGGER_MESSAGE_BOUND(notificationType, bound)
       s"Сработало триггер оповещение! Стоимость портеля «$portfolioName» $msg. Текущая цена: $price"
   }

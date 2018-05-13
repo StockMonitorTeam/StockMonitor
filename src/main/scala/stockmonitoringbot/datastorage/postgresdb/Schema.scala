@@ -30,28 +30,29 @@ trait Schema {
   }
 
   class DailyNotifications(tag: Tag) extends Table[DailyNotification](tag, "DAILY_NOTIFICATIONS") {
+    def dailyNotId = column[Long]("DAILY_NOT_ID", O.PrimaryKey, O.AutoInc)
     def userId = column[Long]("USER_ID")
     def assetType = column[AssetType]("TYPE")
     def assetName = column[String]("ASSET_NAME")
     def time = column[LocalTime]("ALERT_TIME")
 
-    def * = (userId, assetType, assetName, time) <>
+    def * = (dailyNotId, userId, assetType, assetName, time) <>
       (mapRowToDailyNotification, unapplyDailyNotification)
     def userFK = foreignKey("USER_FK", userId, users)(_.id, onDelete = ForeignKeyAction.Cascade)
-    def PK = primaryKey("PK", (userId, assetType, assetName))
+    def uniqueForAsset = index("ONE_NOT_FOR_ASSET", (userId, assetType, assetName), unique = true)
   }
 
   class TriggerNotifications(tag: Tag) extends Table[TriggerNotification](tag, "TRIGGER_NOTIFICATIONS") {
+    def triggerNotId = column[Long]("TRIGGER_NOT_ID", O.PrimaryKey, O.AutoInc)
     def userId = column[Long]("USER_ID")
     def assetType = column[AssetType]("TYPE")
     def assetName = column[String]("ASSET_NAME")
     def bound = column[BigDecimal]("BOUND")
     def boundType = column[TriggerNotificationType]("BOUND_TYPE")
 
-    def * = (userId, assetType, assetName, bound, boundType) <>
+    def * = (triggerNotId, userId, assetType, assetName, bound, boundType) <>
       (mapRowToTriggerNotification, unapplyTriggerNotification)
     def userFK = foreignKey("USER_FK", userId, users)(_.id, onDelete = ForeignKeyAction.Cascade)
-    def PK = primaryKey("PK", (userId, assetType, assetName, bound, boundType))
   }
 
   class Portfolios(tag: Tag) extends Table[Portfolio](tag, "PORTFOLIOS") {
@@ -71,7 +72,7 @@ trait Schema {
 
     def * = (portfolioId, stockName, amount)
     def portfolioFK = foreignKey("PORTFOLIO_FK", portfolioId, portfolios)(_.portfolioId, onDelete = ForeignKeyAction.Cascade)
-    def PK = primaryKey("PK", (portfolioId, stockName))
+    def PK = primaryKey("STOCKS_PK", (portfolioId, stockName))
   }
 
 }
@@ -122,36 +123,36 @@ object Schema {
     case x: PortfolioNotification => (x.portfolioName, Portfolio)
   }
 
-  private def mapRowToTriggerNotification(row: (Long, Schema.AssetType, String, BigDecimal, TriggerNotificationType)): TriggerNotification = {
-    val (userId, assetType, assetName, bound, boundType) = row
+  private def mapRowToTriggerNotification(row: (Long, Long, Schema.AssetType, String, BigDecimal, TriggerNotificationType)): TriggerNotification = {
+    val (notificationId, userId, assetType, assetName, bound, boundType) = row
     assetType match {
-      case Stock => StockTriggerNotification(userId, assetName, bound, boundType)
+      case Stock => StockTriggerNotification(notificationId, userId, assetName, bound, boundType)
       case ExchangeRate =>
         val curr = assetName.split("/")
-        ExchangeRateTriggerNotification(userId, (curr(0), curr(1)), bound, boundType)
-      case Portfolio => PortfolioTriggerNotification(userId, assetName, bound, boundType)
+        ExchangeRateTriggerNotification(notificationId, userId, (curr(0), curr(1)), bound, boundType)
+      case Portfolio => PortfolioTriggerNotification(notificationId, userId, assetName, bound, boundType)
     }
   }
 
   private def unapplyTriggerNotification(n: TriggerNotification) = {
     val (name, t) = getNameAndAssetType(n)
-    Some((n.ownerId, t, name, n.boundPrice, n.notificationType))
+    Some((n.id, n.ownerId, t, name, n.boundPrice, n.notificationType))
   }
 
-  private def mapRowToDailyNotification(row: (Long, Schema.AssetType, String, LocalTime)): DailyNotification = {
-    val (userId, assetType, assetName, time) = row
+  private def mapRowToDailyNotification(row: (Long, Long, Schema.AssetType, String, LocalTime)): DailyNotification = {
+    val (notificationId, userId, assetType, assetName, time) = row
     assetType match {
-      case Stock => StockDailyNotification(userId, assetName, time)
+      case Stock => StockDailyNotification(notificationId, userId, assetName, time)
       case ExchangeRate =>
         val curr = assetName.split("/")
-        ExchangeRateDailyNotification(userId, (curr(0), curr(1)), time)
-      case Portfolio => PortfolioDailyNotification(userId, assetName, time)
+        ExchangeRateDailyNotification(notificationId, userId, (curr(0), curr(1)), time)
+      case Portfolio => PortfolioDailyNotification(notificationId, userId, assetName, time)
     }
   }
 
   private def unapplyDailyNotification(n: DailyNotification) = {
     val (name, t) = getNameAndAssetType(n)
-    Some((n.ownerId, t, name, n.time))
+    Some((n.id, n.ownerId, t, name, n.time))
   }
 
   private def mapRowToPortfolio(row: (Long, Long, String, Currency)): Portfolio = {

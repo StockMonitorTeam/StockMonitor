@@ -5,34 +5,40 @@ import java.time.LocalTime
 /**
   * Created by amir.
   */
-case class PortfolioDailyNotification(ownerId: Long,
+case class PortfolioDailyNotification(id: Long,
+                                      ownerId: Long,
                                       portfolioName: String,
                                       time: LocalTime
                                      ) extends PortfolioNotification with DailyNotification
 
-case class ExchangeRateDailyNotification(ownerId: Long,
+case class ExchangeRateDailyNotification(id: Long,
+                                         ownerId: Long,
                                          exchangePair: (String, String),
                                          time: LocalTime
                                         ) extends ExchangeRateNotification with DailyNotification
 
-case class StockDailyNotification(ownerId: Long,
+case class StockDailyNotification(id: Long,
+                                  ownerId: Long,
                                   stock: String,
                                   time: LocalTime
                                  ) extends StockNotification with DailyNotification
 
-case class PortfolioTriggerNotification(ownerId: Long,
+case class PortfolioTriggerNotification(id: Long,
+                                        ownerId: Long,
                                         portfolioName: String,
                                         boundPrice: BigDecimal,
                                         notificationType: TriggerNotificationType
                                        ) extends PortfolioNotification with TriggerNotification
 
-case class ExchangeRateTriggerNotification(ownerId: Long,
+case class ExchangeRateTriggerNotification(id: Long,
+                                           ownerId: Long,
                                            exchangePair: (String, String),
                                            boundPrice: BigDecimal,
                                            notificationType: TriggerNotificationType
                                           ) extends ExchangeRateNotification with TriggerNotification
 
-case class StockTriggerNotification(ownerId: Long,
+case class StockTriggerNotification(id: Long,
+                                    ownerId: Long,
                                     stock: String,
                                     boundPrice: BigDecimal,
                                     notificationType: TriggerNotificationType

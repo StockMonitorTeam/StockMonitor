@@ -74,9 +74,9 @@ trait MainStuff {
     case IncomingMessage(floatAmount(bound)) =>
       val boundPrice = BigDecimal(bound)
       val notification = assetType match {
-        case PortfolioAsset(name) => PortfolioTriggerNotification(userId, name, boundPrice, nType)
-        case StockAsset(name) => StockTriggerNotification(userId, name, boundPrice, nType)
-        case ExchangeRateAsset(from, to) => ExchangeRateTriggerNotification(userId, (from, to), boundPrice, nType)
+        case PortfolioAsset(name) => PortfolioTriggerNotification(0, userId, name, boundPrice, nType)
+        case StockAsset(name) => StockTriggerNotification(0, userId, name, boundPrice, nType)
+        case ExchangeRateAsset(from, to) => ExchangeRateTriggerNotification(0, userId, (from, to), boundPrice, nType)
       }
       userDataStorage.addTriggerNotification(notification).onComplete {
         case Success(_) =>
@@ -122,9 +122,9 @@ trait MainStuff {
     val localTime: LocalTime = LocalTime.parse(time, DateTimeFormatter.ofPattern("H:mm"))
     val utcTime = getTimeInUTC(localTime, user.timeZone)
     val notification = assetType match {
-      case PortfolioAsset(name) => PortfolioDailyNotification(userId, name, utcTime)
-      case StockAsset(name) => StockDailyNotification(userId, name, utcTime)
-      case ExchangeRateAsset(from, to) => ExchangeRateDailyNotification(userId, (from, to), utcTime)
+      case PortfolioAsset(name) => PortfolioDailyNotification(0, userId, name, utcTime)
+      case StockAsset(name) => StockDailyNotification(0, userId, name, utcTime)
+      case ExchangeRateAsset(from, to) => ExchangeRateDailyNotification(0, userId, (from, to), utcTime)
     }
     val task = for {_ <- clearNotification(userId, assetType)
                     _ = dailyNotification.addDailyNotification(notification)
@@ -143,8 +143,8 @@ trait MainStuff {
   def clearNotification(userId: Long, assetType: AssetType): Future[Unit] = {
     for {userNotOpt <- userDataStorage.getUserNotificationOnAsset(userId, assetType)
     } yield for {userNot <- userNotOpt
-                 _ = dailyNotification.deleteDailyNotification(userNot)
-    } yield for {_ <- userDataStorage.deleteDailyNotification(userNot)
+                 _ = dailyNotification.deleteDailyNotification(userNot.id)
+    } yield for {_ <- userDataStorage.deleteDailyNotification(userNot.id)
     } yield ()
   }
 

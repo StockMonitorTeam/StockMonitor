@@ -14,11 +14,11 @@ trait UserDataStorageComponent {
 trait UserDataStorage {
   def getUsersDailyNotifications(userId: Long): Future[Seq[DailyNotification]]
   def addDailyNotification(notification: DailyNotification): Future[Unit]
-  def deleteDailyNotification(notification: DailyNotification): Future[Unit]
+  def deleteDailyNotification(notificationId: Long): Future[Unit]
 
   def getUsersTriggerNotifications(userId: Long): Future[Seq[TriggerNotification]]
   def addTriggerNotification(notification: TriggerNotification): Future[Unit]
-  def deleteTriggerNotification(notification: TriggerNotification): Future[Unit]
+  def deleteTriggerNotification(notificationId: Long): Future[Unit]
 
   def getAllTriggerNotifications: Future[Iterable[TriggerNotification]]
 

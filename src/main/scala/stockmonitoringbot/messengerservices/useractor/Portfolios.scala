@@ -10,7 +10,7 @@ import stockmonitoringbot.messengerservices.useractor.UserActor.{CallbackTypes, 
 import stockmonitoringbot.notificationhandlers.{getPortfolioCurrentPrice, getPortfolioStocksPrice}
 
 import scala.util.matching.Regex
-import scala.util.{Failure, Success}
+import scala.util.{Failure, Success, Try}
 
 /**
   * Created by amir.
@@ -111,8 +111,8 @@ trait Portfolios {
   def clearPortfolioNotification(userId: Long, portfolio: Portfolio): Unit = {
     userDataStorage.getUserNotificationOnAsset(userId, PortfolioAsset(portfolio.name)).onComplete {
       case Success(Some(x)) =>
-        dailyNotification.deleteDailyNotification(x)
-        userDataStorage.deleteDailyNotification(x)
+        dailyNotification.deleteDailyNotification(x.id)
+        userDataStorage.deleteDailyNotification(x.id)
       case _ =>
     }
   }
@@ -120,7 +120,7 @@ trait Portfolios {
   def setPortfolioNotification(userId: Long, portfolio: Portfolio, time: String): Unit = {
     try {
       val localTime: LocalTime = LocalTime.parse(time, DateTimeFormatter.ofPattern("H:mm"))
-      val notification = PortfolioDailyNotification(userId, portfolio.name, localTime)
+      val notification = PortfolioDailyNotification(0, userId, portfolio.name, localTime)
 
       clearPortfolioNotification(userId, portfolio)
       dailyNotification.addDailyNotification(notification)
@@ -161,14 +161,20 @@ trait Portfolios {
       printPortfolio(portfolio.name)
       context become waitForNewBehavior()
     case IncomingCallback(CallbackTypes.portfolioDeleteTrigger, message) =>
-      message.message.split(" - ", 2) match {
-        case Array(notificationType, boundPrice) =>
-          val notification = PortfolioTriggerNotification(userId, portfolio.name, BigDecimal(boundPrice), TriggerNotificationType.define(notificationType))
-          userDataStorage.deleteTriggerNotification(notification)
-          sendMessageToUser(GeneralTexts.PORTFOLIO_TRIGGER_REMOVED(message.message))
+      Try(message.message.toLong) match {
+        case Success(id) =>
+          userDataStorage.deleteTriggerNotification(id).onComplete {
+            case Success(()) =>
+              sendMessageToUser(GeneralTexts.TRIGGER_REMOVED)
+            case Failure(e) =>
+              sendMessageToUser(GeneralTexts.ERROR)
+              logger.error("Can't delete daily notification", e)
+          }
         case _ =>
           sendMessageToUser(GeneralTexts.ERROR)
       }
+    case _ =>
+      sendMessageToUser(GeneralTexts.ERROR)
   }
 
   def portfolioMenu(portfolio: Portfolio): Receive = common orElse {

@@ -6,6 +6,7 @@ import java.time.LocalTime
   * Created by amir.
   */
 trait Notification {
+  val id: Long
   val ownerId: Long
 }
 

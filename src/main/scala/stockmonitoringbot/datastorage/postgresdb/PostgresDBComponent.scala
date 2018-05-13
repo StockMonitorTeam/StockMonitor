@@ -50,10 +50,9 @@ trait PostgresDBComponent extends UserDataStorageComponent {
         }
       }
     }
-    override def deleteDailyNotification(n: DailyNotification): Future[Unit] = {
-      val (name, assetType) = Schema.getNameAndAssetType(n)
+    override def deleteDailyNotification(id: Long): Future[Unit] = {
       dbConnection.run {
-        deleteDailyNotificationSQL(n.ownerId, assetType, name).map {
+        deleteDailyNotificationSQL(id).map {
           case 0 => throw new NoSuchElementException
           case 1 => ()
           case _ => throw new IllegalStateException()
@@ -73,10 +72,9 @@ trait PostgresDBComponent extends UserDataStorageComponent {
         }
       }
     }
-    override def deleteTriggerNotification(n: TriggerNotification): Future[Unit] = {
-      val (name, assetType) = Schema.getNameAndAssetType(n)
+    override def deleteTriggerNotification(id: Long): Future[Unit] = {
       dbConnection.run {
-        deleteTriggerNotificationSQL(n.ownerId, assetType, name, n.boundPrice, n.notificationType).map {
+        deleteTriggerNotificationSQL(id).map {
           case 0 => throw new NoSuchElementException
           case 1 => ()
           case _ => throw new IllegalStateException()

@@ -12,5 +12,5 @@ trait DailyNotificationHandlerComponent {
 
 trait DailyNotificationHandler {
   def addDailyNotification(notification: DailyNotification): Unit
-  def deleteDailyNotification(notification: DailyNotification): Unit
+  def deleteDailyNotification(notificationId: Long): Unit
 }

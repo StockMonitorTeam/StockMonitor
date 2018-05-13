@@ -55,19 +55,19 @@ trait TriggerNotificationHandlerComponentImpl extends TriggerNotificationHandler
       * @return None, if notification is not triggered, Some((notification, price)), if notification is triggered, price - current price
       */
     private def isTriggered(oldCache: PriceCache, newCache: PriceCache)(notification: TriggerNotification): Future[Option[(TriggerNotification, BigDecimal)]] = notification match {
-      case StockTriggerNotification(_, stock, _, _) =>
+      case StockTriggerNotification(_, _, stock, _, _) =>
         val oldPriceFuture = oldCache.getStockInfo(stock)
         val newPriceFuture = newCache.getStockInfo(stock)
         for {oldPrice <- oldPriceFuture
              newPrice <- newPriceFuture}
           yield isTriggeredWithPrice(notification, oldPrice.price, newPrice.price)
-      case ExchangeRateTriggerNotification(_, (from, to), _, _) =>
+      case ExchangeRateTriggerNotification(_, _, (from, to), _, _) =>
         val oldRateFuture = oldCache.getExchangeRate(from, to)
         val newRateFuture = newCache.getExchangeRate(from, to)
         for {oldRate <- oldRateFuture
              newRate <- newRateFuture}
           yield isTriggeredWithPrice(notification, oldRate.rate, newRate.rate)
-      case PortfolioTriggerNotification(userId, portfolioName, _, _) =>
+      case PortfolioTriggerNotification(_, userId, portfolioName, _, _) =>
         val portfolioFuture = userDataStorage.getPortfolio(userId, portfolioName)
         val oldPriceFuture = for {portfolio <- portfolioFuture
                                   portfolioPrice <- getPortfolioCurrentPrice(portfolio, oldCache)}
@@ -107,7 +107,7 @@ trait TriggerNotificationHandlerComponentImpl extends TriggerNotificationHandler
       } yield {
         triggeredNotifications.flatten.foreach { notification =>
           messageSender(SendMessage(notification._1.ownerId, GeneralTexts.TRIGGER_MESSAGE(notification._1, notification._2)))
-          userDataStorage.deleteTriggerNotification(notification._1)
+          userDataStorage.deleteTriggerNotification(notification._1.id)
         }
         ()
       }

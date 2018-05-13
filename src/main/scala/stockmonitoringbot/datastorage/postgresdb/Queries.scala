@@ -28,16 +28,15 @@ object Queries extends Schema {
     getUsersDailyNotificationsCompiledSQL(userId).result
   def addDailyNotificationSQL(notification: DailyNotification): DBIO[Int] =
     dailyNotifications += notification
-  def deleteDailyNotificationSQL(userId: Long, assetType: AssetType, assetName: String): DBIO[Int] =
-    deleteDailyNotificationCompiledSQL((userId, assetType, assetName)).delete
+  def deleteDailyNotificationSQL(id: Long): DBIO[Int] =
+    deleteDailyNotificationCompiledSQL(id).delete
 
   def getUsersTriggerNotificationsSQL(userId: Long): DBIO[Seq[TriggerNotification]] =
     getUsersTriggerNotificationsCompiledSQL(userId).result
   def addTriggerNotificationSQL(notification: TriggerNotification): DBIO[Int] =
     triggerNotifications += notification
-  def deleteTriggerNotificationSQL(userId: Long, assetType: AssetType, assetName: String,
-                                   bound: BigDecimal, boundType: TriggerNotificationType): DBIO[Int] =
-    deleteTriggerNotificationCompiledSQL((userId, assetType, assetName, bound, boundType)).delete
+  def deleteTriggerNotificationSQL(id: Long): DBIO[Int] =
+    deleteTriggerNotificationCompiledSQL(id).delete
 
   def getAllTriggerNotificationsSQL: DBIO[Seq[TriggerNotification]] = triggerNotifications.result
 
@@ -76,18 +75,15 @@ object CompiledQueries {
     userId: Rep[Long] => dailyNotifications.filter(_.userId === userId)
   }
   val deleteDailyNotificationCompiledSQL = Compiled {
-    (userId: Rep[Long], assetType: Rep[AssetType], assetName: Rep[String]) =>
-      dailyNotifications.filter(x => x.userId === userId &&
-        x.assetType === assetType && x.assetName === assetName)
+    (id: Rep[Long]) =>
+      dailyNotifications.filter(_.dailyNotId === id)
   }
   val getUsersTriggerNotificationsCompiledSQL = Compiled {
     userId: Rep[Long] => triggerNotifications.filter(_.userId === userId)
   }
   val deleteTriggerNotificationCompiledSQL = Compiled {
-    (userId: Rep[Long], assetType: Rep[AssetType], assetName: Rep[String],
-     bound: Rep[BigDecimal], boundType: Rep[TriggerNotificationType]) =>
-      triggerNotifications.filter(x => x.userId === userId && x.assetType === assetType
-        && x.assetName === assetName && x.bound === bound && x.boundType === boundType)
+    (id: Rep[Long]) =>
+      triggerNotifications.filter(_.triggerNotId === id)
   }
 
   val deletePortfolioCompiledSQL = Compiled {

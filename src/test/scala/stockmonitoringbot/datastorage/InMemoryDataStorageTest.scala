@@ -24,14 +24,14 @@ class InMemoryDataStorageTest extends FlatSpec with Matchers with ScalaFutures {
   }
 
   "InMemoryUserDataStorage" should "store daily notifications" in new TestWiring {
-    val dailyNotification1 = PortfolioDailyNotification(0, "newPortfolio", LocalTime.of(0, 0))
-    val dailyNotification2 = PortfolioDailyNotification(0, "newPortfolio2", LocalTime.of(0, 0))
+    val dailyNotification1 = PortfolioDailyNotification(0, 0, "newPortfolio", LocalTime.of(0, 0))
+    val dailyNotification2 = PortfolioDailyNotification(1, 0, "newPortfolio2", LocalTime.of(0, 0))
     val test = for {
       _ <- userDataStorage.addDailyNotification(dailyNotification1)
       _ <- userDataStorage.addDailyNotification(dailyNotification2)
       notifications <- userDataStorage.getUsersDailyNotifications(0)
       _ = notifications should contain theSameElementsAs Seq(dailyNotification1, dailyNotification2)
-      _ <- userDataStorage.deleteDailyNotification(dailyNotification1)
+      _ <- userDataStorage.deleteDailyNotification(0)
       notifications <- userDataStorage.getUsersDailyNotifications(0)
       _ = notifications should contain theSameElementsAs Seq(dailyNotification2)
     } yield
@@ -40,14 +40,14 @@ class InMemoryDataStorageTest extends FlatSpec with Matchers with ScalaFutures {
   }
 
   "InMemoryUserDataStorage" should "store trigger notifications" in new TestWiring {
-    val triggerNotification1 = PortfolioTriggerNotification(0, "newPortfolio", 40, Raise)
-    val triggerNotification2 = PortfolioTriggerNotification(0, "newPortfolio2", 40, Raise)
+    val triggerNotification1 = PortfolioTriggerNotification(0, 0, "newPortfolio", 40, Raise)
+    val triggerNotification2 = PortfolioTriggerNotification(1, 0, "newPortfolio2", 40, Raise)
     val test = for {
       _ <- userDataStorage.addTriggerNotification(triggerNotification1)
       _ <- userDataStorage.addTriggerNotification(triggerNotification2)
       notifications <- userDataStorage.getUsersTriggerNotifications(0)
       _ = notifications should contain theSameElementsAs Seq(triggerNotification1, triggerNotification2)
-      _ <- userDataStorage.deleteTriggerNotification(triggerNotification1)
+      _ <- userDataStorage.deleteTriggerNotification(0)
       notifications <- userDataStorage.getUsersTriggerNotifications(0)
       _ = notifications should contain theSameElementsAs Seq(triggerNotification2)
     } yield
@@ -56,8 +56,8 @@ class InMemoryDataStorageTest extends FlatSpec with Matchers with ScalaFutures {
   }
 
   "InMemoryUserDataStorage" should "be able to return all trigger notifications" in new TestWiring {
-    val triggerNotification1 = PortfolioTriggerNotification(0, "newPortfolio", 40, Raise)
-    val triggerNotification2 = PortfolioTriggerNotification(1, "newPortfolio2", 40, Raise)
+    val triggerNotification1 = PortfolioTriggerNotification(0, 0, "newPortfolio", 40, Raise)
+    val triggerNotification2 = PortfolioTriggerNotification(1, 1, "newPortfolio2", 40, Raise)
     val test = for {
       _ <- userDataStorage.addTriggerNotification(triggerNotification1)
       _ <- userDataStorage.addTriggerNotification(triggerNotification2)
@@ -102,10 +102,10 @@ class InMemoryDataStorageTest extends FlatSpec with Matchers with ScalaFutures {
 
   "InMemoryUserDataStorage" should "delete notifications when deleting portfolio" in new TestWiring {
     val portfolio1 = Portfolio(0, 0, "newPortfolio", USD, Map("MSFT" -> 23, "AAPL" -> 42))
-    val triggerNotification1 = PortfolioTriggerNotification(0, "newPortfolio", 40, Raise)
-    val triggerNotification2 = PortfolioTriggerNotification(0, "newPortfolio1", 40, Raise)
-    val dailyNotification1 = PortfolioDailyNotification(0, "newPortfolio", LocalTime.of(0, 0))
-    val dailyNotification2 = PortfolioDailyNotification(0, "newPortfolio1", LocalTime.of(0, 0))
+    val triggerNotification1 = PortfolioTriggerNotification(0, 0, "newPortfolio", 40, Raise)
+    val triggerNotification2 = PortfolioTriggerNotification(1, 0, "newPortfolio1", 40, Raise)
+    val dailyNotification1 = PortfolioDailyNotification(0, 0, "newPortfolio", LocalTime.of(0, 0))
+    val dailyNotification2 = PortfolioDailyNotification(1, 0, "newPortfolio1", LocalTime.of(0, 0))
     val test = for {
       _ <- userDataStorage.addPortfolio(portfolio1)
       _ <- userDataStorage.addDailyNotification(dailyNotification1)
