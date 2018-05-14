@@ -141,7 +141,7 @@ trait MainStuff {
   }
 
   def clearNotification(userId: Long, assetType: AssetType): Future[Unit] = {
-    userDataStorage.getUserNotification(userId, assetType).flatMap { userNotOpt =>
+    userDataStorage.getUserNotificationOnAsset(userId, assetType).flatMap { userNotOpt =>
       userNotOpt.fold(Future.successful(())) { not =>
         dailyNotification.deleteDailyNotification(not.id)
         userDataStorage.deleteDailyNotification(not.id)
