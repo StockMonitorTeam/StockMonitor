@@ -33,18 +33,18 @@ trait DailyNotificationHandlerComponentImpl extends DailyNotificationHandlerComp
 
     private val logger = Logger(getClass)
 
-    private val notifications = new ConcurrentHashMap[Long, Cancellable]()
+    private val notifications = new ConcurrentHashMap[DailyNotification, Cancellable]()
 
     private def makeNotificationMessage(notification: DailyNotification): Future[String] = notification match {
-      case StockDailyNotification(_, _, stock, _) =>
+      case StockDailyNotification(_, stock, _) =>
         priceCache.getStockInfo(stock).map { stockInfo =>
           GeneralTexts.DAILY_NOTIFICATION_STOCK_INFO(stockInfo)
         }
-      case ExchangeRateDailyNotification(_, _, (from, to), _) =>
+      case ExchangeRateDailyNotification(_, (from, to), _) =>
         priceCache.getExchangeRate(from, to).map { exchangeRateInfo =>
           GeneralTexts.DAILY_NOTIFICATION_EXCHANGE_RATE_INFO(exchangeRateInfo)
         }
-      case PortfolioDailyNotification(_, userId, portfolioName, _) =>
+      case PortfolioDailyNotification(userId, portfolioName, _) =>
         for {portfolio <- userDataStorage.getPortfolio(userId, portfolioName)
              portfolioPrice <- getPortfolioCurrentPrice(portfolio, priceCache)
         } yield GeneralTexts.DAILY_NOTIFICATION_PORTFOLIO_INFO(portfolio.name, portfolioPrice)
@@ -70,7 +70,10 @@ trait DailyNotificationHandlerComponentImpl extends DailyNotificationHandlerComp
 
     def addDailyNotification(notification: DailyNotification): Unit = {
       val prev = notifications.put(notification.id,
-        system.scheduler.schedule(untilTime(notification.time), 24 hours)(notifyUser(notification)))
+        system.scheduler.schedule(untilTime(notification.time), 24 hours) {
+          notifyUser(notification)
+          ()
+        })
       Option(prev).foreach(_.cancel())
     }
 
