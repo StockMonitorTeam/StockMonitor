@@ -127,9 +127,9 @@ trait MainStuff {
       case ExchangeRateAsset(from, to) => ExchangeRateDailyNotification(0, userId, (from, to), utcTime)
     }
     val task = for {_ <- clearNotification(userId, assetType)
-                    _ = dailyNotification.addDailyNotification(notification)
-                    _ <- userDataStorage.addDailyNotification(notification)
+                    notificationWithId <- userDataStorage.addDailyNotification(notification)
     } yield {
+      dailyNotification.addDailyNotification(notificationWithId)
       sendMessageToUser(GeneralTexts.DAILY_NOTIFICATION_SET(time))
       ()
     }
