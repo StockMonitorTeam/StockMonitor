@@ -146,20 +146,6 @@ object GeneralMarkups {
     ))
   ))
 
-  def notificationToString(notification: TriggerNotification): String = {
-    val notificationType = notification.notificationType match {
-      case Raise => ">"
-      case Fall => "<"
-    }
-    //todo pattern match on stock/exchange rate/portfolio
-    s"??? $notificationType ${notification.boundPrice}"
-  }
-
-  def notificationsMarkup(notifications: Seq[TriggerNotification]): Option[ReplyKeyboardMarkup] = Some(ReplyKeyboardMarkup.singleColumn(
-    notifications.map(notification => KeyboardButton(notificationToString(notification))),
-    resizeKeyboard = Some(true),
-    oneTimeKeyboard = Some(true)))
-
   def generatePortfolioList(userId: Long, portfolios: Seq[Portfolio]): Option[InlineKeyboardMarkup] = Some(InlineKeyboardMarkup(
     portfolios.map(
       portfolio => InlineKeyboardButton(text = portfolio.name, callbackData = Some(s"${CallbackTypes.portfolio}_${userId}_${portfolio.name}"))

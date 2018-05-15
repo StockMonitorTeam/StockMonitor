@@ -15,16 +15,16 @@ trait UserDataStorage {
 
   def getAllDailyNotifications: Future[Seq[DailyNotification]]
   def getUsersDailyNotifications(userId: Long): Future[Seq[DailyNotification]]
-  def addDailyNotification(notification: DailyNotification): Future[Unit]
+  def addDailyNotification(notification: DailyNotification): Future[DailyNotification]
   def deleteDailyNotification(notificationId: Long): Future[Unit]
 
   def getUsersTriggerNotifications(userId: Long): Future[Seq[TriggerNotification]]
-  def addTriggerNotification(notification: TriggerNotification): Future[Unit]
+  def addTriggerNotification(notification: TriggerNotification): Future[TriggerNotification]
   def deleteTriggerNotification(notificationId: Long): Future[Unit]
 
   def getAllTriggerNotifications: Future[Iterable[TriggerNotification]]
 
-  def addPortfolio(portfolio: Portfolio): Future[Unit]
+  def addPortfolio(portfolio: Portfolio): Future[Portfolio]
   def deletePortfolio(userId: Long, portfolioName: String): Future[Unit]
   def getUserPortfolios(userId: Long): Future[Seq[Portfolio]]
   def getPortfolio(userId: Long, portfolioName: String): Future[Portfolio]

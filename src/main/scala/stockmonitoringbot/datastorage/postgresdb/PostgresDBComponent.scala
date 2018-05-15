@@ -44,12 +44,11 @@ trait PostgresDBComponent extends UserDataStorageComponent {
     override def getUsersDailyNotifications(userId: Long): Future[Seq[DailyNotification]] =
       dbConnection.run(getUsersDailyNotificationsSQL(userId))
 
-    override def addDailyNotification(n: DailyNotification): Future[Unit] = {
+    override def addDailyNotification(n: DailyNotification): Future[DailyNotification] = {
       dbConnection.run {
         addDailyNotificationSQL(n).map {
-          case 0 => throw new ElementAlreadyExistsException
-          case 1 => ()
-          case _ => throw new IllegalStateException()
+          case Some(id) => setId(n, id)
+          case None => throw new ElementAlreadyExistsException
         }
       }
     }
@@ -66,12 +65,11 @@ trait PostgresDBComponent extends UserDataStorageComponent {
     override def getUsersTriggerNotifications(userId: Long): Future[Seq[TriggerNotification]] =
       dbConnection.run(getUsersTriggerNotificationsSQL(userId))
 
-    override def addTriggerNotification(n: TriggerNotification): Future[Unit] = {
+    override def addTriggerNotification(n: TriggerNotification): Future[TriggerNotification] = {
       dbConnection.run {
         addTriggerNotificationSQL(n).map {
-          case 0 => throw new ElementAlreadyExistsException
-          case 1 => ()
-          case _ => throw new IllegalStateException()
+          case Some(id) => setId(n, id)
+          case None => throw new ElementAlreadyExistsException
         }
       }
     }
@@ -88,12 +86,11 @@ trait PostgresDBComponent extends UserDataStorageComponent {
     override def getAllTriggerNotifications: Future[Iterable[TriggerNotification]] =
       dbConnection.run(getAllTriggerNotificationsSQL)
 
-    override def addPortfolio(p: Portfolio): Future[Unit] =
+    override def addPortfolio(p: Portfolio): Future[Portfolio] =
       dbConnection.run {
         addPortfolioSQL(p).map {
-          case 0 => throw new ElementAlreadyExistsException
-          case 1 => ()
-          case _ => throw new IllegalStateException()
+          case Some(id) => p.copy(portfolioId = id)
+          case None => throw new ElementAlreadyExistsException
         }
       }
 
@@ -176,6 +173,17 @@ trait PostgresDBComponent extends UserDataStorageComponent {
   }
 
   object PostgresDB {
+
+    private def setId(n: DailyNotification, id: Long): DailyNotification = n match {
+      case x: StockDailyNotification => x.copy(id = id)
+      case x: ExchangeRateDailyNotification => x.copy(id = id)
+      case x: PortfolioDailyNotification => x.copy(id = id)
+    }
+    private def setId(n: TriggerNotification, id: Long): TriggerNotification = n match {
+      case x: StockTriggerNotification => x.copy(id = id)
+      case x: ExchangeRateTriggerNotification => x.copy(id = id)
+      case x: PortfolioTriggerNotification => x.copy(id = id)
+    }
 
     private def parseAssetType(at: AssetType) = at match {
       case StockAsset(name) => (Stock, name)

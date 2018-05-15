@@ -28,22 +28,22 @@ object Queries extends Schema {
     dailyNotifications.result
   def getUsersDailyNotificationsSQL(userId: Long): DBIO[Seq[DailyNotification]] =
     getUsersDailyNotificationsCompiledSQL(userId).result
-  def addDailyNotificationSQL(notification: DailyNotification): DBIO[Int] =
-    dailyNotifications += notification
+  def addDailyNotificationSQL(notification: DailyNotification): DBIO[Option[Long]] =
+    dailyNotifications.returning(dailyNotifications.map(_.dailyNotId)).insertOrUpdate(notification)
   def deleteDailyNotificationSQL(id: Long): DBIO[Int] =
     deleteDailyNotificationCompiledSQL(id).delete
 
   def getUsersTriggerNotificationsSQL(userId: Long): DBIO[Seq[TriggerNotification]] =
     getUsersTriggerNotificationsCompiledSQL(userId).result
-  def addTriggerNotificationSQL(notification: TriggerNotification): DBIO[Int] =
-    triggerNotifications += notification
+  def addTriggerNotificationSQL(notification: TriggerNotification): DBIO[Option[Long]] =
+    triggerNotifications.returning(triggerNotifications.map(_.triggerNotId)).insertOrUpdate(notification)
   def deleteTriggerNotificationSQL(id: Long): DBIO[Int] =
     deleteTriggerNotificationCompiledSQL(id).delete
 
   def getAllTriggerNotificationsSQL: DBIO[Seq[TriggerNotification]] = triggerNotifications.result
 
-  def addPortfolioSQL(portfolio: Portfolio): DBIO[Int] =
-    portfolios += portfolio
+  def addPortfolioSQL(portfolio: Portfolio): DBIO[Option[Long]] =
+    portfolios.returning(portfolios.map(_.portfolioId)).insertOrUpdate(portfolio)
   def deletePortfolioSQL(userId: Long, name: String): DBIO[Int] =
     deletePortfolioCompiledSQL((userId, name)).delete
   def getUserPortfoliosSQL(userId: Long): DBIO[Seq[Portfolio]] =

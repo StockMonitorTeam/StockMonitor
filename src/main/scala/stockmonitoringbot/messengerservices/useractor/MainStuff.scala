@@ -87,7 +87,7 @@ trait MainStuff {
           callBack
       }
       context become waitForNewBehavior()
-    case IncomingMessage(_) =>
+    case IncomingMessage(Buttons.back) =>
       context become waitForNewBehavior()
       callBack
     case IncomingMessage(_) =>
@@ -127,9 +127,9 @@ trait MainStuff {
       case ExchangeRateAsset(from, to) => ExchangeRateDailyNotification(0, userId, (from, to), utcTime)
     }
     val task = for {_ <- clearNotification(userId, assetType)
-                    _ = dailyNotification.addDailyNotification(notification)
-                    _ <- userDataStorage.addDailyNotification(notification)
+                    notificationWithId <- userDataStorage.addDailyNotification(notification)
     } yield {
+      dailyNotification.addDailyNotification(notificationWithId)
       sendMessageToUser(GeneralTexts.DAILY_NOTIFICATION_SET(time))
       ()
     }
@@ -141,11 +141,12 @@ trait MainStuff {
   }
 
   def clearNotification(userId: Long, assetType: AssetType): Future[Unit] = {
-    for {userNotOpt <- userDataStorage.getUserNotificationOnAsset(userId, assetType)
-    } yield for {userNot <- userNotOpt
-                 _ = dailyNotification.deleteDailyNotification(userNot.id)
-    } yield for {_ <- userDataStorage.deleteDailyNotification(userNot.id)
-    } yield ()
+    userDataStorage.getUserNotificationOnAsset(userId, assetType).flatMap { userNotOpt =>
+      userNotOpt.fold(Future.successful(())) { not =>
+        dailyNotification.deleteDailyNotification(not.id)
+        userDataStorage.deleteDailyNotification(not.id)
+      }
+    }
   }
 
   private def waitForNotificationTime(assetType: AssetType, user: User, callBack: => Unit): Receive = {

@@ -123,8 +123,9 @@ trait Portfolios {
       val notification = PortfolioDailyNotification(0, userId, portfolio.name, localTime)
 
       clearPortfolioNotification(userId, portfolio)
-      dailyNotification.addDailyNotification(notification)
-      userDataStorage.addDailyNotification(notification)
+      userDataStorage.addDailyNotification(notification).foreach { notificationWithId =>
+        dailyNotification.addDailyNotification(notificationWithId)
+      }
       sendMessageToUser(GeneralTexts.DAILY_NOTIFICATION_SET(time))
     }
     catch {
@@ -191,6 +192,9 @@ trait Portfolios {
     case IncomingMessage(Buttons.portfolioDelete) =>
       userDataStorage.deletePortfolio(userId, portfolio.name).onComplete {
         case Success(_) =>
+          printPortfolios()
+        case Failure(e) =>
+          logger.error("Can't delete portfolio", e)
           printPortfolios()
       }
       context become waitForPortfolioName
