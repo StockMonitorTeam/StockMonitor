@@ -167,21 +167,21 @@ object GeneralMarkups {
 
   def generatePortfolioTriggersDelete(userId: Long, triggers: Seq[TriggerNotification]): Option[InlineKeyboardMarkup] = Some(InlineKeyboardMarkup(
     triggers.map { x => {
-      val triggerUniqueName = s"${x.notificationType} - ${x.boundPrice}"
+      val triggerUniqueName = x.id.toString
       InlineKeyboardButton(text = triggerUniqueName, callbackData = Some(Inline.generatePrefix(CallbackTypes.portfolioDeleteTrigger, userId, triggerUniqueName)))
     }
     }.grouped(3).toSeq
   ))
 
   def generateTriggersDelete(userId: Long, triggers: Seq[TriggerNotification]): Option[InlineKeyboardMarkup] = Some(InlineKeyboardMarkup(
-    triggers.zipWithIndex.map { x => {
-      val triggerType = x._1 match {
-        case StockTriggerNotification(_, stock, _, _) => s"акции $stock"
-        case ExchangeRateTriggerNotification(_, (from, to), _, _) => s"курс $from/$to"
-        case PortfolioTriggerNotification(_, portfolio, _, _) => s"портфель $portfolio"
+    triggers.map { x => {
+      val triggerType = x match {
+        case StockTriggerNotification(_, _, stock, _, _) => s"акции $stock"
+        case ExchangeRateTriggerNotification(_, _, (from, to), _, _) => s"курс $from/$to"
+        case PortfolioTriggerNotification(_, _, portfolio, _, _) => s"портфель $portfolio"
       }
-      val triggerName = s"$triggerType ${x._1.notificationType} - ${x._1.boundPrice}"
-      val triggerUniqueName = x._2.toString
+      val triggerName = s"$triggerType ${x.notificationType} - ${x.boundPrice}"
+      val triggerUniqueName = x.id.toString
       InlineKeyboardButton(text = triggerName, callbackData = Some(Inline.generatePrefix(CallbackTypes.deleteTrigger,
         userId, triggerUniqueName)))
     }
@@ -189,14 +189,14 @@ object GeneralMarkups {
   ))
 
   def generateDailyNotificationsDelete(userId: Long, notifications: Seq[DailyNotification]): Option[InlineKeyboardMarkup] = Some(InlineKeyboardMarkup(
-    notifications.zipWithIndex.map { x => {
-      val notType = x._1 match {
-        case StockDailyNotification(_, stock, _) => s"акции $stock"
-        case ExchangeRateDailyNotification(_, (from, to), _) => s"курс $from/$to"
-        case PortfolioDailyNotification(_, portfolio, _) => s"портфель $portfolio"
+    notifications.map { x => {
+      val notType = x match {
+        case StockDailyNotification(_, _, stock, _) => s"акции $stock"
+        case ExchangeRateDailyNotification(_, _, (from, to), _) => s"курс $from/$to"
+        case PortfolioDailyNotification(_, _, portfolio, _) => s"портфель $portfolio"
       }
-      val notName = s"$notType в ${x._1.time}"
-      val notUniqueName = x._2.toString
+      val notName = s"$notType в ${x.time}"
+      val notUniqueName = x.id.toString
       InlineKeyboardButton(text = notName, callbackData = Some(Inline.generatePrefix(CallbackTypes.deleteDailyNot,
         userId, notUniqueName)))
     }
@@ -213,11 +213,11 @@ object GeneralMarkups {
   def generateTriggerOptions(userId: Long): Option[InlineKeyboardMarkup] = Some(InlineKeyboardMarkup(
     Seq(
       Seq(
-        InlineKeyboardButton(text = "Выше порога 📈", callbackData = Some(Inline.generatePrefix(CallbackTypes.triggerSetType, userId, RaiseNotification.toString))),
-        InlineKeyboardButton(text = "Ниже порога 📉", callbackData = Some(Inline.generatePrefix(CallbackTypes.triggerSetType, userId, FallNotification.toString))),
+        InlineKeyboardButton(text = "Выше порога 📈", callbackData = Some(Inline.generatePrefix(CallbackTypes.triggerSetType, userId, Raise.toString))),
+        InlineKeyboardButton(text = "Ниже порога 📉", callbackData = Some(Inline.generatePrefix(CallbackTypes.triggerSetType, userId, Fall.toString))),
       ),
       Seq(
-        InlineKeyboardButton(text = "Обе стороны 📈➕📉", callbackData = Some(Inline.generatePrefix(CallbackTypes.triggerSetType, userId, BothNotification.toString)))
+        InlineKeyboardButton(text = "Обе стороны 📈➕📉", callbackData = Some(Inline.generatePrefix(CallbackTypes.triggerSetType, userId, Both.toString)))
       )
     )
   ))

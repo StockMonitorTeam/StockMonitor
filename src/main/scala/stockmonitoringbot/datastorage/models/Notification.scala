@@ -6,6 +6,7 @@ import java.time.LocalTime
   * Created by amir.
   */
 trait Notification {
+  val id: Long
   val ownerId: Long
 }
 
@@ -19,22 +20,22 @@ trait TriggerNotification extends Notification {
 }
 
 sealed trait TriggerNotificationType
-case object RaiseNotification extends TriggerNotificationType {
+case object Raise extends TriggerNotificationType {
   override def toString: String = "📈"
 }
-case object FallNotification extends TriggerNotificationType {
+case object Fall extends TriggerNotificationType {
   override def toString: String = "📉"
 }
-case object BothNotification extends TriggerNotificationType {
+case object Both extends TriggerNotificationType {
   override def toString: String = "📈➕📉"
 }
 
 object TriggerNotificationType {
   // TODO: Move symbols to interface
   def define(notificationType: String): TriggerNotificationType = notificationType match {
-    case "📉" => FallNotification
-    case "📈" => RaiseNotification
-    case "📈➕📉" => BothNotification
+    case "📉" => Fall
+    case "📈" => Raise
+    case "📈➕📉" => Both
     case _ => throw new IllegalStateException()
   }
 }

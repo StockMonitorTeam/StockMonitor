@@ -14,7 +14,7 @@ import stockmonitoringbot.datastorage.UserDataStorageComponent
 import stockmonitoringbot.datastorage.models.User
 import stockmonitoringbot.messengerservices.MessageSenderComponent.MessageSender
 import stockmonitoringbot.messengerservices.useractor.UserActor
-import stockmonitoringbot.messengerservices.useractor.UserActor.{IncomingCallback, IncomingCallbackMessage, IncomingMessage}
+import stockmonitoringbot.messengerservices.useractor.UserActor._
 import stockmonitoringbot.notificationhandlers.DailyNotificationHandlerComponent
 import stockmonitoringbot.stocksandratescache.PriceCacheComponent
 import stockmonitoringbot.{ActorSystemComponent, AppConfig, ExecutionContextComponent}
@@ -58,8 +58,6 @@ trait TelegramMessageReceiverAndSenderComponent extends MessageReceiverComponent
 
     private val activeUsers = new ConcurrentHashMap[Long, ActorRef]()
 
-    logger.info("starting telegram bot")
-
     onCommand("/start") {
       implicit msg =>
         logger.info(s"starting chat with ${msg.chat.firstName.get}")
@@ -67,7 +65,7 @@ trait TelegramMessageReceiverAndSenderComponent extends MessageReceiverComponent
              _ <- userDataStorage.setUser(User(msg.chat.id, defaultTimeZone))
         } {}
         val prev = activeUsers.put(msg.chat.id,
-          system.actorOf(UserActor.props(msg.chat.id, messageSender, userDataStorage, dailyNotificationHandler, priceCache)))
+          system.actorOf(UserActor.props(msg.chat.id, NewUser, messageSender, userDataStorage, dailyNotificationHandler, priceCache)))
         Option(prev).foreach(_ ! PoisonPill)
     }
 
@@ -112,7 +110,28 @@ trait TelegramMessageReceiverAndSenderComponent extends MessageReceiverComponent
         case Failure(exception) =>
           logger.error(s"Can't deliver message", exception)
       }
-    override def startReceiving(): Unit = run()
+
+    private def initUsers(): Future[Int] = {
+      userDataStorage.getAllUsers.map { users =>
+        users.map { user =>
+          activeUsers.put(user.id,
+            system.actorOf(UserActor.props(user.id, RestartingUser, messageSender, userDataStorage, dailyNotificationHandler, priceCache)))
+        }
+        users.size
+      }
+    }
+
+    override def startReceiving(): Future[Unit] = {
+      val init = initUsers()
+      init.onComplete {
+        case Success(n) =>
+          logger.info(s"Loaded $n users from db, starting receiving messages")
+          run()
+        case Failure(e) =>
+          logger.error("Can't init users from db", e)
+      }
+      init.map(_ => ())
+    }
     override def stopReceiving(): Future[Unit] = shutdown()
   }
 

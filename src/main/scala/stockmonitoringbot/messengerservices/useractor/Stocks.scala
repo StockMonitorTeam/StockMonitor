@@ -37,8 +37,8 @@ trait Stocks {
   }
 
   def goToStockMenu(stock: StockInfo): Unit = {
-    val dailyNotFut = userDataStorage.getUserNotification(userId, StockAsset(stock.name))
-    val triggerNotFut = userDataStorage.getUserTriggerNotification(userId, StockAsset(stock.name))
+    val dailyNotFut = userDataStorage.getUserNotificationOnAsset(userId, StockAsset(stock.name))
+    val triggerNotFut = userDataStorage.getUserTriggerNotificationOnAsset(userId, StockAsset(stock.name))
     val userFut = userDataStorage.getUser(userId)
     for {dailyNot <- dailyNotFut
          triggerNot <- triggerNotFut

@@ -53,17 +53,17 @@ trait Settings {
       sendMessageToUser(GeneralTexts.TRIGGER_REMOVE, GeneralMarkups.onlyBack)
       sendInlineMessageToUser(GeneralTexts.TRIGGER_TEXT_ACTIVE,
         GeneralMarkups.generateTriggersDelete(userId, triggers))
-      context become waitForTriggerToDelete(triggers)
+      context become waitForTriggerToDelete
     case IncomingMessage(Buttons.settings) => becomeSettingsMainMenu()
     case IncomingMessage(Buttons.backToMain) => becomeMainMenu()
   }
 
-  def waitForTriggerToDelete(triggers: Seq[TriggerNotification]): Receive = {
+  def waitForTriggerToDelete: Receive = {
     case IncomingMessage(Buttons.back) => becomeTriggersMenu()
     case IncomingCallback(CallbackTypes.deleteTrigger, message) =>
-      Try(message.message.toInt) match {
+      Try(message.message.toLong) match {
         case Success(id) =>
-          userDataStorage.deleteTriggerNotification(triggers(id)).onComplete {
+          userDataStorage.deleteTriggerNotification(id).onComplete {
             case Success(()) =>
               sendMessageToUser(GeneralTexts.TRIGGER_REMOVED)
               becomeTriggersMenu()
@@ -101,19 +101,19 @@ trait Settings {
       sendMessageToUser(GeneralTexts.DAILY_NOTIFICATION_REMOVE, GeneralMarkups.onlyBack)
       sendInlineMessageToUser(GeneralTexts.DAILY_NOTIFICATION_TEXT_ACTIVE,
         GeneralMarkups.generateDailyNotificationsDelete(userId, notifications))
-      context become waitForDailyNotificationToDelete(notifications)
+      context become waitForDailyNotificationToDelete
     case IncomingMessage(Buttons.settings) => becomeSettingsMainMenu()
     case IncomingMessage(Buttons.backToMain) => becomeMainMenu()
   }
 
-  def waitForDailyNotificationToDelete(notifications: Seq[DailyNotification]): Receive = {
+  def waitForDailyNotificationToDelete: Receive = {
     case IncomingMessage(Buttons.back) =>
       becomeDailyNotificationsMenu()
       context become waitForNewBehavior()
     case IncomingCallback(CallbackTypes.deleteDailyNot, message) =>
-      Try(message.message.toInt) match {
+      Try(message.message.toLong) match {
         case Success(id) =>
-          userDataStorage.deleteDailyNotification(notifications(id)).onComplete {
+          userDataStorage.deleteDailyNotification(id).onComplete {
             case Success(()) =>
               sendMessageToUser(GeneralTexts.DAILY_NOTIFICATION_REMOVED)
               becomeDailyNotificationsMenu()

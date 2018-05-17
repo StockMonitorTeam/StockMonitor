@@ -10,7 +10,7 @@ import stockmonitoringbot.messengerservices.useractor.UserActor.{CallbackTypes, 
 import stockmonitoringbot.notificationhandlers.{getPortfolioCurrentPrice, getPortfolioStocksPrice}
 
 import scala.util.matching.Regex
-import scala.util.{Failure, Success}
+import scala.util.{Failure, Success, Try}
 
 /**
   * Created by amir.
@@ -101,7 +101,7 @@ trait Portfolios {
   def printPortfolioTriggers(userId: Long, portfolio: Portfolio): Unit = {
     for {
       price <- getPortfolioCurrentPrice(portfolio, cache)
-      triggers <- userDataStorage.getUserTriggerNotification(userId, PortfolioAsset(portfolio.name))
+      triggers <- userDataStorage.getUserTriggerNotificationOnAsset(userId, PortfolioAsset(portfolio.name))
     } {
       val message = GeneralTexts.PORTFOLIO_TRIGGERS(portfolio.name, price) + GeneralTexts.PORTFOLIO_TRIGGERS_LIST(triggers)
       sendMessageToUser(message, GeneralMarkups.portfolioTriggerMenuMarkup)
@@ -109,10 +109,10 @@ trait Portfolios {
   }
 
   def clearPortfolioNotification(userId: Long, portfolio: Portfolio): Unit = {
-    userDataStorage.getUserNotification(userId, PortfolioAsset(portfolio.name)).onComplete {
+    userDataStorage.getUserNotificationOnAsset(userId, PortfolioAsset(portfolio.name)).onComplete {
       case Success(Some(x)) =>
-        dailyNotification.deleteDailyNotification(x)
-        userDataStorage.deleteDailyNotification(x)
+        dailyNotification.deleteDailyNotification(x.id)
+        userDataStorage.deleteDailyNotification(x.id)
       case _ =>
     }
   }
@@ -120,11 +120,12 @@ trait Portfolios {
   def setPortfolioNotification(userId: Long, portfolio: Portfolio, time: String): Unit = {
     try {
       val localTime: LocalTime = LocalTime.parse(time, DateTimeFormatter.ofPattern("H:mm"))
-      val notification = PortfolioDailyNotification(userId, portfolio.name, localTime)
+      val notification = PortfolioDailyNotification(0, userId, portfolio.name, localTime)
 
       clearPortfolioNotification(userId, portfolio)
-      dailyNotification.addDailyNotification(notification)
-      userDataStorage.addDailyNotification(notification)
+      userDataStorage.addDailyNotification(notification).foreach { notificationWithId =>
+        dailyNotification.addDailyNotification(notificationWithId)
+      }
       sendMessageToUser(GeneralTexts.DAILY_NOTIFICATION_SET(time))
     }
     catch {
@@ -133,7 +134,7 @@ trait Portfolios {
   }
 
   def createNewPortfolio(name: String, currency: String): Unit = {
-    userDataStorage.addPortfolio(Portfolio(userId, name, Currency.define(currency), Map.empty)).onComplete {
+    userDataStorage.addPortfolio(Portfolio(0, userId, name, Currency.define(currency), Map.empty)).onComplete {
       case Success(_) =>
         sendMessageToUser(GeneralTexts.INPUT_PORTFOLIO_CREATED(name, currency))
         printPortfolios()
@@ -149,7 +150,7 @@ trait Portfolios {
         printPortfolio(portfolio.name)
       })
     case IncomingMessage(Buttons.triggerRemove) =>
-      userDataStorage.getUserTriggerNotification(userId, PortfolioAsset(portfolio.name)) onComplete {
+      userDataStorage.getUserTriggerNotificationOnAsset(userId, PortfolioAsset(portfolio.name)) onComplete {
         case Success(Nil) =>
           sendMessageToUser(GeneralTexts.PORTFOLIO_TRIGGER_EMPTY)
         case Success(x) =>
@@ -161,14 +162,20 @@ trait Portfolios {
       printPortfolio(portfolio.name)
       context become waitForNewBehavior()
     case IncomingCallback(CallbackTypes.portfolioDeleteTrigger, message) =>
-      message.message.split(" - ", 2) match {
-        case Array(notificationType, boundPrice) =>
-          val notification = PortfolioTriggerNotification(userId, portfolio.name, BigDecimal(boundPrice), TriggerNotificationType.define(notificationType))
-          userDataStorage.deleteTriggerNotification(notification)
-          sendMessageToUser(GeneralTexts.PORTFOLIO_TRIGGER_REMOVED(message.message))
+      Try(message.message.toLong) match {
+        case Success(id) =>
+          userDataStorage.deleteTriggerNotification(id).onComplete {
+            case Success(()) =>
+              sendMessageToUser(GeneralTexts.TRIGGER_REMOVED)
+            case Failure(e) =>
+              sendMessageToUser(GeneralTexts.ERROR)
+              logger.error("Can't delete daily notification", e)
+          }
         case _ =>
           sendMessageToUser(GeneralTexts.ERROR)
       }
+    case _ =>
+      sendMessageToUser(GeneralTexts.ERROR)
   }
 
   def portfolioMenu(portfolio: Portfolio): Receive = common orElse {
@@ -192,7 +199,7 @@ trait Portfolios {
       }
       context become waitForPortfolioName
     case IncomingMessage(Buttons.notifications) =>
-      userDataStorage.getUserNotification(userId, PortfolioAsset(portfolio.name)) onComplete {
+      userDataStorage.getUserNotificationOnAsset(userId, PortfolioAsset(portfolio.name)) onComplete {
         case Success(_) =>
           addDailyNotification(PortfolioAsset(portfolio.name), {
             printPortfolio(portfolio.name)

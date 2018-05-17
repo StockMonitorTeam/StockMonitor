@@ -74,9 +74,9 @@ trait MainStuff {
     case IncomingMessage(floatAmount(bound)) =>
       val boundPrice = BigDecimal(bound)
       val notification = assetType match {
-        case PortfolioAsset(name) => PortfolioTriggerNotification(userId, name, boundPrice, nType)
-        case StockAsset(name) => StockTriggerNotification(userId, name, boundPrice, nType)
-        case ExchangeRateAsset(from, to) => ExchangeRateTriggerNotification(userId, (from, to), boundPrice, nType)
+        case PortfolioAsset(name) => PortfolioTriggerNotification(0, userId, name, boundPrice, nType)
+        case StockAsset(name) => StockTriggerNotification(0, userId, name, boundPrice, nType)
+        case ExchangeRateAsset(from, to) => ExchangeRateTriggerNotification(0, userId, (from, to), boundPrice, nType)
       }
       userDataStorage.addTriggerNotification(notification).onComplete {
         case Success(_) =>
@@ -99,7 +99,7 @@ trait MainStuff {
   //NEW DAILY NOTIFICATION
   //callback should send SetBehavior message to self to take control back
   def addDailyNotification(assetType: AssetType, callBack: => Unit): Unit = {
-    val notF = userDataStorage.getUserNotification(userId, assetType)
+    val notF = userDataStorage.getUserNotificationOnAsset(userId, assetType)
     val userF = userDataStorage.getUser(userId)
     val infoF = for (not <- notF; user <- userF) yield (not, user.get)
     infoF onComplete {
@@ -122,14 +122,14 @@ trait MainStuff {
     val localTime: LocalTime = LocalTime.parse(time, DateTimeFormatter.ofPattern("H:mm"))
     val utcTime = getTimeInUTC(localTime, user.timeZone)
     val notification = assetType match {
-      case PortfolioAsset(name) => PortfolioDailyNotification(userId, name, utcTime)
-      case StockAsset(name) => StockDailyNotification(userId, name, utcTime)
-      case ExchangeRateAsset(from, to) => ExchangeRateDailyNotification(userId, (from, to), utcTime)
+      case PortfolioAsset(name) => PortfolioDailyNotification(0, userId, name, utcTime)
+      case StockAsset(name) => StockDailyNotification(0, userId, name, utcTime)
+      case ExchangeRateAsset(from, to) => ExchangeRateDailyNotification(0, userId, (from, to), utcTime)
     }
     val task = for {_ <- clearNotification(userId, assetType)
-                    _ = dailyNotification.addDailyNotification(notification)
-                    _ <- userDataStorage.addDailyNotification(notification)
+                    notificationWithId <- userDataStorage.addDailyNotification(notification)
     } yield {
+      dailyNotification.addDailyNotification(notificationWithId)
       sendMessageToUser(GeneralTexts.DAILY_NOTIFICATION_SET(time))
       ()
     }
@@ -141,10 +141,10 @@ trait MainStuff {
   }
 
   def clearNotification(userId: Long, assetType: AssetType): Future[Unit] = {
-    userDataStorage.getUserNotification(userId, assetType).flatMap { userNotOpt =>
+    userDataStorage.getUserNotificationOnAsset(userId, assetType).flatMap { userNotOpt =>
       userNotOpt.fold(Future.successful(())) { not =>
-        dailyNotification.deleteDailyNotification(not)
-        userDataStorage.deleteDailyNotification(not)
+        dailyNotification.deleteDailyNotification(not.id)
+        userDataStorage.deleteDailyNotification(not.id)
       }
     }
   }

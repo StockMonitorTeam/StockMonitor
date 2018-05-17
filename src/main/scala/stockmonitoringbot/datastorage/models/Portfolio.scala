@@ -1,6 +1,10 @@
 package stockmonitoringbot.datastorage.models
 
-case class Portfolio(userId: Long, name: String, currency: Currency, stocks: Map[String, Double])
+case class Portfolio(portfolioId: Long,
+                     userId: Long,
+                     name: String,
+                     currency: Currency,
+                     stocks: Map[String, Double])
 
 sealed trait Currency
 case object USD extends Currency
@@ -15,4 +19,3 @@ object Currency {
     case _ => throw new IllegalStateException()
   }
 }
-

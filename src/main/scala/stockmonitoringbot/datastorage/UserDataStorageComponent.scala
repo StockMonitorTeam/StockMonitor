@@ -12,17 +12,19 @@ trait UserDataStorageComponent {
 }
 
 trait UserDataStorage {
+
+  def getAllDailyNotifications: Future[Seq[DailyNotification]]
   def getUsersDailyNotifications(userId: Long): Future[Seq[DailyNotification]]
-  def addDailyNotification(notification: DailyNotification): Future[Unit]
-  def deleteDailyNotification(notification: DailyNotification): Future[Unit]
+  def addDailyNotification(notification: DailyNotification): Future[DailyNotification]
+  def deleteDailyNotification(notificationId: Long): Future[Unit]
 
   def getUsersTriggerNotifications(userId: Long): Future[Seq[TriggerNotification]]
-  def addTriggerNotification(notification: TriggerNotification): Future[Unit]
-  def deleteTriggerNotification(notification: TriggerNotification): Future[Unit]
+  def addTriggerNotification(notification: TriggerNotification): Future[TriggerNotification]
+  def deleteTriggerNotification(notificationId: Long): Future[Unit]
 
   def getAllTriggerNotifications: Future[Iterable[TriggerNotification]]
 
-  def addPortfolio(portfolio: Portfolio): Future[Unit]
+  def addPortfolio(portfolio: Portfolio): Future[Portfolio]
   def deletePortfolio(userId: Long, portfolioName: String): Future[Unit]
   def getUserPortfolios(userId: Long): Future[Seq[Portfolio]]
   def getPortfolio(userId: Long, portfolioName: String): Future[Portfolio]
@@ -30,11 +32,14 @@ trait UserDataStorage {
   def deleteStockFromPortfolio(userId: Long, portfolioName: String, stock: String): Future[Unit]
 
   //actions with daily notifications on specified asset
-  def getUserNotification(userId: Long, assetType: AssetType): Future[Option[DailyNotification]]
+  def getUserNotificationOnAsset(userId: Long, assetType: AssetType): Future[Option[DailyNotification]]
 
   //actions with trigger notifications on specified asset
-  def getUserTriggerNotification(userId: Long, assetType: AssetType): Future[Seq[TriggerNotification]]
+  def getUserTriggerNotificationOnAsset(userId: Long, assetType: AssetType): Future[Seq[TriggerNotification]]
 
+  def getAllUsers: Future[Seq[User]]
   def getUser(userId: Long): Future[Option[User]]
   def setUser(user: User): Future[Unit]
+
+  def initDB(): Future[Unit]
 }

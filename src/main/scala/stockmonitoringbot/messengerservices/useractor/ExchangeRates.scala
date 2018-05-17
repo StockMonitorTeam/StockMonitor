@@ -40,8 +40,8 @@ trait ExchangeRates {
   }
 
   def goToRateMenu(rate: CurrencyExchangeRateInfo): Unit = {
-    val dailyNotFut = userDataStorage.getUserNotification(userId, ExchangeRateAsset(rate.from, rate.to))
-    val triggerNotFut = userDataStorage.getUserTriggerNotification(userId, ExchangeRateAsset(rate.from, rate.to))
+    val dailyNotFut = userDataStorage.getUserNotificationOnAsset(userId, ExchangeRateAsset(rate.from, rate.to))
+    val triggerNotFut = userDataStorage.getUserTriggerNotificationOnAsset(userId, ExchangeRateAsset(rate.from, rate.to))
     val userFut = userDataStorage.getUser(userId)
     for {dailyNot <- dailyNotFut
          triggerNot <- triggerNotFut

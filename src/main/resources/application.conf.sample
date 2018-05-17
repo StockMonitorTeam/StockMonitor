@@ -7,6 +7,18 @@ StockMonitor {
     port = "1337"
     url = ""
   }
+
   cacheUpdateFrequency = "1 minute"
   defaultTimezone = "UTC+3"
+
+  postgresDB {
+    dataSourceClass = "slick.jdbc.DatabaseUrlDataSource"
+    properties = {
+      driver = "org.postgresql.Driver"
+      url = "jdbc:postgresql://localhost:5432/stockmondb"
+      user = "stockmon"
+      password = "123"
+    }
+    numThreads = 10
+  }
 }

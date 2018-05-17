@@ -10,6 +10,6 @@ trait MessageReceiverComponent {
 }
 
 trait MessageReceiver {
-  def startReceiving(): Unit
+  def startReceiving(): Future[Unit]
   def stopReceiving(): Future[Unit]
 }
