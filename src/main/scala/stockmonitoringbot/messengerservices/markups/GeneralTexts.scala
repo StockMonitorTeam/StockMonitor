@@ -154,7 +154,7 @@ object GeneralTexts {
     import stockmonitoringbot.messengerservices.useractor.currentTimeAccordingToTimezone
     s"""Для того, чтобы задать ежедневное оповещение о $asset выберите время, либо введите его в формате HH:MM.
        |
-       |Текущая дата на сервере с учетом вашего часового пояса: ${currentTimeAccordingToTimezone(user.timeZone)}
+       |Время на сервере с учетом вашего часового пояса: ${currentTimeAccordingToTimezone(user.timeZone)}
      """.stripMargin
   }
 
@@ -213,7 +213,7 @@ object GeneralTexts {
     import stockmonitoringbot.messengerservices.useractor.currentTimeAccordingToTimezone
     val zone = if (user.timeZone.toString == "Z") "UTC" else s"UTC${user.timeZone.toString}"
     s"""Ваш текущий часовой пояс: $zone
-       |Дата на сервере соответствующая вашему часовому поясу: ${currentTimeAccordingToTimezone(user.timeZone)}
+       |Время на сервере с учетом вашего часового пояса: ${currentTimeAccordingToTimezone(user.timeZone)}
        |Чтобы его изменить выберите соответсвующий пункт в меню
        |
      """.stripMargin
@@ -221,7 +221,7 @@ object GeneralTexts {
 
   val TIME_ZONE_CHANGE =
     s"""Для смены часового пояса введите новый часовой пояс от -12 до +12
-       | Например для "+3", для пояса GMT+3.
+       |Например "+3", для пояса GMT+3.
      """.stripMargin
 
   val TIME_ZONE_CHANGED = "Новый часовой пояс установлен"

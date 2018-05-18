@@ -3,6 +3,7 @@ package stockmonitoringbot.messengerservices
 import java.time._
 
 import scala.util.matching.Regex
+import java.time.format.DateTimeFormatter
 
 /**
   * Created by amir.
@@ -10,7 +11,8 @@ import scala.util.matching.Regex
 package object useractor {
 
   def currentTimeAccordingToTimezone(zoneId: ZoneId): String = {
-    LocalDateTime.now(zoneId).toString
+    val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
+    LocalDateTime.now(zoneId).format(formatter)
   }
 
   def getTimeInUTC(localTime: LocalTime, zoneId: ZoneId): LocalTime = {
