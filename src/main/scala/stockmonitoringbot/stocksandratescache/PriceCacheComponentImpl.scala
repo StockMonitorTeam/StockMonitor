@@ -65,7 +65,7 @@ trait PriceCacheComponentImpl extends PriceCacheComponent {
         updatedStocks.foreach(setStockInfo)
         updatedStocks.size
       }
-      val ratesUpdate: Future[Int] = Future.traverse(exchangeRates.keySet().asScala) { pair =>
+      val ratesUpdate: Future[Int] = Future.traverse(exchangeRates.keySet().asScala.toSeq) { pair =>
         stockPriceService.getCurrencyExchangeRate(pair._1, pair._2).map(setExchangeRate)
       }.map(_.size)
       for {numOfUpdatedStocks <- stockUpdate
