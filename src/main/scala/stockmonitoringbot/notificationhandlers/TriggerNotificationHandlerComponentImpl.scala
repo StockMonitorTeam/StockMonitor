@@ -103,14 +103,12 @@ trait TriggerNotificationHandlerComponentImpl extends TriggerNotificationHandler
     }
 
     override def start(): Unit = {
-      val freq = Try(Duration(updateFrequency).asInstanceOf[FiniteDuration]).fold({
-        _ =>
-          logger.warn("Can't get update frequency from configuration, starting cache update with frequency 1 minute")
-          1 minute
-      }, {
-        f =>
-          logger.info(s"starting cache update with frequency $f")
-          f
+      val freq = Try(Duration(updateFrequency).asInstanceOf[FiniteDuration]).fold({ _ =>
+        logger.warn("Can't get update frequency from configuration, starting cache update with frequency 1 minute")
+        1 minute
+      }, { f =>
+        logger.info(s"starting cache update with frequency $f")
+        f
       })
       // update every minute StocksAndExchangeRatesCache
       // and check all trigger notifications
