@@ -15,12 +15,4 @@ package object notificationhandlers {
       _.foldRight(BigDecimal(0))((stock, sum) => sum + stock.price * portfolio.stocks(stock.name))
     }
   }
-  def getPortfolioStocksPrice(portfolio: Portfolio, cache: PriceCache)
-                             (implicit executionContext: ExecutionContext): Future[Map[String,BigDecimal]] = {
-    Future.traverse(portfolio.stocks.keys)(cache.getStockInfo).map {
-      _.map( stock => (stock.name, stock.price * portfolio.stocks(stock.name))).toMap
-    }
-  }
-
-  val q = "\""
 }

@@ -1,6 +1,7 @@
 package stockmonitoringbot.messengerservices
 
 import java.time._
+import java.time.format.DateTimeFormatter
 
 import stockmonitoringbot.datastorage.models._
 
@@ -8,6 +9,12 @@ import stockmonitoringbot.datastorage.models._
   * Created by amir.
   */
 package object markups {
+
+  def currentTimeAccordingToTimezone(zoneId: ZoneId): String = {
+    val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
+    LocalDateTime.now(zoneId).format(formatter)
+  }
+
   def tnToStr(trigger: TriggerNotification): String = {
     trigger match {
       case StockTriggerNotification(_, _, name, bound, nType) =>

@@ -3,12 +3,9 @@ package stockmonitoringbot.messengerservices.useractor
 import akka.actor.Actor.Receive
 import akka.actor.{Actor, Props}
 import com.typesafe.scalalogging.Logger
-import stockmonitoringbot.datastorage._
-import stockmonitoringbot.messengerservices.MessageSenderComponent.MessageSender
+import stockmonitoringbot.messengerservices.UserActorService
 import stockmonitoringbot.messengerservices.markups.{Buttons, GeneralMarkups, GeneralTexts}
-import stockmonitoringbot.messengerservices.useractor.UserActor.{NewUser, RestartingUser, UserType}
-import stockmonitoringbot.notificationhandlers.DailyNotificationHandler
-import stockmonitoringbot.stocksandratescache.PriceCache
+import stockmonitoringbot.messengerservices.useractor.UserActor.UserType
 
 import scala.concurrent.ExecutionContextExecutor
 
@@ -17,10 +14,8 @@ import scala.concurrent.ExecutionContextExecutor
   */
 class UserActor(val userId: Long,
                 val userType: UserType,
-                val messageSender: MessageSender,
-                val userDataStorage: UserDataStorage,
-                val dailyNotification: DailyNotificationHandler,
-                val cache: PriceCache) extends Actor
+                val userActorService: UserActorService,
+               ) extends Actor
   with MainStuff
   with Stocks
   with Settings
@@ -71,8 +66,8 @@ class UserActor(val userId: Long,
 }
 
 object UserActor {
-  def props(id: Long, userType: UserType, messageSender: MessageSender, userDataStorage: UserDataStorage, dailyNotificationHandler: DailyNotificationHandler, cache: PriceCache): Props =
-    Props(new UserActor(id, userType, messageSender, userDataStorage, dailyNotificationHandler, cache))
+  def props(id: Long, userType: UserType, botInterfaceController: UserActorService): Props =
+    Props(new UserActor(id, userType, botInterfaceController))
 
   case class IncomingMessage(message: String)
   case class IncomingCallback(handler: String, message: IncomingCallbackMessage)

@@ -36,7 +36,7 @@ trait Settings {
   }
 
   def becomeTriggersMenu(): Unit = {
-    userDataStorage.getUsersTriggerNotifications(userId).onComplete {
+    userActorService.getUsersTriggerNotifications(userId).onComplete {
       case Success(triggers) =>
         sendMessageToUser(GeneralTexts.TRIGGERS_LIST(triggers), GeneralMarkups.triggersMenuMarkup)
         self ! SetBehavior(triggersMenu(triggers))
@@ -64,7 +64,7 @@ trait Settings {
     case IncomingCallback(CallbackTypes.deleteTrigger, message) =>
       Try(message.message.toLong) match {
         case Success(id) =>
-          userDataStorage.deleteTriggerNotification(id).onComplete {
+          userActorService.deleteTriggerNotification(id).onComplete {
             case Success(()) =>
               sendMessageToUser(GeneralTexts.TRIGGER_REMOVED)
               becomeTriggersMenu()
@@ -81,8 +81,8 @@ trait Settings {
   }
 
   def becomeDailyNotificationsMenu(): Unit = {
-    val dNotsF = userDataStorage.getUsersDailyNotifications(userId)
-    val userF = userDataStorage.getUser(userId)
+    val dNotsF = userActorService.getUsersDailyNotifications(userId)
+    val userF = userActorService.getUser(userId)
     val info = for (dNots <- dNotsF; user <- userF) yield (dNots, user)
     info.onComplete {
       case Success((notifications, user)) =>
@@ -114,7 +114,7 @@ trait Settings {
     case IncomingCallback(CallbackTypes.deleteDailyNot, message) =>
       Try(message.message.toLong) match {
         case Success(id) =>
-          userDataStorage.deleteDailyNotification(id).onComplete {
+          userActorService.deleteDailyNotification(id).onComplete {
             case Success(()) =>
               sendMessageToUser(GeneralTexts.DAILY_NOTIFICATION_REMOVED)
               becomeDailyNotificationsMenu()
@@ -130,7 +130,7 @@ trait Settings {
   }
 
   def becomeTimezoneMenu(): Unit = {
-    userDataStorage.getUser(userId).onComplete {
+    userActorService.getUser(userId).onComplete {
       case Success(Some(user)) =>
         sendMessageToUser(GeneralTexts.TIME_ZONE_SHOW(user), GeneralMarkups.timezoneMenuMarkup)
         self ! SetBehavior(timezoneMenu)
@@ -162,7 +162,7 @@ trait Settings {
     case IncomingMessage(timezone(zone, _)) =>
       Try(ZoneId.of(if (zone == "0") "+0" else zone)) match {
         case Success(zoneId) =>
-          userDataStorage.setUser(User(userId, zoneId)).onComplete {
+          userActorService.setUser(User(userId, zoneId)).onComplete {
             case Success(()) =>
               sendMessageToUser(GeneralTexts.TIME_ZONE_CHANGED)
               becomeTimezoneMenu()
