@@ -8,13 +8,10 @@ import akka.actor.{ActorContext, ActorRef}
 import com.typesafe.scalalogging.Logger
 import info.mukel.telegrambot4s.methods.SendMessage
 import info.mukel.telegrambot4s.models.{InlineKeyboardMarkup, ReplyKeyboardMarkup, ReplyKeyboardRemove}
-import stockmonitoringbot.datastorage.UserDataStorage
 import stockmonitoringbot.datastorage.models._
-import stockmonitoringbot.messengerservices.MessageSenderComponent.MessageSender
+import stockmonitoringbot.messengerservices.UserActorService
 import stockmonitoringbot.messengerservices.markups.{Buttons, GeneralMarkups, GeneralTexts}
 import stockmonitoringbot.messengerservices.useractor.UserActor.{CallbackTypes, IncomingCallback, IncomingMessage, SetBehavior}
-import stockmonitoringbot.notificationhandlers.DailyNotificationHandler
-import stockmonitoringbot.stocksandratescache.PriceCache
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
@@ -24,23 +21,20 @@ import scala.util.{Failure, Success}
   */
 trait MainStuff {
   val userId: Long
-  val messageSender: MessageSender
-  val userDataStorage: UserDataStorage
-  val dailyNotification: DailyNotificationHandler
-  val cache: PriceCache
+  val userActorService: UserActorService
   val logger: Logger
   val self: ActorRef
   implicit val context: ActorContext
   implicit val ec: ExecutionContext
 
   def sendMessageToUser(message: String, markup: Option[ReplyKeyboardMarkup] = None): Unit =
-    messageSender(SendMessage(userId, message, disableWebPagePreview = Some(true), replyMarkup = markup))
+    userActorService.sendMessage(SendMessage(userId, message, disableWebPagePreview = Some(true), replyMarkup = markup))
 
   def messageHideKeyboard(msg: String): Unit =
-    messageSender(SendMessage(userId, msg, disableWebPagePreview = Some(true), replyMarkup = Some(ReplyKeyboardRemove())))
+    userActorService.sendMessage(SendMessage(userId, msg, disableWebPagePreview = Some(true), replyMarkup = Some(ReplyKeyboardRemove())))
 
   def sendInlineMessageToUser(message: String, markup: Option[InlineKeyboardMarkup]): Unit =
-    messageSender(SendMessage(userId, message, replyMarkup = markup))
+    userActorService.sendMessage(SendMessage(userId, message, replyMarkup = markup))
 
   def becomeMainMenu(): Unit
 
@@ -78,7 +72,7 @@ trait MainStuff {
         case StockAsset(name) => StockTriggerNotification(0, userId, name, boundPrice, nType)
         case ExchangeRateAsset(from, to) => ExchangeRateTriggerNotification(0, userId, (from, to), boundPrice, nType)
       }
-      userDataStorage.addTriggerNotification(notification).onComplete {
+      userActorService.addTriggerNotification(notification).onComplete {
         case Success(_) =>
           sendMessageToUser(GeneralTexts.TRIGGER_ADDED)
           callBack
@@ -99,8 +93,8 @@ trait MainStuff {
   //NEW DAILY NOTIFICATION
   //callback should send SetBehavior message to self to take control back
   def addDailyNotification(assetType: AssetType, callBack: => Unit): Unit = {
-    val notF = userDataStorage.getUserNotificationOnAsset(userId, assetType)
-    val userF = userDataStorage.getUser(userId)
+    val notF = userActorService.getUserNotificationOnAsset(userId, assetType)
+    val userF = userActorService.getUser(userId)
     val infoF = for (not <- notF; user <- userF) yield (not, user.get)
     infoF onComplete {
       case Success((notification, user)) =>
@@ -127,9 +121,8 @@ trait MainStuff {
       case ExchangeRateAsset(from, to) => ExchangeRateDailyNotification(0, userId, (from, to), utcTime)
     }
     val task = for {_ <- clearNotification(userId, assetType)
-                    notificationWithId <- userDataStorage.addDailyNotification(notification)
+                    _ <- userActorService.addDailyNotification(notification)
     } yield {
-      dailyNotification.addDailyNotification(notificationWithId)
       sendMessageToUser(GeneralTexts.DAILY_NOTIFICATION_SET(time))
       ()
     }
@@ -141,10 +134,9 @@ trait MainStuff {
   }
 
   def clearNotification(userId: Long, assetType: AssetType): Future[Unit] = {
-    userDataStorage.getUserNotificationOnAsset(userId, assetType).flatMap { userNotOpt =>
+    userActorService.getUserNotificationOnAsset(userId, assetType).flatMap { userNotOpt =>
       userNotOpt.fold(Future.successful(())) { not =>
-        dailyNotification.deleteDailyNotification(not.id)
-        userDataStorage.deleteDailyNotification(not.id)
+        userActorService.deleteDailyNotification(not.id)
       }
     }
   }

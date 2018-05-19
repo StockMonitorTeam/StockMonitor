@@ -24,7 +24,7 @@ trait ExchangeRates {
   def waitForExchangePair: Receive = {
     case IncomingMessage(ExchangePairName(from, to)) =>
       logger.info(s"Got message : $from, $to")
-      cache.getExchangeRate(from, to).onComplete {
+      userActorService.getExchangeRate(from, to).onComplete {
         case Success(rate) =>
           goToRateMenu(rate)
         case Failure(exception) =>
@@ -40,9 +40,9 @@ trait ExchangeRates {
   }
 
   def goToRateMenu(rate: CurrencyExchangeRateInfo): Unit = {
-    val dailyNotFut = userDataStorage.getUserNotificationOnAsset(userId, ExchangeRateAsset(rate.from, rate.to))
-    val triggerNotFut = userDataStorage.getUserTriggerNotificationOnAsset(userId, ExchangeRateAsset(rate.from, rate.to))
-    val userFut = userDataStorage.getUser(userId)
+    val dailyNotFut = userActorService.getUserNotificationOnAsset(userId, ExchangeRateAsset(rate.from, rate.to))
+    val triggerNotFut = userActorService.getUserTriggerNotificationOnAsset(userId, ExchangeRateAsset(rate.from, rate.to))
+    val userFut = userActorService.getUser(userId)
     for {dailyNot <- dailyNotFut
          triggerNot <- triggerNotFut
          user <- userFut

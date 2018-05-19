@@ -7,7 +7,6 @@ import akka.actor.Actor.Receive
 import stockmonitoringbot.datastorage.models._
 import stockmonitoringbot.messengerservices.markups.{Buttons, GeneralMarkups, GeneralTexts}
 import stockmonitoringbot.messengerservices.useractor.UserActor.{CallbackTypes, IncomingCallback, IncomingMessage, SetBehavior}
-import stockmonitoringbot.notificationhandlers.{getPortfolioCurrentPrice, getPortfolioStocksPrice}
 
 import scala.util.matching.Regex
 import scala.util.{Failure, Success, Try}
@@ -22,7 +21,7 @@ trait Portfolios {
   val currencyName: Regex = "(USD|EUR|RUB)".r
 
   def becomePortfolioMainMenu(): Unit = {
-    userDataStorage.getUserPortfolios(userId).onComplete {
+    userActorService.getUserPortfolios(userId).onComplete {
       case Success(results) => results match {
         case Seq() =>
           sendMessageToUser(GeneralTexts.NO_PORTFOLIO_GREETING, GeneralMarkups.portfolioMarkup)
@@ -61,7 +60,7 @@ trait Portfolios {
   }
 
   def printPortfolios(): Unit = {
-    userDataStorage.getUserPortfolios(userId).onComplete {
+    userActorService.getUserPortfolios(userId).onComplete {
       case Success(results) => results match {
         case Seq() =>
           sendMessageToUser(GeneralTexts.NO_PORTFOLIO_GREETING, GeneralMarkups.portfolioMarkup)
@@ -78,8 +77,8 @@ trait Portfolios {
 
   def printPortfolio(portfolioName: String): Unit = {
     for {
-      portfolio <- userDataStorage.getPortfolio(userId, portfolioName)
-      stockPrices <- getPortfolioStocksPrice(portfolio, cache)
+      portfolio <- userActorService.getPortfolio(userId, portfolioName)
+      stockPrices <- userActorService.getPortfolioStocksPrice(portfolio)
     } {
       val sum = stockPrices.foldLeft(BigDecimal(0))(_ + _._2)
       val portfolioGreeting = GeneralTexts.PORTFOLIO_SHOW(portfolio, sum) +
@@ -100,8 +99,8 @@ trait Portfolios {
 
   def printPortfolioTriggers(userId: Long, portfolio: Portfolio): Unit = {
     for {
-      price <- getPortfolioCurrentPrice(portfolio, cache)
-      triggers <- userDataStorage.getUserTriggerNotificationOnAsset(userId, PortfolioAsset(portfolio.name))
+      price <- userActorService.getPortfolioCurrentPrice(portfolio)
+      triggers <- userActorService.getUserTriggerNotificationOnAsset(userId, PortfolioAsset(portfolio.name))
     } {
       val message = GeneralTexts.PORTFOLIO_TRIGGERS(portfolio.name, price) + GeneralTexts.PORTFOLIO_TRIGGERS_LIST(triggers)
       sendMessageToUser(message, GeneralMarkups.portfolioTriggerMenuMarkup)
@@ -109,10 +108,9 @@ trait Portfolios {
   }
 
   def clearPortfolioNotification(userId: Long, portfolio: Portfolio): Unit = {
-    userDataStorage.getUserNotificationOnAsset(userId, PortfolioAsset(portfolio.name)).onComplete {
+    userActorService.getUserNotificationOnAsset(userId, PortfolioAsset(portfolio.name)).onComplete {
       case Success(Some(x)) =>
-        dailyNotification.deleteDailyNotification(x.id)
-        userDataStorage.deleteDailyNotification(x.id)
+        userActorService.deleteDailyNotification(x.id)
       case _ =>
     }
   }
@@ -123,9 +121,7 @@ trait Portfolios {
       val notification = PortfolioDailyNotification(0, userId, portfolio.name, localTime)
 
       clearPortfolioNotification(userId, portfolio)
-      userDataStorage.addDailyNotification(notification).foreach { notificationWithId =>
-        dailyNotification.addDailyNotification(notificationWithId)
-      }
+      userActorService.addDailyNotification(notification)
       sendMessageToUser(GeneralTexts.DAILY_NOTIFICATION_SET(time))
     }
     catch {
@@ -134,7 +130,7 @@ trait Portfolios {
   }
 
   def createNewPortfolio(name: String, currency: String): Unit = {
-    userDataStorage.addPortfolio(Portfolio(0, userId, name, Currency.define(currency), Map.empty)).onComplete {
+    userActorService.addPortfolio(Portfolio(0, userId, name, Currency.define(currency), Map.empty)).onComplete {
       case Success(_) =>
         sendMessageToUser(GeneralTexts.INPUT_PORTFOLIO_CREATED(name, currency))
         printPortfolios()
@@ -150,7 +146,7 @@ trait Portfolios {
         printPortfolio(portfolio.name)
       })
     case IncomingMessage(Buttons.triggerRemove) =>
-      userDataStorage.getUserTriggerNotificationOnAsset(userId, PortfolioAsset(portfolio.name)) onComplete {
+      userActorService.getUserTriggerNotificationOnAsset(userId, PortfolioAsset(portfolio.name)) onComplete {
         case Success(Nil) =>
           sendMessageToUser(GeneralTexts.PORTFOLIO_TRIGGER_EMPTY)
         case Success(x) =>
@@ -164,7 +160,7 @@ trait Portfolios {
     case IncomingCallback(CallbackTypes.portfolioDeleteTrigger, message) =>
       Try(message.message.toLong) match {
         case Success(id) =>
-          userDataStorage.deleteTriggerNotification(id).onComplete {
+          userActorService.deleteTriggerNotification(id).onComplete {
             case Success(()) =>
               sendMessageToUser(GeneralTexts.TRIGGER_REMOVED)
             case Failure(e) =>
@@ -190,7 +186,7 @@ trait Portfolios {
         context become waitForPortfolioStock(portfolio)
       }
     case IncomingMessage(Buttons.portfolioDelete) =>
-      userDataStorage.deletePortfolio(userId, portfolio.name).onComplete {
+      userActorService.deletePortfolio(userId, portfolio.name).onComplete {
         case Success(_) =>
           printPortfolios()
         case Failure(e) =>
@@ -199,7 +195,7 @@ trait Portfolios {
       }
       context become waitForPortfolioName
     case IncomingMessage(Buttons.notifications) =>
-      userDataStorage.getUserNotificationOnAsset(userId, PortfolioAsset(portfolio.name)) onComplete {
+      userActorService.getUserNotificationOnAsset(userId, PortfolioAsset(portfolio.name)) onComplete {
         case Success(_) =>
           addDailyNotification(PortfolioAsset(portfolio.name), {
             printPortfolio(portfolio.name)
@@ -216,7 +212,7 @@ trait Portfolios {
 
   def waitForPortfolioName: Receive = common orElse {
     case IncomingMessage(portfolioName(name)) =>
-      userDataStorage.getPortfolio(userId, name) onComplete {
+      userActorService.getPortfolio(userId, name) onComplete {
         case Success(_) =>
           sendMessageToUser(GeneralTexts.INPUT_PORTFOLIO_NAME_EXISTS)
           self ! SetBehavior(waitForPortfolioName)
@@ -244,11 +240,11 @@ trait Portfolios {
     case IncomingMessage(stockName(name)) =>
       // Try to get the ticker
 
-      if (!cache.contains(name)) {
+      if (!userActorService.cacheContains(name)) {
         sendMessageToUser(GeneralTexts.PORTFOLIO_STOCK_ADD_QUERY)
       }
 
-      cache.getStockInfo(name).onComplete {
+      userActorService.getStockInfo(name).onComplete {
         case Success(_) =>
           sendMessageToUser(GeneralTexts.PORTFOLIO_STOCK_ADD_AMOUNT(name, portfolio.name))
           self ! SetBehavior(waitForPortfolioStockAmount(portfolio, name))
@@ -262,7 +258,7 @@ trait Portfolios {
       }
       context become waitForNewBehavior()
     case IncomingCallback(CallbackTypes.portfolioDeleteStock, x) =>
-      userDataStorage.deleteStockFromPortfolio(userId, portfolio.name, x.message).onComplete {
+      userActorService.deleteStockFromPortfolio(userId, portfolio.name, x.message).onComplete {
         case Success(_) =>
           sendMessageToUser(GeneralTexts.PORTFOLIO_STOCK_DELETE_SUCCESS(x.message, portfolio.name))
           printPortfolio(portfolio.name)
@@ -275,7 +271,7 @@ trait Portfolios {
 
   def waitForPortfolioStockAmount(portfolio: Portfolio, stockName: String): Receive = portfolioMenu(portfolio) orElse {
     case IncomingMessage(floatAmount(amount)) =>
-      userDataStorage.addStockToPortfolio(userId, portfolio.name, stockName, amount.toDouble) onComplete {
+      userActorService.addStockToPortfolio(userId, portfolio.name, stockName, amount.toDouble) onComplete {
         case Success(_) =>
           printPortfolio(portfolio.name)
         case _ =>
