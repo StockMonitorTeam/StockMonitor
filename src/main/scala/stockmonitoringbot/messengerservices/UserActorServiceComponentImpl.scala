@@ -1,5 +1,8 @@
 package stockmonitoringbot.messengerservices
 
+import java.sql.Timestamp
+
+import com.typesafe.scalalogging.Logger
 import info.mukel.telegrambot4s.methods.SendMessage
 import stockmonitoringbot.{ExecutionContextComponent, notificationhandlers}
 import stockmonitoringbot.datastorage.UserDataStorageComponent
@@ -9,6 +12,7 @@ import stockmonitoringbot.stockpriceservices.models.{CurrencyExchangeRateInfo, S
 import stockmonitoringbot.stocksandratescache.PriceCacheComponent
 
 import scala.concurrent.Future
+import scala.util.Success
 
 /**
   * Created by amir.
@@ -23,6 +27,9 @@ trait UserActorServiceComponentImpl extends UserActorServiceComponent {
   override val userActorService: UserActorService = new UserActorServiceImpl
 
   class UserActorServiceImpl extends UserActorService {
+
+    private val logger = Logger(getClass)
+
     override def getUsersDailyNotifications(userId: Long): Future[Seq[DailyNotification]] =
       userDataStorage.getUsersDailyNotifications(userId)
     override def addDailyNotification(notification: DailyNotification): Future[DailyNotification] =
@@ -74,20 +81,45 @@ trait UserActorServiceComponentImpl extends UserActorServiceComponent {
     override def getUser(userId: Long): Future[Option[User]] = userDataStorage.getUser(userId)
     override def setUser(user: User): Future[Unit] = userDataStorage.setUser(user)
 
-    override def getStockInfo(stock: String): Future[StockInfo] = priceCache.getStockInfo(stock)
+    override def getStockInfo(stock: String, userId: Long): Future[StockInfo] = {
+      val stockFut = priceCache.getStockInfo(stock)
+      stockFut.onComplete {
+        case Success(_) =>
+          val query = UserQuery(userId, StockAsset(stock), new Timestamp(System.currentTimeMillis()))
+          userDataStorage.addQueryToHistory(query).failed.foreach { e =>
+            logger.error(s"Can't save query to history $query", e)
+          }
+        case _ =>
+      }
+      stockFut
+    }
     override def cacheContains(stock: String): Boolean = priceCache.contains(stock)
-    override def getExchangeRate(from: String, to: String): Future[CurrencyExchangeRateInfo] =
-      priceCache.getExchangeRate(from, to)
+    override def getExchangeRate(from: String, to: String, userId: Long): Future[CurrencyExchangeRateInfo] = {
+      val rateFut = priceCache.getExchangeRate(from, to)
+      rateFut.onComplete {
+        case Success(_) =>
+          val query = UserQuery(userId, ExchangeRateAsset(from, to), new Timestamp(System.currentTimeMillis()))
+          userDataStorage.addQueryToHistory(query).failed.foreach { e =>
+            logger.error(s"Can't save query to history $query", e)
+          }
+        case _ =>
+      }
+      rateFut
+    }
 
     override def sendMessage(sendMessage: SendMessage): Unit = messageSender(sendMessage)
 
     override def getPortfolioCurrentPrice(p: Portfolio): Future[BigDecimal] =
       notificationhandlers.getPortfolioCurrentPrice(p, priceCache)
     override def getPortfolioStocksPrice(portfolio: Portfolio): Future[Map[String, BigDecimal]] = {
-      Future.traverse(portfolio.stocks.keys)(getStockInfo).map {
+      Future.traverse(portfolio.stocks.keys)(priceCache.getStockInfo).map {
         _.map(stock => (stock.name, stock.price * portfolio.stocks(stock.name))).toMap
       }
     }
+    override def getStockQueryHistory(userId: Long, num: Int): Future[Seq[UserQuery]] =
+      userDataStorage.getHistory(userId, StockAsset(""), num)
+    override def getExchangeRateQueryHistory(userId: Long, num: Int): Future[Seq[UserQuery]] =
+      userDataStorage.getHistory(userId, ExchangeRateAsset("", ""), num)
   }
 
 }

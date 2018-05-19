@@ -25,12 +25,37 @@ object GeneralTexts {
       |Больше примеров тикеров по адресу https://goo.gl/s7pnNS
     """.stripMargin
 
+  val STOCK_INTRO_MESSAGE_WITH_HISTORY = (history: Seq[UserQuery]) => {
+    val historyStr = history.collect {
+      case UserQuery(_, StockAsset(stock), _) => s"/$stock"
+    }.mkString("\n")
+    s"""Для получения информации о стоимости акций введите её тикер как текст (YNDX) или как команду (/YNDX).
+       |
+       |Ваши недавние запросы:
+       |$historyStr
+       |
+       |Больше примеров тикеров по адресу https://goo.gl/s7pnNS
+    """.stripMargin
+  }
+
   val EXCHANGE_RATE_INTRO_MESSAGE =
     """Для получения информации о курсе валют введите пару через "/".
       |
       |Например: USD/RUB
       |
     """.stripMargin
+
+  val EXCHANGE_RATE_INTRO_MESSAGE_WITH_HISTORY = (history: Seq[UserQuery]) => {
+    val historyStr = history.collect {
+      case UserQuery(_, ExchangeRateAsset(from, to), _) => s"$from/$to"
+    }.mkString("\n")
+    s"""Для получения информации о курсе валют введите пару через "/".
+       |
+       |Ваши недавние запросы:
+       |$historyStr
+       |
+    """.stripMargin
+  }
 
   val EXCHANGE_RATE_INVALID = "Ваше сообщение не соответствует формату"
 

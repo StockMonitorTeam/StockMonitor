@@ -170,6 +170,24 @@ trait PostgresDBComponent extends UserDataStorageComponent {
         }
       }
 
+    override def addQueryToHistory(userQuery: UserQuery): Future[Unit] = {
+      dbConnection.run(addQueryToHistorySQL(userQuery)).map {
+        case 0 => throw new ElementAlreadyExistsException
+        case 1 => ()
+        case _ => throw new IllegalStateException()
+      }
+    }
+
+    def getHistory(userId: Long, t: AssetType, numOfQueries: Int): Future[Seq[UserQuery]] = {
+      val assetT = t match {
+        case StockAsset(_) => Stock
+        case ExchangeRateAsset(_, _) => ExchangeRate
+        case PortfolioAsset(_) => Portfolio
+      }
+      dbConnection.run {
+        getHistorySQL(userId, assetT, numOfQueries)
+      }
+    }
   }
 
   object PostgresDB {

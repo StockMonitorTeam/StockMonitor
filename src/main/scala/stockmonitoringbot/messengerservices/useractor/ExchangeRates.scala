@@ -16,15 +16,22 @@ trait ExchangeRates {
   this: MainStuff =>
 
   def becomeExchangeRatesMainMenu(): Unit = {
-    sendMessageToUser(GeneralTexts.EXCHANGE_RATE_INTRO_MESSAGE, GeneralMarkups.onlyMainMenu)
-    context become waitForExchangePair
+    userActorService.getExchangeRateQueryHistory(userId, 3).onComplete {
+      case Success(lastQueries) if lastQueries.nonEmpty =>
+        sendMessageToUser(GeneralTexts.EXCHANGE_RATE_INTRO_MESSAGE_WITH_HISTORY(lastQueries), GeneralMarkups.onlyMainMenu)
+        self ! SetBehavior(waitForExchangePair)
+      case _ => //todo parse Failure
+        sendMessageToUser(GeneralTexts.EXCHANGE_RATE_INTRO_MESSAGE, GeneralMarkups.onlyMainMenu)
+        self ! SetBehavior(waitForExchangePair)
+    }
+    context become waitForNewBehavior()
   }
 
   //#3
   def waitForExchangePair: Receive = {
     case IncomingMessage(ExchangePairName(from, to)) =>
       logger.info(s"Got message : $from, $to")
-      userActorService.getExchangeRate(from, to).onComplete {
+      userActorService.getExchangeRate(from, to, userId).onComplete {
         case Success(rate) =>
           goToRateMenu(rate)
         case Failure(exception) =>

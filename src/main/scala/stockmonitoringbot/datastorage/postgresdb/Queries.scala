@@ -12,7 +12,7 @@ import scala.concurrent.ExecutionContext
   */
 object Queries extends Schema {
 
-  val tables = Seq(users, dailyNotifications, triggerNotifications, portfolios, stocksInPortfolios)
+  val tables = Seq(users, dailyNotifications, triggerNotifications, portfolios, stocksInPortfolios, usersHistory)
   def ddl(implicit ec: ExecutionContext): DBIO[Seq[Unit]] = MTable.getTables.flatMap { existingTables =>
     val names = existingTables.map(mt => mt.name.name)
     val tableCreations = tables
@@ -67,6 +67,14 @@ object Queries extends Schema {
   def getUsersSQL: DBIO[Seq[User]] = users.result
   def getUserSQL(userId: Long): DBIO[Seq[User]] = getUserCompiledSQL(userId).result
   def setUserSQL(user: User): DBIO[Int] = users.insertOrUpdate(user)
+
+  def addQueryToHistorySQL(query: UserQuery): DBIO[Int] = usersHistory.insertOrUpdate(query)
+  def getHistorySQL(userId: Long, assetType: AssetType, num: Int): DBIO[Seq[UserQuery]] =
+    usersHistory
+      .filter(x => x.userId === userId && x.assetType === assetType)
+      .sortBy(_.timestamp.desc)
+      .take(num)
+      .result
 
 }
 

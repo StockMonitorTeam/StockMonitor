@@ -15,15 +15,22 @@ trait Stocks {
   this: MainStuff =>
 
   def becomeStockMainMenu(): Unit = {
-    sendMessageToUser(GeneralTexts.STOCK_INTRO_MESSAGE, GeneralMarkups.onlyMainMenu)
-    context become waitForStock
+    userActorService.getStockQueryHistory(userId, 3).onComplete {
+      case Success(lastQueries) if lastQueries.nonEmpty =>
+        sendMessageToUser(GeneralTexts.STOCK_INTRO_MESSAGE_WITH_HISTORY(lastQueries), GeneralMarkups.onlyMainMenu)
+        self ! SetBehavior(waitForStock)
+      case _ => //todo parse failure
+        sendMessageToUser(GeneralTexts.STOCK_INTRO_MESSAGE, GeneralMarkups.onlyMainMenu)
+        self ! SetBehavior(waitForStock)
+    }
+    context become waitForNewBehavior()
   }
 
   //#2
   def waitForStock: Receive = {
     case IncomingMessage(stockName(name)) =>
       logger.info(s"Got message : $name")
-      userActorService.getStockInfo(name).onComplete {
+      userActorService.getStockInfo(name, userId).onComplete {
         case Success(stock) =>
           goToStockMenu(stock)
         case Failure(exception) =>

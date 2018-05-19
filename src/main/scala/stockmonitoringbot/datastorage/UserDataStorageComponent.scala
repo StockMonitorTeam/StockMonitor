@@ -41,5 +41,8 @@ trait UserDataStorage {
   def getUser(userId: Long): Future[Option[User]]
   def setUser(user: User): Future[Unit]
 
+  def addQueryToHistory(userQuery: UserQuery): Future[Unit]
+  def getHistory(userId: Long, t: AssetType, numOfQueries: Int): Future[Seq[UserQuery]]
+
   def initDB(): Future[Unit]
 }
