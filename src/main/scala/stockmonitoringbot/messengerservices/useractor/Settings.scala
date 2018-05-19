@@ -59,7 +59,9 @@ trait Settings {
   }
 
   def waitForTriggerToDelete: Receive = {
-    case IncomingMessage(Buttons.back) => becomeTriggersMenu()
+    case IncomingMessage(Buttons.back) =>
+      becomeTriggersMenu()
+      context become waitForNewBehavior()
     case IncomingCallback(CallbackTypes.deleteTrigger, message) =>
       Try(message.message.toLong) match {
         case Success(id) =>
