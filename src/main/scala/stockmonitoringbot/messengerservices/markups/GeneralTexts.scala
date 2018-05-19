@@ -151,7 +151,6 @@ object GeneralTexts {
       case StockAsset(name) => s"стоимости акций $name"
       case ExchangeRateAsset(from, to) => s"курсе валют $from/$to"
     }
-    import stockmonitoringbot.messengerservices.useractor.currentTimeAccordingToTimezone
     s"""Для того, чтобы задать ежедневное оповещение о $asset выберите время, либо введите его в формате HH:MM.
        |
        |Время на сервере с учетом вашего часового пояса: ${currentTimeAccordingToTimezone(user.timeZone)}
@@ -210,7 +209,6 @@ object GeneralTexts {
   }
 
   val TIME_ZONE_SHOW = (user: User) => {
-    import stockmonitoringbot.messengerservices.useractor.currentTimeAccordingToTimezone
     val zone = if (user.timeZone.toString == "Z") "UTC" else s"UTC${user.timeZone.toString}"
     s"""Ваш текущий часовой пояс: $zone
        |Время на сервере с учетом вашего часового пояса: ${currentTimeAccordingToTimezone(user.timeZone)}

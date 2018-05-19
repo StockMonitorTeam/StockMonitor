@@ -15,8 +15,6 @@ import stockmonitoringbot.datastorage.models.User
 import stockmonitoringbot.messengerservices.MessageSenderComponent.MessageSender
 import stockmonitoringbot.messengerservices.useractor.UserActor
 import stockmonitoringbot.messengerservices.useractor.UserActor._
-import stockmonitoringbot.notificationhandlers.DailyNotificationHandlerComponent
-import stockmonitoringbot.stocksandratescache.PriceCacheComponent
 import stockmonitoringbot.{ActorSystemComponent, AppConfig, ExecutionContextComponent}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -29,9 +27,8 @@ import scala.util.{Failure, Success}
 trait TelegramMessageReceiverAndSenderComponent extends MessageReceiverComponent with MessageSenderComponent {
   self: ExecutionContextComponent
     with ActorSystemComponent
+    with UserActorServiceComponent
     with UserDataStorageComponent
-    with DailyNotificationHandlerComponent
-    with PriceCacheComponent
     with AppConfig =>
 
   val tg = new TelegramMessageReceiverAndSender
@@ -61,11 +58,11 @@ trait TelegramMessageReceiverAndSenderComponent extends MessageReceiverComponent
     onCommand("/start") {
       implicit msg =>
         logger.info(s"starting chat with ${msg.chat.firstName.get}")
-        for {user <- userDataStorage.getUser(msg.chat.id) if user.isEmpty
-             _ <- userDataStorage.setUser(User(msg.chat.id, defaultTimeZone))
+        for {user <- userActorService.getUser(msg.chat.id) if user.isEmpty
+             _ <- userActorService.setUser(User(msg.chat.id, defaultTimeZone))
         } {}
         val prev = activeUsers.put(msg.chat.id,
-          system.actorOf(UserActor.props(msg.chat.id, NewUser, messageSender, userDataStorage, dailyNotificationHandler, priceCache)))
+          system.actorOf(UserActor.props(msg.chat.id, NewUser, userActorService)))
         Option(prev).foreach(_ ! PoisonPill)
     }
 
@@ -115,7 +112,7 @@ trait TelegramMessageReceiverAndSenderComponent extends MessageReceiverComponent
       userDataStorage.getAllUsers.map { users =>
         users.map { user =>
           activeUsers.put(user.id,
-            system.actorOf(UserActor.props(user.id, RestartingUser, messageSender, userDataStorage, dailyNotificationHandler, priceCache)))
+            system.actorOf(UserActor.props(user.id, RestartingUser, userActorService)))
         }
         users.size
       }

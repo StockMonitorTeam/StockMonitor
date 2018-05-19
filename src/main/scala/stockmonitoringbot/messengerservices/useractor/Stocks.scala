@@ -23,7 +23,7 @@ trait Stocks {
   def waitForStock: Receive = {
     case IncomingMessage(stockName(name)) =>
       logger.info(s"Got message : $name")
-      cache.getStockInfo(name).onComplete {
+      userActorService.getStockInfo(name).onComplete {
         case Success(stock) =>
           goToStockMenu(stock)
         case Failure(exception) =>
@@ -37,9 +37,9 @@ trait Stocks {
   }
 
   def goToStockMenu(stock: StockInfo): Unit = {
-    val dailyNotFut = userDataStorage.getUserNotificationOnAsset(userId, StockAsset(stock.name))
-    val triggerNotFut = userDataStorage.getUserTriggerNotificationOnAsset(userId, StockAsset(stock.name))
-    val userFut = userDataStorage.getUser(userId)
+    val dailyNotFut = userActorService.getUserNotificationOnAsset(userId, StockAsset(stock.name))
+    val triggerNotFut = userActorService.getUserTriggerNotificationOnAsset(userId, StockAsset(stock.name))
+    val userFut = userActorService.getUser(userId)
     for {dailyNot <- dailyNotFut
          triggerNot <- triggerNotFut
          user <- userFut

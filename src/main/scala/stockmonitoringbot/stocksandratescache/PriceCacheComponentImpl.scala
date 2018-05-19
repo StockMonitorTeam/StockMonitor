@@ -14,8 +14,8 @@ import scala.concurrent.Future
   */
 
 trait PriceCacheComponentImpl extends PriceCacheComponent {
-  this: StockPriceServiceComponent //todo initial load stocks in cache
-    with ExecutionContextComponent =>
+  this: ExecutionContextComponent
+    with StockPriceServiceComponent =>
 
   override val priceCache = new PriceCacheImpl
 
@@ -25,50 +25,53 @@ trait PriceCacheComponentImpl extends PriceCacheComponent {
     private val exchangeRates: ConcurrentHashMap[(String, String), CurrencyExchangeRateInfo] = new ConcurrentHashMap()
 
     override def getStockInfo(stock: String): Future[StockInfo] =
-      if (stocks.containsKey(stock))
-        Future.successful(stocks.get(stock))
-      else
+      Option(stocks.get(stock)).fold {
         stockPriceService.getStockPriceInfo(stock).map { info =>
-          setStockInfo(info)
+          priceCache.setStockInfo(info)
           info
         }
-
-    override def setStockInfo(stockInfo: StockInfo): Unit = {
-      stocks.put(stockInfo.name, stockInfo)
-      ()
-    }
-
-    override def getStocks: Set[String] =
-      stocks.keySet().asScala.toSet
+      }(Future.successful)
 
     override def contains(stock: String): Boolean =
       stocks.containsKey(stock)
 
     override def getExchangeRate(from: String, to: String): Future[CurrencyExchangeRateInfo] =
-      if (exchangeRates.containsKey((from, to)))
-        Future.successful(exchangeRates.get((from, to)))
-      else
+      Option(exchangeRates.get((from, to))).fold {
         stockPriceService.getCurrencyExchangeRate(from, to).map { info =>
-          setExchangeRate(info)
+          priceCache.setExchangeRate(info)
           info
         }
-
-    override def setExchangeRate(exchangeRate: CurrencyExchangeRateInfo): Unit = {
-      exchangeRates.put((exchangeRate.from, exchangeRate.to), exchangeRate)
-      ()
-    }
-
-    override def getExchangePairs: Set[(String, String)] =
-      exchangeRates.keySet().asScala.toSet
+      }(Future.successful)
 
     override def contains(exchangePair: (String, String)): Boolean =
       exchangeRates.containsKey(exchangePair)
 
-    override def copy(): PriceCacheImpl = {
-      val cache = new PriceCacheImpl()
-      stocks.forEach((_, stockInfo) => cache.setStockInfo(stockInfo))
-      exchangeRates.forEach((_, rateInfo) => cache.setExchangeRate(rateInfo))
-      cache
+    private def setStockInfo(stockInfo: StockInfo): Unit = {
+      stocks.put(stockInfo.name, stockInfo)
+      ()
     }
+
+    private def setExchangeRate(exchangeRate: CurrencyExchangeRateInfo): Unit = {
+      exchangeRates.put((exchangeRate.from, exchangeRate.to), exchangeRate)
+      ()
+    }
+
+    /**
+      *
+      * @return number of updated stocks & exchange rates
+      */
+    override def updateCache(): Future[(Int, Int)] = {
+      val stockUpdate: Future[Int] = stockPriceService.getBatchPrices(stocks.keySet().asScala.toSeq).map { updatedStocks =>
+        updatedStocks.foreach(setStockInfo)
+        updatedStocks.size
+      }
+      val ratesUpdate: Future[Int] = Future.traverse(exchangeRates.keySet().asScala.toSeq) { pair =>
+        stockPriceService.getCurrencyExchangeRate(pair._1, pair._2).map(setExchangeRate)
+      }.map(_.size)
+      for {numOfUpdatedStocks <- stockUpdate
+           numOfUpdatedRates <- ratesUpdate
+      } yield (numOfUpdatedStocks, numOfUpdatedRates)
+    }
+
   }
 }
