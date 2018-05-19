@@ -45,6 +45,7 @@ trait Settings {
         sendMessageToUser(GeneralTexts.ERROR, GeneralMarkups.onlyMainMenu)
         self ! SetBehavior(triggersMenu(Seq()))
     }
+    context become waitForNewBehavior()
   }
 
   //#9
@@ -93,6 +94,7 @@ trait Settings {
         sendMessageToUser(GeneralTexts.ERROR, GeneralMarkups.onlyMainMenu)
         self ! SetBehavior(dailyNotificationsMenu(Seq()))
     }
+    context become waitForNewBehavior()
   }
 
   //#10
@@ -109,7 +111,6 @@ trait Settings {
   def waitForDailyNotificationToDelete: Receive = {
     case IncomingMessage(Buttons.back) =>
       becomeDailyNotificationsMenu()
-      context become waitForNewBehavior()
     case IncomingCallback(CallbackTypes.deleteDailyNot, message) =>
       Try(message.message.toLong) match {
         case Success(id) =>
@@ -126,7 +127,6 @@ trait Settings {
           sendMessageToUser(GeneralTexts.ERROR)
           becomeDailyNotificationsMenu()
       }
-      context become waitForNewBehavior()
   }
 
   def becomeTimezoneMenu(): Unit = {
