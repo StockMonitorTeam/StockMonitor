@@ -45,6 +45,8 @@ trait Stocks {
       context become waitForNewBehavior()
     case IncomingMessage(Buttons.backToMain) =>
       becomeMainMenu()
+    case IncomingMessage(_) =>
+      sendMessageToUser(GeneralTexts.WRONG_STOCK_NAME)
   }
 
   def goToStockMenu(stock: StockInfo): Unit = {
