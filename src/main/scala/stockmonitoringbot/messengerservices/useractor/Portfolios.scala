@@ -170,6 +170,8 @@ trait Portfolios {
         case _ =>
           sendMessageToUser(GeneralTexts.ERROR)
       }
+    case IncomingMessage(Buttons.backToMain) =>
+      becomeMainMenu()
     case _ =>
       sendMessageToUser(GeneralTexts.ERROR)
   }
