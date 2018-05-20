@@ -279,6 +279,8 @@ trait Portfolios {
           printPortfolios()
       }
       context become waitForNewBehavior()
+    case _ =>
+      sendMessageToUser(GeneralTexts.PORTFOLIO_STOCK_AMOUNT_ERROR)
   }
 
 }

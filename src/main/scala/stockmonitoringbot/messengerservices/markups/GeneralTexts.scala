@@ -141,6 +141,8 @@ object GeneralTexts {
 
   val PORTFOLIO_STOCK_ADD_ERROR = s"Ошибка добавления акции в портфель"
 
+  val PORTFOLIO_STOCK_AMOUNT_ERROR = s"Введите количество акций. Например: 1 или 0.03"
+
   val PORTFOLIO_STOCK_ADD_QUERY = s"Данный тикер не найден в системе. Пытаемся запросить. Пожалуйста, подождите 😌"
 
   val PORTFOLIO_STOCK_ADD_AMOUNT = (ticker: String, portfolioName: String) =>
