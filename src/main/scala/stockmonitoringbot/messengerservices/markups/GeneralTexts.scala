@@ -215,7 +215,7 @@ object GeneralTexts {
     val zone = if (user.timeZone.toString == "Z") "UTC" else s"UTC${user.timeZone.toString}"
     s"""Ваш текущий часовой пояс: $zone
        |Время на сервере с учетом вашего часового пояса: ${currentTimeAccordingToTimezone(user.timeZone)}
-       |Чтобы его изменить выберите соответсвующий пункт в меню
+       |Чтобы его изменить выберите соответствующий пункт в меню
        |
      """.stripMargin
   }
