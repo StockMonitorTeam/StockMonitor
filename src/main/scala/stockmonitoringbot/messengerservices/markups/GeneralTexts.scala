@@ -91,6 +91,9 @@ object GeneralTexts {
   val printStockException = (name: String) =>
     s"Ошибка получения информации об акции: $name 😔"
 
+  val WRONG_STOCK_NAME =
+    s"Некорректное название акции"
+
   val printExchangeRateException = (from: String, to: String) =>
     s"Ошибка получения информации о курсе: $from/$to 😔"
 
