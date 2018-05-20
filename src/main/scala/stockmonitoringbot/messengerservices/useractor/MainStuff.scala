@@ -113,14 +113,14 @@ trait MainStuff {
   }
 
   def setNotification(userId: Long, assetType: AssetType, time: String, user: User): Future[Unit] = {
-    val localTime: LocalTime = LocalTime.parse(time, DateTimeFormatter.ofPattern("H:mm"))
-    val utcTime = getTimeInUTC(localTime, user.timeZone)
-    val notification = assetType match {
-      case PortfolioAsset(name) => PortfolioDailyNotification(0, userId, name, utcTime)
-      case StockAsset(name) => StockDailyNotification(0, userId, name, utcTime)
-      case ExchangeRateAsset(from, to) => ExchangeRateDailyNotification(0, userId, (from, to), utcTime)
-    }
     val task = for {_ <- clearNotification(userId, assetType)
+                    localTime = LocalTime.parse(time, DateTimeFormatter.ofPattern("H:mm"))
+                    utcTime = getTimeInUTC(localTime, user.timeZone)
+                    notification = assetType match {
+                      case PortfolioAsset(name) => PortfolioDailyNotification(0, userId, name, utcTime)
+                      case StockAsset(name) => StockDailyNotification(0, userId, name, utcTime)
+                      case ExchangeRateAsset(from, to) => ExchangeRateDailyNotification(0, userId, (from, to), utcTime)
+                    }
                     _ <- userActorService.addDailyNotification(notification)
     } yield {
       sendMessageToUser(GeneralTexts.DAILY_NOTIFICATION_SET(time))
