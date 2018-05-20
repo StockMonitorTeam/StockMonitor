@@ -41,6 +41,7 @@ object GeneralTexts {
 
   val INFO_MESSAGE =
     """О всех проблемах или пожеланиях пишите в Telegram: @amirmuratov, @n0str.
+      |
       |Данные взяты с сайта: https://www.alphavantage.co/
       |
     """.stripMargin
