@@ -167,8 +167,9 @@ object GeneralMarkups {
 
   def generatePortfolioTriggersDelete(userId: Long, triggers: Seq[TriggerNotification]): Option[InlineKeyboardMarkup] = Some(InlineKeyboardMarkup(
     triggers.map { x => {
+      val triggerName = s"${x.notificationType} - ${x.boundPrice}"
       val triggerUniqueName = x.id.toString
-      InlineKeyboardButton(text = triggerUniqueName, callbackData = Some(Inline.generatePrefix(CallbackTypes.portfolioDeleteTrigger, userId, triggerUniqueName)))
+      InlineKeyboardButton(text = triggerName, callbackData = Some(Inline.generatePrefix(CallbackTypes.portfolioDeleteTrigger, userId, triggerUniqueName)))
     }
     }.grouped(3).toSeq
   ))
