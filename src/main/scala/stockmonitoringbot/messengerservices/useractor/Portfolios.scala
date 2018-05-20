@@ -193,7 +193,7 @@ trait Portfolios {
           logger.error("Can't delete portfolio", e)
           printPortfolios()
       }
-      context become waitForPortfolioName
+      context become waitForNewBehavior()
     case IncomingMessage(Buttons.notifications) =>
       userActorService.getUserNotificationOnAsset(userId, PortfolioAsset(portfolio.name)) onComplete {
         case Success(_) =>
@@ -279,6 +279,8 @@ trait Portfolios {
           printPortfolios()
       }
       context become waitForNewBehavior()
+    case _ =>
+      sendMessageToUser(GeneralTexts.PORTFOLIO_STOCK_AMOUNT_ERROR)
   }
 
 }
