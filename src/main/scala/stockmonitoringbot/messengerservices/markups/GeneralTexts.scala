@@ -249,7 +249,7 @@ object GeneralTexts {
 
   val TRIGGER_ADDED = "Триггер успешно установлен"
 
-  val TRIGGER_ADD_ERROR = "Триггер успешно установлен"
+  val TRIGGER_ADD_ERROR = "Не удалось установить триггер"
 
   val TRIGGER_REMOVED = s"Триггер успешно удалён"
 
