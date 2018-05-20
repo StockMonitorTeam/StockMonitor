@@ -37,13 +37,16 @@ trait UserActorService {
   def getUser(userId: Long): Future[Option[User]]
   def setUser(user: User): Future[Unit]
 
-  def getStockInfo(stock: String): Future[StockInfo]
+  def getStockInfo(stock: String, userId: Long): Future[StockInfo]
   def cacheContains(stock: String): Boolean
 
-  def getExchangeRate(from: String, to: String): Future[CurrencyExchangeRateInfo]
+  def getExchangeRate(from: String, to: String, userId: Long): Future[CurrencyExchangeRateInfo]
 
   def getPortfolioCurrentPrice(p: Portfolio): Future[BigDecimal]
   def getPortfolioStocksPrice(portfolio: Portfolio): Future[Map[String, BigDecimal]]
+
+  def getStockQueryHistory(userId: Long, num: Int): Future[Seq[UserQuery]]
+  def getExchangeRateQueryHistory(userId: Long, num: Int): Future[Seq[UserQuery]]
 
   def sendMessage(sendMessage: SendMessage): Unit
 }

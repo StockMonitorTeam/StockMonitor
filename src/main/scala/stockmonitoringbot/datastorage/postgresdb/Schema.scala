@@ -1,13 +1,13 @@
 package stockmonitoringbot.datastorage.postgresdb
 
+import java.sql.Timestamp
 import java.time.{LocalTime, ZoneId}
 
 import slick.ast.BaseTypedType
 import slick.jdbc.JdbcType
-
 import slick.jdbc.PostgresProfile.api._
-import stockmonitoringbot.datastorage.models._
 import stockmonitoringbot.datastorage.models
+import stockmonitoringbot.datastorage.models._
 
 /**
   * Created by amir.
@@ -19,6 +19,7 @@ trait Schema {
   val triggerNotifications = TableQuery[TriggerNotifications]
   val portfolios = TableQuery[Portfolios]
   val stocksInPortfolios = TableQuery[StocksInPortfolios]
+  val usersHistory = TableQuery[UsersHistory]
 
   import Schema._
 
@@ -73,6 +74,17 @@ trait Schema {
     def * = (portfolioId, stockName, amount)
     def portfolioFK = foreignKey("PORTFOLIO_FK", portfolioId, portfolios)(_.portfolioId, onDelete = ForeignKeyAction.Cascade)
     def PK = primaryKey("STOCKS_PK", (portfolioId, stockName))
+  }
+
+  class UsersHistory(tag: Tag) extends Table[UserQuery](tag, "USERS_HISTORY") {
+    def queryId = column[Long]("QUERY_ID", O.PrimaryKey, O.AutoInc)
+    def userId = column[Long]("USER_ID")
+    def assetType = column[AssetType]("ASSET_TYPE")
+    def assetName = column[String]("ASSET_NAME")
+    def timestamp = column[Timestamp]("CREATED")
+
+    def * = (queryId, userId, assetType, assetName, timestamp) <> (mapRowToUserQuery, unapplyUserQuery)
+    def userFK = foreignKey("USER_FK", userId, users)(_.id, onDelete = ForeignKeyAction.Cascade)
   }
 
 }
@@ -162,6 +174,26 @@ object Schema {
 
   private def unapplyPortfolio(p: Portfolio) = {
     Some((p.portfolioId, p.userId, p.name, p.currency))
+  }
+
+  private def mapRowToUserQuery(row: (Long, Long, Schema.AssetType, String, Timestamp)): UserQuery = {
+    val (_, userId, assetType, assetName, timestamp) = row
+    assetType match {
+      case Stock => UserQuery(userId, StockAsset(assetName), timestamp)
+      case ExchangeRate =>
+        val curr = assetName.split("/")
+        UserQuery(userId, ExchangeRateAsset(curr(0), curr(1)), timestamp)
+      case Portfolio => UserQuery(userId, PortfolioAsset(assetName), timestamp)
+    }
+  }
+
+  private def unapplyUserQuery(q: UserQuery) = {
+    val (t, name) = q.assetType match {
+      case StockAsset(stock) => (Schema.Stock, stock)
+      case ExchangeRateAsset(from, to) => (Schema.ExchangeRate, s"$from/$to")
+      case PortfolioAsset(portfolio) => (Schema.Portfolio, portfolio)
+    }
+    Some((0L, q.userId, t, name, q.time))
   }
 
 }

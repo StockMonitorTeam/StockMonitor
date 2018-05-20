@@ -244,7 +244,7 @@ trait Portfolios {
         sendMessageToUser(GeneralTexts.PORTFOLIO_STOCK_ADD_QUERY)
       }
 
-      userActorService.getStockInfo(name).onComplete {
+      userActorService.getStockInfo(name, userId).onComplete {
         case Success(_) =>
           sendMessageToUser(GeneralTexts.PORTFOLIO_STOCK_ADD_AMOUNT(name, portfolio.name))
           self ! SetBehavior(waitForPortfolioStockAmount(portfolio, name))
