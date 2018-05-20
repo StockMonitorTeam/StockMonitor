@@ -20,7 +20,11 @@ trait ExchangeRates {
       case Success(lastQueries) if lastQueries.nonEmpty =>
         sendMessageToUser(GeneralTexts.EXCHANGE_RATE_INTRO_MESSAGE_WITH_HISTORY(lastQueries), GeneralMarkups.onlyMainMenu)
         self ! SetBehavior(waitForExchangePair)
-      case _ => //todo parse Failure
+      case Success(_) =>
+        sendMessageToUser(GeneralTexts.EXCHANGE_RATE_INTRO_MESSAGE, GeneralMarkups.onlyMainMenu)
+        self ! SetBehavior(waitForExchangePair)
+      case Failure(e) =>
+        logger.error("Can't get history", e)
         sendMessageToUser(GeneralTexts.EXCHANGE_RATE_INTRO_MESSAGE, GeneralMarkups.onlyMainMenu)
         self ! SetBehavior(waitForExchangePair)
     }

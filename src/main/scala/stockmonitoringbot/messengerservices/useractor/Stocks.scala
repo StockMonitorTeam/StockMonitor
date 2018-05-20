@@ -19,7 +19,11 @@ trait Stocks {
       case Success(lastQueries) if lastQueries.nonEmpty =>
         sendMessageToUser(GeneralTexts.STOCK_INTRO_MESSAGE_WITH_HISTORY(lastQueries), GeneralMarkups.onlyMainMenu)
         self ! SetBehavior(waitForStock)
-      case _ => //todo parse failure
+      case Success(_) =>
+        sendMessageToUser(GeneralTexts.STOCK_INTRO_MESSAGE, GeneralMarkups.onlyMainMenu)
+        self ! SetBehavior(waitForStock)
+      case Failure(e) =>
+        logger.error("Can't get history", e)
         sendMessageToUser(GeneralTexts.STOCK_INTRO_MESSAGE, GeneralMarkups.onlyMainMenu)
         self ! SetBehavior(waitForStock)
     }
