@@ -197,16 +197,9 @@ trait Portfolios {
       }
       context become waitForNewBehavior()
     case IncomingMessage(Buttons.notifications) =>
-      userActorService.getUserNotificationOnAsset(userId, PortfolioAsset(portfolio.name)) onComplete {
-        case Success(_) =>
-          addDailyNotification(PortfolioAsset(portfolio.name), {
-            printPortfolio(portfolio.name)
-          })
-        case _ =>
-          sendMessageToUser(GeneralTexts.ERROR)
-          becomePortfolioMainMenu()
-      }
-      context become waitForPortfolioName
+      addDailyNotification(PortfolioAsset(portfolio.name), {
+        printPortfolio(portfolio.name)
+      })
     case IncomingMessage(Buttons.triggers) =>
       printPortfolioTriggers(userId, portfolio)
       context become waitForPortfolioTrigger(portfolio)
